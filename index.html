@@ -1,1209 +1,858 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>BetControl - Gestão Operacional</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* Estilização para forçar o picker de calendário nativo visível e clicável */
-    input[type="date"]::-webkit-calendar-picker-indicator {
-      filter: invert(1);
-      cursor: pointer;
-      opacity: 0.8;
-    }
-    input[type="date"]::-webkit-calendar-picker-indicator:hover {
-      opacity: 1;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BetControl - Gestão Operacional Segura</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #131b2e;
+            --border-color: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #10b981;
+            --primary-hover: #059669;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+        }
 
-    /* Regras de impressão configuradas para permitir múltiplas páginas A4 */
-    @media print {
-      @page {
-        size: A4 landscape;
-        margin: 10mm;
-      }
-      
-      header, aside, .no-print, #tela-login {
-        display: none !important;
-      }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
 
-      html, body {
-        width: 100% !important;
-        height: auto !important;
-        overflow: visible !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        background-color: #0d1117 !important;
-        color: #f0f6fc !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
 
-      main {
-        padding: 0 !important;
-        margin: 0 !important;
-        width: 100% !important;
-        transform: none !important;
-      }
+        /* TELA DE LOGIN */
+        #login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
 
-      .print-header {
-        display: flex !important;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 2px solid #10b981;
-        padding-bottom: 8px;
-        margin-bottom: 16px;
-      }
+        .login-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 40px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
 
-      .print-card {
-        background-color: #161b22 !important;
-        border: 1px solid #30363d !important;
-        border-radius: 8px !important;
-        padding: 12px !important;
-        margin-bottom: 16px !important;
-      }
+        .login-logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-radius: 12px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+        }
 
-      table {
-        width: 100% !important;
-        border-collapse: collapse !important;
-      }
+        .login-card h1 {
+            font-size: 22px;
+            margin-bottom: 5px;
+            color: var(--text-main);
+        }
 
-      th {
-        background-color: #1f2937 !important;
-        color: #ffffff !important;
-        font-size: 11px !important;
-        padding: 6px 8px !important;
-      }
+        .login-card p {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
 
-      td {
-        border-bottom: 1px solid #2d3748 !important;
-        font-size: 11px !important;
-        padding: 6px 8px !important;
-      }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
 
-      tr {
-        break-inside: avoid !important;
-        page-break-inside: avoid !important;
-      }
-    }
-  </style>
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .error-msg {
+            color: var(--danger);
+            font-size: 12px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        /* LAYOUT PRINCIPAL */
+        #app-container {
+            display: none;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-logo {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .badge {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--primary);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            text-transform: uppercase;
+        }
+
+        .btn-logout {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .btn-logout:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        main {
+            flex: 1;
+            padding: 30px;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* GRID DE MÉTRICAS */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .metric-title {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .text-green { color: var(--primary); }
+        .text-red { color: var(--danger); }
+
+        /* ABAS E NAVEGAÇÃO */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .tab-btn {
+            background-color: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* FORMULÁRIO E TABELAS */
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card h3 {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: var(--text-main);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        th {
+            background-color: rgba(255, 255, 255, 0.02);
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.01);
+        }
+
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 11px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+        }
+
+        .btn-danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        .btn-danger:hover {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-green { background: rgba(16, 185, 129, 0.1); color: var(--primary); }
+        .status-red { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+        .status-yellow { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            main { padding: 15px; }
+            header { padding: 15px; }
+            .charts-grid { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
-<body class="bg-[#090a0f] text-white min-h-screen flex flex-col">
-
-  <!-- ================= TELA DE LOGIN ================= -->
-  <div id="tela-login" class="fixed inset-0 z-50 bg-[#07090e] flex items-center justify-center p-4">
-    <div class="absolute -top-32 -left-32 w-72 h-72 md:w-96 md:h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-    <div class="absolute -bottom-32 -right-32 w-72 h-72 md:w-96 md:h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-    <div class="w-full max-w-md bg-[#111520] border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl relative z-10 backdrop-blur-xl">
-      
-      <!-- LOGOTIPO DESTAQUE NA TELA DE LOGIN -->
-      <div class="flex flex-col items-center mb-6 md:mb-8">
-        <div class="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-2xl p-[2px] shadow-xl shadow-emerald-500/20 mb-3 md:mb-4 group">
-          <div class="w-full h-full bg-[#0c0e14] rounded-[14px] flex items-center justify-center relative overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 opacity-70"></div>
-            <span class="font-black text-2xl md:text-3xl tracking-tighter bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent transform -skew-x-6 drop-shadow-md">
-              BC
-            </span>
-          </div>
-        </div>
-
-        <h1 class="text-xl md:text-2xl font-black tracking-tight text-white">
-          Bet<span class="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">Control</span>
-        </h1>
-        <p class="text-[10px] md:text-xs uppercase font-bold tracking-widest text-gray-400 mt-1">Gestão Operacional Segura</p>
-      </div>
-
-      <!-- FORMULÁRIO DE AUTENTICAÇÃO -->
-      <form onsubmit="realizarLogin(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold uppercase text-gray-300 mb-1.5">Usuário de Acesso</label>
-          <input type="text" id="loginUsuario" required placeholder="Ex: admin" class="w-full px-4 py-3 bg-[#181d2c] border border-white/10 rounded-xl text-white text-sm outline-none focus:border-emerald-500 transition">
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold uppercase text-gray-300 mb-1.5">Senha de Segurança</label>
-          <input type="password" id="loginSenha" required placeholder="••••••••" class="w-full px-4 py-3 bg-[#181d2c] border border-white/10 rounded-xl text-white text-sm outline-none focus:border-emerald-500 transition">
-        </div>
-
-        <div id="loginErro" class="hidden text-xs text-red-400 font-bold text-center bg-red-500/10 border border-red-500/20 py-2 rounded-lg">
-          Usuário ou senha incorretos. Tente novamente.
-        </div>
-
-        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black text-sm rounded-xl transition shadow-lg shadow-emerald-900/40 uppercase tracking-wider">
-          Acessar Sistema
-        </button>
-      </form>
-
-      <div class="mt-6 pt-4 border-t border-white/5 text-center space-y-1">
-        <p class="text-[11px] text-gray-500">Admin (Completo): <strong class="text-gray-400">admin</strong> / <strong class="text-gray-400">123456</strong></p>
-        <p class="text-[11px] text-gray-500">Operador (Leitura): <strong class="text-gray-400">operador</strong> / <strong class="text-gray-400">123456</strong></p>
-      </div>
-    </div>
-  </div>
-
-  <!-- ================= APLICAÇÃO PRINCIPAL ================= -->
-  <div id="app-container" class="hidden flex-col flex-1">
-    
-    <!-- HEADER RESPONSIVO -->
-    <header class="sticky top-0 z-40 bg-[#0c0e14] border-b border-white/10 px-4 md:px-8 py-3 md:py-4 flex flex-col md:flex-row items-center justify-between gap-3 no-print">
-      <div class="flex items-center justify-between w-full md:w-auto">
-        <div class="flex items-center gap-3">
-          <div class="relative w-10 h-10 md:w-11 md:h-11 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-xl p-[1px] shadow-lg shadow-emerald-500/25 group cursor-pointer">
-            <div class="w-full h-full bg-[#0c0e14] rounded-[11px] flex items-center justify-center relative overflow-hidden">
-              <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 opacity-50"></div>
-              <span class="font-black text-lg md:text-xl tracking-tighter bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent transform -skew-x-6 drop-shadow">
-                BC
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <div class="flex items-center text-xl md:text-2xl font-black tracking-tight font-sans">
-              <span class="text-white drop-shadow">Bet</span>
-              <span class="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">Control</span>
-            </div>
-            <p class="text-[9px] md:text-[10px] uppercase font-bold tracking-widest text-gray-400 -mt-1">Gestão Operacional</p>
-          </div>
-        </div>
-
-        <!-- Botão Sair mobile (visível apenas em telas pequenas no topo) -->
-        <div class="flex md:hidden items-center gap-2">
-          <button onclick="realizarLogout()" title="Sair" class="p-2 bg-red-600/20 text-red-400 rounded-lg text-xs font-bold">
-            🔒 Sair
-          </button>
-        </div>
-      </div>
-
-      <!-- FILTROS E CONTROLES DO TOPO -->
-      <div class="flex flex-wrap items-center justify-end gap-2 md:gap-4 w-full md:w-auto">
-        <div class="flex items-center gap-2 bg-[#131620] p-1.5 rounded-lg border border-white/10 shadow-inner overflow-x-auto max-w-full">
-          <div class="relative">
-            <label class="block text-[8px] md:text-[9px] text-white uppercase font-bold px-1">De</label>
-            <input type="date" id="filtroDataInicio" onchange="atualizarFiltrosGlobais()" onclick="this.showPicker &amp;&amp; this.showPicker()" class="bg-[#1a1f2e] text-white text-[11px] md:text-xs px-2 py-1 rounded border border-white/10 outline-none cursor-pointer">
-          </div>
-          <span class="text-gray-500 text-xs self-end mb-1">até</span>
-          <div class="relative">
-            <label class="block text-[8px] md:text-[9px] text-white uppercase font-bold px-1">Até</label>
-            <input type="date" id="filtroDataFim" onchange="atualizarFiltrosGlobais()" onclick="this.showPicker &amp;&amp; this.showPicker()" class="bg-[#1a1f2e] text-white text-[11px] md:text-xs px-2 py-1 rounded border border-white/10 outline-none cursor-pointer">
-          </div>
-          <button onclick="limparFiltroDatas()" class="text-[11px] text-gray-300 hover:text-white px-2 py-1 bg-white/5 hover:bg-white/10 rounded border border-white/10 transition self-end">Limpar</button>
-        </div>
-
-        <div>
-          <select id="selectOperador" onchange="atualizarFiltrosGlobais()" class="px-2.5 py-2 bg-[#131620] border border-white/10 rounded-lg text-white text-xs cursor-pointer hover:border-white transition outline-none">
-            <option value="">Todos os Operadores</option>
-          </select>
-        </div>
-
-        <!-- INFO USUÁRIO E LOGOUT (DESKTOP) -->
-        <div class="hidden md:flex items-center gap-3 pl-2 border-l border-white/10">
-          <div class="text-right">
-            <span id="headerNomeUsuario" class="block text-xs font-bold text-white">admin</span>
-            <span id="headerPerfilUsuario" class="block text-[9px] text-emerald-400 font-bold uppercase">Editor</span>
-          </div>
-          <button onclick="realizarLogout()" title="Sair do Sistema" class="px-3 py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1">
-            🔒 Sair
-          </button>
-        </div>
-      </div>
-    </header>
-
-    <!-- LAYOUT PRINCIPAL: SIDEBAR HORIZONTAL NO MOBILE / VERTICAL NO DESKTOP -->
-    <div class="flex flex-col md:flex-row flex-1">
-      
-      <!-- MENU DE ABAS (Responsivo: Linha horizontal no celular, coluna no PC) -->
-      <aside class="w-full md:w-64 bg-[#090a0f] md:border-r border-b md:border-b-0 border-white/10 p-3 md:p-6 flex md:flex-col gap-2 overflow-x-auto no-print shrink-0">
-        <button id="btn-dashboard" onclick="mudarAba('dashboard')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-emerald-600 text-white font-medium text-xs md:text-sm transition shadow-md shadow-emerald-900/30">
-          📊 Dashboard
-        </button>
-        <button id="btn-operadores" onclick="mudarAba('operadores')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-[#131620] text-gray-300 hover:bg-[#1a1f2e] font-medium text-xs md:text-sm transition">
-          👥 Operadores
-        </button>
-        <button id="btn-casas" onclick="mudarAba('casas')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-[#131620] text-gray-300 hover:bg-[#1a1f2e] font-medium text-xs md:text-sm transition">
-          🏛️ Casas de Apostas
-        </button>
-        <button id="btn-relatorios" onclick="mudarAba('relatorios')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-[#131620] text-gray-300 hover:bg-[#1a1f2e] font-medium text-xs md:text-sm transition">
-          📑 Relatórios
-        </button>
-        <button id="btn-pagamentos" onclick="mudarAba('pagamentos')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-[#131620] text-gray-300 hover:bg-[#1a1f2e] font-medium text-xs md:text-sm transition">
-          💳 Pagamento
-        </button>
-        <button id="btn-usuarios" onclick="mudarAba('usuarios')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-[#131620] text-gray-300 hover:bg-[#1a1f2e] font-medium text-xs md:text-sm transition">
-          🔐 Usuários
-        </button>
-      </aside>
-
-      <!-- CONTEÚDO PRINCIPAL -->
-      <main class="flex-1 p-4 md:p-8 overflow-x-hidden" id="conteudo-principal">
-        <!-- Conteúdo injetado por JavaScript -->
-      </main>
-    </div>
-  </div>
-
-  <script>
-    const DADOS_INICIAIS = {
-      abaAtiva: 'dashboard',
-      dataFormulario: new Date().toISOString().split('T')[0],
-      descontoPercentual: 0,
-      ordemRelatorio: 'desc',
-      filtros: {
-        dataInicio: '',
-        dataFim: '',
-        operadorId: ''
-      },
-      usuarios: [
-        { id: 'usr-1', usuario: 'admin', senha: '123456', perfil: 'editor', nome: 'Administrador Mestre' },
-        { id: 'usr-2', usuario: 'operador', senha: '123456', perfil: 'leitura', nome: 'Operador Padrão' }
-      ],
-      operadores: [
-        { id: 'operador-1', nome: 'LUCAS' },
-        { id: 'operador-2', nome: 'Maria Santos' },
-      ],
-      casas: [
-        { id: 'casa-1', nome: 'HM Bets', operadorId: 'operador-1' },
-        { id: 'casa-2', nome: 'BET Certa', operadorId: 'operador-1' },
-        { id: 'casa-3', nome: 'Bet365', operadorId: 'operador-2' },
-      ],
-      apostas: [
-        { id: 'aposta-1', operadorId: 'operador-1', casaId: 'casa-2', data: '2026-09-07', stake: 1500, retorno: 0, finalizada: true },
-        { id: 'aposta-2', operadorId: 'operador-1', casaId: 'casa-2', data: '2026-09-07', stake: 1500, retorno: 2355, finalizada: true },
-        { id: 'aposta-3', operadorId: 'operador-1', casaId: 'casa-2', data: '2026-09-07', stake: 1000, retorno: 0, finalizada: true },
-        { id: 'aposta-4', operadorId: 'operador-1', casaId: 'casa-2', data: '2026-09-07', stake: 1000, retorno: 0, finalizada: true },
-      ]
-    };
-
-    let estado = carregarDadosDoLocalStorage();
-
-    function salvarDadosNoLocalStorage() {
-      localStorage.setItem('betcontrol_dados', JSON.stringify(estado));
-    }
-
-    function carregarDadosDoLocalStorage() {
-      const dadosSalvos = localStorage.getItem('betcontrol_dados');
-      if (dadosSalvos) {
-        try {
-          const parsed = JSON.parse(dadosSalvos);
-          if (!parsed.dataFormulario) parsed.dataFormulario = new Date().toISOString().split('T')[0];
-          if (!parsed.filtros) parsed.filtros = { dataInicio: '', dataFim: '', operadorId: '' };
-          if (parsed.descontoPercentual === undefined) parsed.descontoPercentual = 0;
-          if (!parsed.ordemRelatorio) parsed.ordemRelatorio = 'desc';
-          if (!parsed.usuarios) {
-            parsed.usuarios = [
-              { id: 'usr-1', usuario: 'admin', senha: '123456', perfil: 'editor', nome: 'Administrador Mestre' },
-              { id: 'usr-2', usuario: 'operador', senha: '123456', perfil: 'leitura', nome: 'Operador Padrão' }
-            ];
-          }
-          if (parsed.clientes && !parsed.operadores) {
-            parsed.operadores = parsed.clientes;
-            delete parsed.clientes;
-          }
-          return parsed;
-        } catch (e) {
-          console.error('Erro ao ler do localStorage, carregando padrão.', e);
-        }
-      }
-      return DADOS_INICIAIS;
-    }
-
-    function obterUsuarioLogado() {
-      const username = localStorage.getItem('betcontrol_user_ativo');
-      if (!username) return null;
-      return estado.usuarios.find(u => u.usuario === username) || null;
-    }
-
-    function verificarSeTemPermissaoEdicao() {
-      const usr = obterUsuarioLogado();
-      if (!usr) return false;
-      return usr.perfil === 'editor';
-    }
-
-    function realizarLogin(e) {
-      e.preventDefault();
-      const user = document.getElementById('loginUsuario').value.trim();
-      const pass = document.getElementById('loginSenha').value.trim();
-      const erroDiv = document.getElementById('loginErro');
-
-      const usuarioEncontrado = estado.usuarios.find(u => u.usuario === user && u.senha === pass);
-
-      if (usuarioEncontrado) {
-        localStorage.setItem('betcontrol_logado', 'true');
-        localStorage.setItem('betcontrol_user_ativo', usuarioEncontrado.usuario);
-        erroDiv.classList.add('hidden');
-        verificarAutenticacao();
-      } else {
-        erroDiv.classList.remove('hidden');
-      }
-    }
-
-    function realizarLogout() {
-      localStorage.removeItem('betcontrol_logado');
-      localStorage.removeItem('betcontrol_user_ativo');
-      verificarAutenticacao();
-    }
-
-    function verificarAutenticacao() {
-      const logado = localStorage.getItem('betcontrol_logado');
-      const telaLogin = document.getElementById('tela-login');
-      const appContainer = document.getElementById('app-container');
-
-      if (logado === 'true') {
-        const usr = obterUsuarioLogado();
-        if (usr) {
-          const elNome = document.getElementById('headerNomeUsuario');
-          const elPerfil = document.getElementById('headerPerfilUsuario');
-          if (elNome) elNome.textContent = usr.usuario;
-          if (elPerfil) elPerfil.textContent = usr.perfil === 'editor' ? '✏️ Editor' : '👁️ Leitura';
-        }
-        telaLogin.classList.add('hidden');
-        appContainer.classList.remove('hidden');
-        appContainer.classList.add('flex');
-        restaurarFiltrosNaUI();
-        atualizarSelectOperadores();
-        renderizarAba();
-      } else {
-        appContainer.classList.remove('flex');
-        appContainer.classList.add('hidden');
-        telaLogin.classList.remove('hidden');
-      }
-    }
-
-    window.onload = () => {
-      verificarAutenticacao();
-    };
-
-    function restaurarFiltrosNaUI() {
-      if (estado.filtros) {
-        const di = document.getElementById('filtroDataInicio');
-        const df = document.getElementById('filtroDataFim');
-        if (di) di.value = estado.filtros.dataInicio || '';
-        if (df) df.value = estado.filtros.dataFim || '';
-      }
-    }
-
-    function atualizarFiltrosGlobais() {
-      estado.filtros = {
-        dataInicio: document.getElementById('filtroDataInicio').value,
-        dataFim: document.getElementById('filtroDataFim').value,
-        operadorId: document.getElementById('selectOperador').value
-      };
-      salvarDadosNoLocalStorage();
-      renderizarAba();
-    }
-
-    function mudarAba(novaAba) {
-      estado.abaAtiva = novaAba;
-      salvarDadosNoLocalStorage();
-      document.querySelectorAll('.aba-btn').forEach(btn => {
-        btn.className = 'aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-[#131620] text-gray-300 hover:bg-[#1a1f2e] font-medium text-xs md:text-sm transition';
-      });
-      const btnAtivo = document.getElementById(`btn-${novaAba}`);
-      if (btnAtivo) {
-        btnAtivo.className = 'aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-emerald-600 text-white font-medium text-xs md:text-sm transition shadow-md shadow-emerald-900/30';
-      }
-      renderizarAba();
-    }
-
-    function atualizarSelectOperadores() {
-      const select = document.getElementById('selectOperador');
-      if (!select) return;
-      select.innerHTML = '<option value="">Todos os Operadores</option>';
-      
-      estado.operadores.forEach(op => {
-        const option = document.createElement('option');
-        option.value = op.id;
-        option.textContent = op.nome;
-        select.appendChild(option);
-      });
-      if (estado.filtros && estado.filtros.operadorId) {
-        select.value = estado.filtros.operadorId;
-      }
-    }
-
-    function limparFiltroDatas() {
-      document.getElementById('filtroDataInicio').value = '';
-      document.getElementById('filtroDataFim').value = '';
-      atualizarFiltrosGlobais();
-    }
-
-    function filtrarApostasPorGeral(apostas) {
-      const operadorFiltro = estado.filtros ? estado.filtros.operadorId : '';
-      const dataInicio = estado.filtros ? estado.filtros.dataInicio : '';
-      const dataFim = estado.filtros ? estado.filtros.dataFim : '';
-
-      return apostas.filter(a => {
-        const opId = a.operadorId || a.clienteId;
-        if (operadorFiltro && opId !== operadorFiltro) return false;
-        if (dataInicio && a.data < dataInicio) return false;
-        if (dataFim && a.data > dataFim) return false;
-        return true;
-      });
-    }
-
-    function renderizarAba() {
-      const main = document.getElementById('conteudo-principal');
-
-      if (estado.abaAtiva === 'dashboard') renderizarDashboard(main);
-      else if (estado.abaAtiva === 'operadores') renderizarOperadores(main);
-      else if (estado.abaAtiva === 'casas') renderizarCasas(main);
-      else if (estado.abaAtiva === 'relatorios') renderizarRelatorios(main);
-      else if (estado.abaAtiva === 'pagamentos') renderizarPagamentos(main);
-      else if (estado.abaAtiva === 'usuarios') renderizarUsuarios(main);
-    }
-
-    // ================= 1. DASHBOARD =================
-    function renderizarDashboard(container) {
-      const apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
-      const podeEditar = verificarSeTemPermissaoEdicao();
-
-      let lucroTotal = 0;
-      let totalVolume = 0;
-      apostasFiltradas.forEach(a => {
-        totalVolume += a.stake;
-        if (a.finalizada && a.retorno !== null) {
-          lucroTotal += (a.retorno - a.stake);
-        }
-      });
-
-      const operadorFiltro = estado.filtros.operadorId;
-      const operadoresParaForm = operadorFiltro ? estado.operadores.filter(o => o.id === operadorFiltro) : estado.operadores;
-
-      container.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
-          <div class="bg-[#131620] border border-white/10 rounded-xl p-5 md:p-6">
-            <p class="text-xs md:text-sm text-gray-400 mb-1">Total Apostado (Volume)</p>
-            <h3 class="text-xl md:text-2xl font-bold text-white">R$ ${totalVolume.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
-          </div>
-          <div class="bg-[#131620] border border-white/10 rounded-xl p-5 md:p-6">
-            <p class="text-xs md:text-sm text-gray-400 mb-1">Apostas Registradas</p>
-            <h3 class="text-xl md:text-2xl font-bold text-white">${apostasFiltradas.length}</h3>
-          </div>
-          <div class="bg-[#131620] border border-white/10 rounded-xl p-5 md:p-6">
-            <p class="text-xs md:text-sm text-gray-400 mb-1">Lucro Operacional (Finalizados)</p>
-            <h3 class="text-xl md:text-2xl font-bold ${lucroTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}">
-              R$ ${lucroTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-            </h3>
-          </div>
-        </div>
-
-        ${podeEditar ? `
-          <div class="bg-[#131620] border border-white/10 rounded-xl p-4 md:p-6 mb-6 md:mb-8 no-print">
-            <h3 class="text-sm md:text-md font-bold mb-4 text-white uppercase tracking-wide">⚡ LANÇAR APOSTA</h3>
-            <form onsubmit="adicionarAposta(event)" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3">
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">Data da Aposta</label>
-                <input type="date" id="apostaData" value="${estado.dataFormulario}" onchange="atualizarDataFormulario(this.value)" onclick="this.showPicker &amp;&amp; this.showPicker()" required class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none cursor-pointer">
-              </div>
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">Operador</label>
-                <select id="apostaOperador" required onchange="atualizarCasasFormAposta()" class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
-                  <option value="">Selecione...</option>
-                  ${operadoresParaForm.map(o => `<option value="${o.id}">${o.nome}</option>`).join('')}
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">Casa de Aposta</label>
-                <select id="apostaCasa" required class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
-                  <option value="">Selecione Operador...</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">Stake / Valor (R$)</label>
-                <input type="number" step="0.01" id="apostaStake" required placeholder="1000" class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
-              </div>
-              <div>
-                <label class="block text-xs text-gray-400 mb-1">Qtd. Apostas</label>
-                <input type="number" min="1" max="50" id="apostaQtd" value="1" required class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none font-bold">
-              </div>
-              <div class="flex items-end">
-                <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 font-bold text-white rounded text-xs transition">
-                  + Criar Aposta
-                </button>
-              </div>
-            </form>
-          </div>
-        ` : `
-          <div class="bg-blue-500/10 border border-blue-500/20 text-blue-300 p-4 rounded-xl mb-6 text-xs font-semibold">
-            ℹ️ Perfil atual: <strong>Somente Leitura</strong>. Lançamentos e alterações de apostas estão desativados.
-          </div>
-        `}
-
-        <div class="bg-[#131620] border border-white/10 rounded-xl p-4 md:p-6">
-          <h2 class="text-base md:text-lg font-bold mb-4 text-white">Gestão de Apostas</h2>
-          <div class="overflow-x-auto rounded-lg border border-white/10">
-            <table class="w-full text-left text-xs md:text-sm text-gray-300 min-w-[700px]">
-              <thead class="bg-[#1a1f2e] text-white uppercase text-[10px] md:text-xs">
-                <tr>
-                  <th class="p-3">Data</th>
-                  <th class="p-3">Operador</th>
-                  <th class="p-3">Casa</th>
-                  <th class="p-3">Stake</th>
-                  <th class="p-3">Valor de Retorno (R$)</th>
-                  <th class="p-3">Status</th>
-                  <th class="p-3 text-right no-print">Ação</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-white/5">
-                ${apostasFiltradas.length === 0 ? '<tr><td colspan="7" class="p-4 text-center text-gray-500">Nenhuma aposta encontrada.</td></tr>' : ''}
-                ${apostasFiltradas.map((a, index) => {
-                  const opId = a.operadorId || a.clienteId;
-                  const operador = estado.operadores.find(o => o.id === opId);
-                  const casa = estado.casas.find(cs => cs.id === a.casaId);
-                  const bgClass = index % 2 === 0 ? 'bg-[#131620]' : 'bg-[#181c28]';
-                  
-                  let statusTag = '<span class="bg-yellow-500/20 text-yellow-400 px-2.5 py-1 rounded text-[10px] md:text-xs font-bold">PENDENTE</span>';
-                  
-                  if (a.finalizada && a.retorno !== null) {
-                    const lucroOuPrejuizo = a.retorno - a.stake;
-                    if (a.retorno > a.stake) {
-                      statusTag = `<span class="bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded text-[10px] md:text-xs font-bold">GREEN (+R$ ${lucroOuPrejuizo.toLocaleString('pt-BR', {minimumFractionDigits: 2})})</span>`;
-                    } else if (a.retorno < a.stake) {
-                      statusTag = `<span class="bg-red-500/20 text-red-400 px-2.5 py-1 rounded text-[10px] md:text-xs font-bold">RED (-R$ ${Math.abs(lucroOuPrejuizo).toLocaleString('pt-BR', {minimumFractionDigits: 2})})</span>`;
-                    } else {
-                      statusTag = `<span class="bg-gray-500/20 text-gray-400 px-2.5 py-1 rounded text-[10px] md:text-xs font-bold">VOID</span>`;
-                    }
-                  }
-
-                  return `
-                    <tr class="${bgClass} hover:bg-[#1f2536] transition-colors">
-                      <td class="p-3">${a.data}</td>
-                      <td class="p-3 font-semibold text-white">${operador ? operador.nome : 'N/A'}</td>
-                      <td class="p-3">${casa ? casa.nome : 'N/A'}</td>
-                      <td class="p-3">R$ ${a.stake.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                      <td class="p-3">
-                        ${podeEditar ? (
-                          a.editando ? `
-                            <input type="number" step="0.01" id="input-retorno-${a.id}" value="${a.retorno !== null ? a.retorno : ''}" placeholder="Ex: 2700" class="w-28 px-2 py-1 bg-[#1a1f2e] border border-white rounded text-white text-xs outline-none">
-                          ` : (a.finalizada ? `R$ ${a.retorno.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : `
-                            <input type="number" step="0.01" id="input-retorno-${a.id}" placeholder="Ex: 2700" class="w-28 px-2 py-1 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
-                          `)
-                        ) : (a.finalizada ? `R$ ${a.retorno.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-')}
-                      </td>
-                      <td class="p-3">${statusTag}</td>
-                      <td class="p-3 text-right no-print">
-                        ${podeEditar ? `
-                          <div class="flex items-center justify-end gap-1.5">
-                            ${a.editando ? `
-                              <button onclick="salvarRetornoAposta('${a.id}')" class="px-2.5 py-1 bg-emerald-600 text-white text-xs rounded font-bold">Salvar</button>
-                              <button onclick="zerarApostaDirectly('${a.id}')" class="px-2 py-1 bg-red-600 text-white text-xs rounded font-bold">Zerar</button>
-                              <button onclick="cancelarEdicao('${a.id}')" class="px-2 py-1 bg-gray-600 text-gray-200 text-xs rounded">X</button>
-                            ` : (a.finalizada ? `
-                              <button onclick="habilitarEdicao('${a.id}')" class="px-2.5 py-1 bg-blue-600/20 text-blue-400 text-xs rounded font-bold">Editar</button>
-                            ` : `
-                              <button onclick="salvarRetornoAposta('${a.id}')" class="px-2.5 py-1 bg-emerald-600/30 text-emerald-300 text-xs rounded font-bold">Ok</button>
-                              <button onclick="zerarApostaDirectly('${a.id}')" class="px-2 py-1 bg-red-600/20 text-red-400 text-xs rounded font-bold">Zerar</button>
-                            `)}
-                            <button onclick="deletarAposta('${a.id}')" class="text-gray-500 hover:text-red-400 text-xs p-1">🗑️</button>
-                          </div>
-                        ` : '<span class="text-xs text-gray-500">-</span>'}
-                      </td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
-    }
-
-    function atualizarDataFormulario(novaData) {
-      estado.dataFormulario = novaData;
-      salvarDadosNoLocalStorage();
-    }
-
-    function atualizarCasasFormAposta() {
-      const operadorId = document.getElementById('apostaOperador').value;
-      const selectCasa = document.getElementById('apostaCasa');
-      if (!selectCasa) return;
-      selectCasa.innerHTML = '';
-
-      const casasDoOperador = estado.casas.filter(c => (c.operadorId || c.clienteId) === operadorId);
-      if (casasDoOperador.length === 0) {
-        selectCasa.innerHTML = '<option value="">Nenhuma casa cadastrada</option>';
-        return;
-      }
-
-      casasDoOperador.forEach(c => {
-        const option = document.createElement('option');
-        option.value = c.id;
-        option.textContent = c.nome;
-        selectCasa.appendChild(option);
-      });
-    }
-
-    function adicionarAposta(event) {
-      event.preventDefault();
-      if (!verificarSeTemPermissaoEdicao()) return;
-      const operadorId = document.getElementById('apostaOperador').value;
-      const casaId = document.getElementById('apostaCasa').value;
-      const stake = parseFloat(document.getElementById('apostaStake').value);
-      const dataAposta = document.getElementById('apostaData').value;
-      const qtd = parseInt(document.getElementById('apostaQtd').value) || 1;
-
-      if (!casaId) {
-        alert("Cadastre uma casa de apostas para este operador primeiro.");
-        return;
-      }
-
-      estado.dataFormulario = dataAposta;
-      for (let i = 0; i < qtd; i++) {
-        estado.apostas.push({
-          id: `aposta-${Date.now()}-${i}`,
-          operadorId,
-          casaId,
-          data: dataAposta,
-          stake,
-          retorno: null,
-          finalizada: false
-        });
-      }
-
-      salvarDadosNoLocalStorage();
-      renderizarAba();
-    }
-
-    function salvarRetornoAposta(apostaId) {
-      if (!verificarSeTemPermissaoEdicao()) return;
-      const input = document.getElementById(`input-retorno-${apostaId}`);
-      if (!input || input.value === '') {
-        alert("Digite o valor de retorno.");
-        return;
-      }
-      const aposta = estado.apostas.find(a => a.id === apostaId);
-      if (aposta) {
-        aposta.retorno = parseFloat(input.value);
-        aposta.finalizada = true;
-        aposta.editando = false;
-        salvarDadosNoLocalStorage();
-        renderizarAba();
-      }
-    }
-
-    function zerarApostaDirectly(apostaId) {
-      if (!verificarSeTemPermissaoEdicao()) return;
-      const aposta = estado.apostas.find(a => a.id === apostaId);
-      if (aposta) {
-        aposta.retorno = 0;
-        aposta.finalizada = true;
-        aposta.editando = false;
-        salvarDadosNoLocalStorage();
-        renderizarAba();
-      }
-    }
-
-    function habilitarEdicao(apostaId) {
-      if (!verificarSeTemPermissaoEdicao()) return;
-      const aposta = estado.apostas.find(a => a.id === apostaId);
-      if (aposta) {
-        aposta.editando = true;
-        renderizarAba();
-      }
-    }
-
-    function cancelarEdicao(apostaId) {
-      const aposta = estado.apostas.find(a => a.id === apostaId);
-      if (aposta) {
-        aposta.editando = false;
-        renderizarAba();
-      }
-    }
-
-    function deletarAposta(apostaId) {
-      if (!verificarSeTemPermissaoEdicao()) return;
-      if (confirm("Excluir esta aposta?")) {
-        estado.apostas = estado.apostas.filter(a => a.id !== apostaId);
-        salvarDadosNoLocalStorage();
-        renderizarAba();
-      }
-    }
-
-    // ================= 2. OPERADORES =================
-    function renderizarOperadores(container) {
-      const podeEditar = verificarSeTemPermissaoEdicao();
-      container.innerHTML = `
-        <div class="mb-6">
-          <h2 class="text-xl md:text-2xl font-bold text-white">Gestão de Operadores</h2>
-        </div>
-
-        ${podeEditar ? `
-          <div class="bg-[#131620] border border-white/10 rounded-xl p-4 md:p-6 mb-6 no-print">
-            <h3 class="text-sm font-bold mb-3 text-white">➕ Cadastrar Novo Operador</h3>
-            <form onsubmit="adicionarOperador(event)" class="flex flex-col sm:flex-row gap-3">
-              <input type="text" id="novoNome" required class="flex-1 px-4 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none" placeholder="Nome do Operador">
-              <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 font-bold text-white rounded text-xs transition">
-                Adicionar
-              </button>
-            </form>
-          </div>
-        ` : ''}
-
-        <div class="bg-[#131620] border border-white/10 rounded-xl p-4 md:p-6">
-          <h3 class="text-sm font-bold mb-4 text-white">Operadores Cadastrados</h3>
-          <div class="overflow-x-auto rounded-lg border border-white/10">
-            <table class="w-full text-left text-xs md:text-sm text-gray-300">
-              <thead class="bg-[#1a1f2e] text-white uppercase text-[10px] md:text-xs">
-                <tr>
-                  <th class="p-3">Nome</th>
-                  <th class="p-3 text-right no-print">Ações</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-white/5">
-                ${estado.operadores.length === 0 ? '<tr><td colspan="2" class="p-4 text-center text-gray-500">Nenhum operador cadastrado.</td></tr>' : ''}
-                ${estado.operadores.map((op, index) => `
-                  <tr class="${index % 2 === 0 ? 'bg-[#131620]' : 'bg-[#181c28]'}">
-                    <td class="p-3 font-semibold text-white">${op.nome}</td>
-                    <td class="p-3 text-right no-print">
-                      ${podeEditar ? `
-                        <button onclick="deletarOperador('${op.id}')" class="px-2.5 py-1 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded text-xs transition font-bold">Excluir</button>
-                      ` : '-'}
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
-    }
-
-    function adicionarOperador(e) {
-      e.preventDefault();
-      if (!verificarSeTemPermissaoEdicao()) return;
-      estado.operadores.push({
-        id: `operador-${Date.now()}`,
-        nome: document.getElementById('novoNome').value
-      });
-      salvarDadosNoLocalStorage();
-      atualizarSelectOperadores();
-      renderizarAba();
-    }
-
-    function deletarOperador(id) {
-      if (!verificarSeTemPermissaoEdicao()) return;
-      if (confirm("Excluir operador e dados associados?")) {
-        estado.operadores = estado.operadores.filter(o => o.id !== id);
-        estado.apostas = estado.apostas.filter(a => (a.operadorId || a.clienteId) !== id);
-        estado.casas = estado.casas.filter(cs => (cs.operadorId || cs.clienteId) !== id);
-        salvarDadosNoLocalStorage();
-        atualizarSelectOperadores();
-        renderizarAba();
-      }
-    }
-
-    // ================= 3. CASAS DE APOSTAS =================
-    function renderizarCasas(container) {
-      const operadorFiltro = estado.filtros.operadorId;
-      const casasFiltradas = operadorFiltro ? estado.casas.filter(c => (c.operadorId || c.clienteId) === operadorFiltro) : estado.casas;
-      const podeEditar = verificarSeTemPermissaoEdicao();
-
-      container.innerHTML = `
-        <div class="mb-6">
-          <h2 class="text-xl md:text-2xl font-bold text-white">Casas de Apostas</h2>
-        </div>
-
-        ${podeEditar ? `
-          <div class="bg-[#131620] border border-white/10 rounded-xl p-4 md:p-6 mb-6 no-print">
-            <h3 class="text-sm font-bold mb-3 text-white">🏛️ Cadastrar Nova Casa</h3>
-            <form onsubmit="adicionarCasa(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <select id="casaOperadorId" required class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
-                  <option value="">Selecione Operador...</option>
-                  ${estado.operadores.map(o => `<option value="${o.id}">${o.nome}</option>`).join('')}
-                </select>
-              </div>
-              <div>
-                <input type="text" id="casaNome" required placeholder="Nome da Casa (Ex: Bet365)" class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
-              </div>
-              <div>
-                <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 font-bold text-white rounded text-xs transition">
-                  + Adicionar Casa
-                </button>
-              </div>
-            </form>
-          </div>
-        ` : ''}
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          ${casasFiltradas.length === 0 ? '<div class="col-span-3 text-center text-gray-500 py-4">Nenhuma casa cadastrada.</div>' : ''}
-          ${casasFiltradas.map(casa => {
-            const operador = estado.operadores.find(o => o.id === (casa.operadorId || casa.clienteId));
-            return `
-              <div class="bg-[#131620] border border-white/10 rounded-xl p-4">
-                <div class="flex justify-between items-center mb-2">
-                  <h3 class="text-base font-bold text-white">${casa.nome}</h3>
-                  <span class="text-[10px] bg-white/5 px-2 py-0.5 rounded text-gray-400">${operador ? operador.nome : 'N/A'}</span>
+<body>
+
+    <!-- TELA DE LOGIN -->
+    <div id="login-screen">
+        <div class="login-card">
+            <div class="login-logo">BC</div>
+            <h1>BetControl</h1>
+            <p>Gestão Operacional Segura</p>
+            
+            <form id="login-form" onsubmit="realizarLogin(event)">
+                <div class="form-group">
+                    <label>Usuário de Acesso</label>
+                    <input type="text" id="username" class="form-control" required autocomplete="username">
                 </div>
-                ${podeEditar ? `
-                  <button onclick="deletarCasa('${casa.id}')" class="mt-3 w-full py-1 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded text-xs font-bold no-print">Excluir</button>
-                ` : ''}
-              </div>
-            `;
-          }).join('')}
-        </div>
-      `;
-    }
-
-    function adicionarCasa(e) {
-      e.preventDefault();
-      if (!verificarSeTemPermissaoEdicao()) return;
-      estado.casas.push({
-        id: `casa-${Date.now()}`,
-        operadorId: document.getElementById('casaOperadorId').value,
-        nome: document.getElementById('casaNome').value
-      });
-      salvarDadosNoLocalStorage();
-      renderizarAba();
-    }
-
-    function deletarCasa(id) {
-      if (!verificarSeTemPermissaoEdicao()) return;
-      if (confirm("Deletar esta casa de apostas?")) {
-        estado.casas = estado.casas.filter(c => c.id !== id);
-        salvarDadosNoLocalStorage();
-        renderizarAba();
-      }
-    }
-
-    // ================= 4. RELATÓRIOS =================
-    function renderizarRelatorios(container) {
-      const operadorFiltro = estado.filtros.operadorId;
-      const filtroCasaRelatorio = window.filtroCasaRelatorio || '';
-      let apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
-
-      if (filtroCasaRelatorio) {
-        apostasFiltradas = apostasFiltradas.filter(a => a.casaId === filtroCasaRelatorio);
-      }
-
-      apostasFiltradas.sort((a, b) => {
-        return estado.ordemRelatorio === 'asc' ? new Date(a.data) - new Date(b.data) : new Date(b.data) - new Date(a.data);
-      });
-
-      let volumeTotal = 0, lucroTotal = 0, totalFinalizadas = 0, greens = 0, reds = 0;
-      apostasFiltradas.forEach(a => {
-        volumeTotal += a.stake;
-        if (a.finalizada && a.retorno !== null) {
-          totalFinalizadas++;
-          lucroTotal += (a.retorno - a.stake);
-          if (a.retorno > a.stake) greens++;
-          else if (a.retorno < a.stake) reds++;
-        }
-      });
-
-      const roi = volumeTotal > 0 ? ((lucroTotal / volumeTotal) * 100).toFixed(2) : '0.00';
-      const winrate = totalFinalizadas > 0 ? ((greens / totalFinalizadas) * 100).toFixed(1) : '0.0';
-      const apostaMedia = apostasFiltradas.length > 0 ? (volumeTotal / apostasFiltradas.length).toFixed(2) : '0.00';
-
-      const relatorioPorCasa = {};
-      apostasFiltradas.forEach(a => {
-        if (!relatorioPorCasa[a.casaId]) {
-          const casaObj = estado.casas.find(c => c.id === a.casaId);
-          relatorioPorCasa[a.casaId] = { nome: casaObj ? casaObj.nome : 'Desconhecida', qtd: 0, volume: 0, lucro: 0 };
-        }
-        relatorioPorCasa[a.casaId].qtd++;
-        relatorioPorCasa[a.casaId].volume += a.stake;
-        if (a.finalizada && a.retorno !== null) {
-          relatorioPorCasa[a.casaId].lucro += (a.retorno - a.stake);
-        }
-      });
-
-      const casasParaFiltro = operadorFiltro ? estado.casas.filter(c => (c.operadorId || c.clienteId) === operadorFiltro) : estado.casas;
-
-      container.innerHTML = `
-        <div class="hidden print-header">
-          <div class="flex items-center gap-3">
-            <span class="font-black text-lg bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">BC BetControl</span>
-          </div>
-          <div class="text-right text-[10px]">Gerado em: ${new Date().toLocaleDateString('pt-BR')}</div>
-        </div>
-
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
-          <div>
-            <h2 class="text-xl md:text-2xl font-bold text-white">📊 Relatório Analítico</h2>
-            <p class="text-xs text-gray-400">Análise detalhada de banca e assertividade.</p>
-          </div>
-          <button onclick="window.print()" class="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition shadow-lg shadow-emerald-900/40">
-            🖨️ Imprimir / Salvar PDF
-          </button>
-        </div>
-
-        <div class="bg-[#131620] border border-white/10 rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-2 w-full sm:w-auto">
-            <span class="text-xs font-bold text-white">Casa:</span>
-            <select id="selectRelatorioCasa" onchange="window.filtroCasaRelatorio=this.value;renderizarAba()" class="px-2.5 py-1.5 bg-[#1a1f2e] border border-white/10 rounded text-xs text-white outline-none flex-1">
-              <option value="">Todas</option>
-              ${casasParaFiltro.map(c => `<option value="${c.id}" ${filtroCasaRelatorio === c.id ? 'selected' : ''}>${c.nome}</option>`).join('')}
-            </select>
-          </div>
-
-          <div class="flex items-center gap-2 w-full sm:w-auto">
-            <span class="text-xs font-bold text-white">Ordem:</span>
-            <select id="selectOrdemRelatorio" onchange="estado.ordemRelatorio=this.value;salvarDadosNoLocalStorage();renderizarAba()" class="px-2.5 py-1.5 bg-[#1a1f2e] border border-white/10 rounded text-xs text-white outline-none font-bold flex-1">
-              <option value="desc" ${estado.ordemRelatorio === 'desc' ? 'selected' : ''}>🔽 Recentes</option>
-              <option value="asc" ${estado.ordemRelatorio === 'asc' ? 'selected' : ''}>🔼 Antigas</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-          <div class="print-card bg-[#131620] border border-white/10 rounded-xl p-4">
-            <p class="text-[11px] text-gray-400 mb-1">ROI</p>
-            <h3 class="text-lg md:text-xl font-black ${parseFloat(roi) >= 0 ? 'text-emerald-400' : 'text-red-400'}">${roi}%</h3>
-          </div>
-          <div class="print-card bg-[#131620] border border-white/10 rounded-xl p-4">
-            <p class="text-[11px] text-gray-400 mb-1">Volume</p>
-            <h3 class="text-base md:text-xl font-bold text-blue-400">R$ ${volumeTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
-          </div>
-          <div class="print-card bg-[#131620] border border-white/10 rounded-xl p-4">
-            <p class="text-[11px] text-gray-400 mb-1">Lucro/Prejuízo</p>
-            <h3 class="text-base md:text-xl font-bold ${lucroTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}">R$ ${lucroTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
-          </div>
-          <div class="print-card bg-[#131620] border border-white/10 rounded-xl p-4">
-            <p class="text-[11px] text-gray-400 mb-1">Winrate</p>
-            <h3 class="text-base md:text-xl font-bold text-teal-300">${winrate}%</h3>
-          </div>
-          <div class="print-card bg-[#131620] border border-white/10 rounded-xl p-4 col-span-2 md:col-span-1">
-            <p class="text-[11px] text-gray-400 mb-1">Stake Média</p>
-            <h3 class="text-base md:text-xl font-bold text-purple-300">R$ ${parseFloat(apostaMedia).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
-          </div>
-        </div>
-
-        <div class="print-card bg-[#131620] border border-white/10 rounded-xl p-4 md:p-6 mb-6">
-          <h3 class="text-sm font-bold mb-3 text-white">📋 Detalhamento das Apostas</h3>
-          <div class="overflow-x-auto rounded-lg border border-white/10">
-            <table class="w-full text-left text-xs md:text-sm text-gray-300 min-w-[600px]">
-              <thead class="bg-[#1a1f2e] text-white uppercase text-[10px] md:text-xs">
-                <tr>
-                  <th class="p-2.5">Data</th>
-                  <th class="p-2.5">Operador</th>
-                  <th class="p-2.5">Casa</th>
-                  <th class="p-2.5">Stake</th>
-                  <th class="p-2.5">Retorno</th>
-                  <th class="p-2.5">Resultado</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-white/5">
-                ${apostasFiltradas.length === 0 ? '<tr><td colspan="6" class="p-4 text-center text-gray-500">Nenhuma aposta encontrada.</td></tr>' : ''}
-                ${apostasFiltradas.map((a, index) => {
-                  const operador = estado.operadores.find(o => o.id === (a.operadorId || a.clienteId));
-                  const casa = estado.casas.find(cs => cs.id === a.casaId);
-                  let resTexto = "PENDENTE", resCor = "text-yellow-400 font-bold";
-                  if (a.finalizada && a.retorno !== null) {
-                    const diff = a.retorno - a.stake;
-                    if (diff > 0) { resTexto = `+R$ ${diff.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`; resCor = "text-emerald-400 font-bold"; }
-                    else if (diff < 0) { resTexto = `-R$ ${Math.abs(diff).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`; resCor = "text-red-400 font-bold"; }
-                    else { resTexto = "VOID"; resCor = "text-gray-400"; }
-                  }
-                  return `
-                    <tr class="${index % 2 === 0 ? 'bg-[#131620]' : 'bg-[#181c28]'}">
-                      <td class="p-2.5">${a.data}</td>
-                      <td class="p-2.5 font-bold text-white">${operador ? operador.nome : 'N/A'}</td>
-                      <td class="p-2.5">${casa ? casa.nome : 'N/A'}</td>
-                      <td class="p-2.5">R$ ${a.stake.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                      <td class="p-2.5">${a.retorno !== null ? `R$ ${a.retorno.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-'}</td>
-                      <td class="p-2.5 ${resCor}">${resTexto}</td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
-    }
-
-    // ================= 5. ABA DE PAGAMENTO =================
-    function renderizarPagamentos(container) {
-      const operadorFiltro = estado.filtros.operadorId;
-      const filtroCasaPagamento = window.filtroCasaPagamento || '';
-      let apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
-
-      if (filtroCasaPagamento) {
-        apostasFiltradas = apostasFiltradas.filter(a => a.casaId === filtroCasaPagamento);
-      }
-
-      const relatorioPorCasa = {};
-      let resultadoLiquidoBruto = 0;
-      apostasFiltradas.forEach(a => {
-        if (!relatorioPorCasa[a.casaId]) {
-          const casaObj = estado.casas.find(c => c.id === a.casaId);
-          relatorioPorCasa[a.casaId] = { nome: casaObj ? casaObj.nome : 'Desconhecida', qtd: 0, volume: 0, lucro: 0 };
-        }
-        relatorioPorCasa[a.casaId].qtd++;
-        relatorioPorCasa[a.casaId].volume += a.stake;
-        if (a.finalizada && a.retorno !== null) {
-          const lucroAposta = a.retorno - a.stake;
-          relatorioPorCasa[a.casaId].lucro += lucroAposta;
-          resultadoLiquidoBruto += lucroAposta;
-        }
-      });
-
-      const pctDesconto = estado.descontoPercentual || 0;
-      const valorDesconto = resultadoLiquidoBruto * (pctDesconto / 100);
-      const totalLiquidoAPagar = resultadoLiquidoBruto - valorDesconto;
-      const casasParaFiltro = operadorFiltro ? estado.casas.filter(c => (c.operadorId || c.clienteId) === operadorFiltro) : estado.casas;
-      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=00020126360014BR.GOV.BCB.PIX0114008436963975204000053039865405${Math.max(0, totalLiquidoAPagar).toFixed(2)}5802BR5925FABIO%20WELLINGTON%20VENTURA%20M6009FORTALEZA62070503***6304`;
-
-      container.innerHTML = `
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
-          <div>
-            <h2 class="text-xl md:text-2xl font-bold text-white">💳 Gestão de Pagamentos</h2>
-            <p class="text-xs text-gray-400">Apuração de valores e PIX.</p>
-          </div>
-          <button onclick="window.print()" class="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition">
-            🖨️ Imprimir / Salvar PDF
-          </button>
-        </div>
-
-        <div class="bg-[#131620] border border-white/10 rounded-xl p-4 mb-6 grid grid-cols-1 md:grid-cols-3 gap-3 items-center no-print">
-          <div>
-            <label class="block text-xs font-bold text-white mb-1">Filtrar Casa:</label>
-            <select id="selectPagamentoCasa" onchange="window.filtroCasaPagamento=this.value;renderizarAba()" class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-xs text-white outline-none">
-              <option value="">Todas</option>
-              ${casasParaFiltro.map(c => `<option value="${c.id}" ${filtroCasaPagamento === c.id ? 'selected' : ''}>${c.nome}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-white mb-1">Desconto / Taxa (%):</label>
-            <input type="number" step="0.1" min="0" max="100" value="${pctDesconto}" onchange="atualizarDescontoPercentual(this.value)" class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none font-bold">
-          </div>
-          <div class="bg-[#161b26] p-3 rounded-lg border border-white/5 text-right">
-            <span class="text-[10px] text-gray-400 uppercase block font-bold">Líquido A Pagar</span>
-            <span class="text-lg md:text-xl font-black ${totalLiquidoAPagar >= 0 ? 'text-emerald-400' : 'text-red-400'}">R$ ${totalLiquidoAPagar.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div class="print-card bg-[#131620] border border-white/10 rounded-xl p-5 flex flex-col justify-between">
-            <div>
-              <h3 class="text-xs font-bold text-white mb-3 uppercase tracking-wider border-b border-white/10 pb-2">Apuração Bruta</h3>
-              <div class="space-y-2 text-xs">
-                <div class="flex justify-between text-gray-400"><span>Bruto:</span><span class="font-bold text-white">R$ ${resultadoLiquidoBruto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
-                ${pctDesconto > 0 ? `<div class="flex justify-between text-gray-400"><span>Desconto (${pctDesconto}%):</span><span class="font-bold text-red-400">- R$ ${valorDesconto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>` : ''}
-              </div>
-            </div>
-            <div class="mt-4 pt-3 border-t border-white/5 text-[11px] text-gray-400">
-              <p>Total de Bilhetes: <strong class="text-white">${apostasFiltradas.length}</strong></p>
-            </div>
-          </div>
-
-          <div class="print-card md:col-span-2 bg-gradient-to-br from-[#131620] to-[#181d2a] border border-emerald-500/30 rounded-xl p-5 flex flex-col sm:flex-row items-center gap-4">
-            <div class="bg-white p-2 rounded-xl shadow shrink-0">
-              <img src="${qrCodeUrl}" alt="QR Code PIX" class="w-36 h-36 object-contain">
-            </div>
-            <div class="flex-1 space-y-2 text-left w-full">
-              <span class="inline-block bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full">PIX Oficial</span>
-              <h4 class="text-xs font-black text-white">FABIO WELLINGTON VENTURA MARANHAO FILHO</h4>
-              <div>
-                <span class="text-[9px] text-gray-400 uppercase block font-bold">Chave (CPF)</span>
-                <span class="text-xs font-mono font-bold text-emerald-400">00843696397</span>
-              </div>
-              <button onclick="copiarChavePix('00843696397', this)" class="w-full px-3 py-1.5 bg-emerald-600/30 hover:bg-emerald-600 border border-emerald-500 text-emerald-300 hover:text-white text-xs font-bold rounded transition">
-                📋 Copiar Chave PIX
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    // ================= 6. ABA DE USUÁRIOS =================
-    function renderizarUsuarios(container) {
-      const podeEditar = verificarSeTemPermissaoEdicao();
-      container.innerHTML = `
-        <div class="mb-6">
-          <h2 class="text-xl md:text-2xl font-bold text-white">🔐 Gestão de Usuários</h2>
-          <p class="text-xs text-gray-400">Gerencie contas e permissões.</p>
-        </div>
-
-        ${podeEditar ? `
-          <div class="bg-[#131620] border border-white/10 rounded-xl p-4 md:p-6 mb-6 no-print">
-            <h3 class="text-sm font-bold mb-3 text-white">➕ Novo Usuário</h3>
-            <form onsubmit="adicionarUsuario(event)" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              <input type="text" id="novoUsuarioNome" required placeholder="Nome Completo" class="px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
-              <input type="text" id="novoUsuarioLogin" required placeholder="Login (ex: joao)" class="px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
-              <input type="password" id="novoUsuarioSenha" required placeholder="Senha" class="px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
-              <select id="novoUsuarioPerfil" class="px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none font-bold">
-                <option value="leitura">Somente Leitura</option>
-                <option value="editor">Editor (Completo)</option>
-              </select>
-              <div class="md:col-span-4 flex justify-end">
-                <button type="submit" class="px-5 py-2 bg-emerald-600 font-bold text-white rounded text-xs">Salvar Usuário</button>
-              </div>
+                <div class="form-group">
+                    <label>Senha de Segurança</label>
+                    <input type="password" id="password" class="form-control" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn">Acessar Sistema</button>
+                <div id="login-error" class="error-msg">Usuário ou senha inválidos.</div>
             </form>
-          </div>
-        ` : ''}
-
-        <div class="bg-[#131620] border border-white/10 rounded-xl p-4 md:p-6">
-          <h3 class="text-sm font-bold mb-4 text-white">Contas Cadastradas</h3>
-          <div class="overflow-x-auto rounded-lg border border-white/10">
-            <table class="w-full text-left text-xs md:text-sm text-gray-300">
-              <thead class="bg-[#1a1f2e] text-white uppercase text-[10px] md:text-xs">
-                <tr>
-                  <th class="p-3">Nome</th>
-                  <th class="p-3">Login</th>
-                  <th class="p-3">Perfil</th>
-                  <th class="p-3 text-right no-print">Ação</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-white/5">
-                ${estado.usuarios.map((u, index) => `
-                  <tr class="${index % 2 === 0 ? 'bg-[#131620]' : 'bg-[#181c28]'}">
-                    <td class="p-3 font-semibold text-white">${u.nome}</td>
-                    <td class="p-3 font-mono text-emerald-300">${u.usuario}</td>
-                    <td class="p-3">${u.perfil === 'editor' ? '<span class="text-emerald-400 font-bold">Editor</span>' : '<span class="text-blue-400 font-bold">Leitura</span>'}</td>
-                    <td class="p-3 text-right no-print">
-                      ${podeEditar && u.usuario !== 'admin' ? `<button onclick="deletarUsuario('${u.id}')" class="px-2.5 py-1 bg-red-600/20 text-red-400 rounded text-xs font-bold">Excluir</button>` : '-'}
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
         </div>
-      `;
-    }
+    </div>
 
-    function adicionarUsuario(e) {
-      e.preventDefault();
-      if (!verificarSeTemPermissaoEdicao()) return;
-      const nome = document.getElementById('novoUsuarioNome').value.trim();
-      const usuario = document.getElementById('novoUsuarioLogin').value.trim().toLowerCase();
-      const senha = document.getElementById('novoUsuarioSenha').value.trim();
-      const perfil = document.getElementById('novoUsuarioPerfil').value;
+    <!-- SISTEMA PRINCIPAL -->
+    <div id="app-container">
+        <header>
+            <div class="header-brand">
+                <div class="header-logo">BC</div>
+                <h2 style="font-size: 18px; font-weight: bold;">BetControl</h2>
+            </div>
+            <div class="user-info">
+                <span id="user-badge" class="badge">Admin</span>
+                <button class="btn-logout" onclick="realizarLogout()">Sair</button>
+            </div>
+        </header>
 
-      if (estado.usuarios.some(u => u.usuario === usuario)) {
-        alert("Este login já existe.");
-        return;
-      }
+        <main>
+            <!-- MÉTRICAS -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-title">Banca Total Atual</div>
+                    <div id="m-banca-total" class="metric-value">R$ 0,00</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Lucro / Prejuízo Líquido</div>
+                    <div id="m-lucro" class="metric-value">R$ 0,00</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">ROI Geral</div>
+                    <div id="m-roi" class="metric-value">0,00%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Total de Apostas</div>
+                    <div id="m-total-apostas" class="metric-value">0</div>
+                </div>
+            </div>
 
-      estado.usuarios.push({ id: `usr-${Date.now()}`, nome, usuario, senha, perfil });
-      salvarDadosNoLocalStorage();
-      renderizarAba();
-      alert("Usuário criado!");
-    }
+            <!-- ABAS -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="mudarAba('lancamentos')">Lançamentos</button>
+                <button class="tab-btn" onclick="mudarAba('dashboard')">Relatórios & Gráficos</button>
+                <button class="tab-btn" onclick="mudarAba('config')">Configurações & Casas</button>
+            </div>
 
-    function deletarUsuario(id) {
-      if (!verificarSeTemPermissaoEdicao()) return;
-      if (confirm("Excluir este usuário?")) {
-        estado.usuarios = estado.usuarios.filter(u => u.id !== id);
-        salvarDadosNoLocalStorage();
-        renderizarAba();
-      }
-    }
+            <!-- ABA LANÇAMENTOS -->
+            <div id="tab-lancamentos" class="tab-content active">
+                <div class="card" id="card-nova-aposta">
+                    <h3>Registrar Nova Aposta</h3>
+                    <form onsubmit="adicionarAposta(event)">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Data</label>
+                                <input type="date" id="ap-data" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Casa de Aposta</label>
+                                <select id="ap-casa" class="form-control" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Esporte / Categoria</label>
+                                <input type="text" id="ap-esporte" class="form-control" placeholder="Ex: Futebol, Dota 2" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Evento / Jogo</label>
+                                <input type="text" id="ap-evento" class="form-control" placeholder="Ex: Time A x Time B" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Mercado</label>
+                                <input type="text" id="ap-mercado" class="form-control" placeholder="Ex: Over 2.5, Handicap" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Valor Apostado (R$)</label>
+                                <input type="number" step="0.01" id="ap-valor" class="form-control" placeholder="0.00" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Odd</label>
+                                <input type="number" step="0.01" id="ap-odd" class="form-control" placeholder="1.90" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Status</label>
+                                <select id="ap-status" class="form-control" required>
+                                    <option value="Pendente">Pendente</option>
+                                    <option value="Green">Green (Vitória)</option>
+                                    <option value="Red">Red (Derrota)</option>
+                                    <option value="Anulado">Anulado / Reembolso</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn" style="max-width: 200px;">Salvar Aposta</button>
+                    </form>
+                </div>
 
-    function atualizarDescontoPercentual(val) {
-      estado.descontoPercentual = Math.max(0, Math.min(100, parseFloat(val) || 0));
-      salvarDadosNoLocalStorage();
-    }
+                <div class="card">
+                    <h3>Histórico de Apostas</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Casa</th>
+                                    <th>Evento</th>
+                                    <th>Mercado</th>
+                                    <th>Valor</th>
+                                    <th>Odd</th>
+                                    <th>Retorno</th>
+                                    <th>Status</th>
+                                    <th id="th-acoes">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-apostas-corpo"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
 
-    function copiarChavePix(chave, btn) {
-      navigator.clipboard.writeText(chave).then(() => {
-        const original = btn.innerHTML;
-        btn.innerHTML = "✅ Copiado!";
-        setTimeout(() => btn.innerHTML = original, 2000);
-      });
-    }
-  </script>
+            <!-- ABA DASHBOARD -->
+            <div id="tab-dashboard" class="tab-content">
+                <div class="charts-grid">
+                    <div class="card">
+                        <h3>Evolução da Banca</h3>
+                        <canvas id="chartEvolucao"></canvas>
+                    </div>
+                    <div class="card">
+                        <h3>Desempenho por Casa</h3>
+                        <canvas id="chartCasas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA CONFIGURAÇÕES -->
+            <div id="tab-config" class="tab-content">
+                <div class="card" id="card-configuracoes">
+                    <h3>Gerenciar Casas de Apostas</h3>
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <input type="text" id="nova-casa-nome" class="form-control" placeholder="Nome da Casa (Ex: Pinnacle, Betano)" style="max-width: 300px;">
+                        <input type="number" step="0.01" id="nova-casa-saldo" class="form-control" placeholder="Banca Inicial (R$)" style="max-width: 200px;">
+                        <button type="button" class="btn" style="max-width: 150px;" onclick="adicionarCasa()">Adicionar</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Casa de Aposta</th>
+                                    <th>Banca Inicial / Atual</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-casas-corpo"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // CREDENCIAIS E ESTADO
+        const usuarios = {
+            'admin': { senha: '123456', perfil: 'Admin' },
+            'operador': { senha: '123456', perfil: 'Leitura' }
+        };
+
+        let usuarioLogado = sessionStorage.getItem('betcontrol_user') || null;
+        let perfilLogado = sessionStorage.getItem('betcontrol_perfil') || null;
+
+        let dadosSistema = JSON.parse(localStorage.getItem('betcontrol_dados')) || {
+            apostas: [],
+            casas: [
+                { nome: 'Pinnacle', saldoInicial: 1000 },
+                { nome: 'Betano', saldoInicial: 1000 }
+            ]
+        };
+
+        let chartEvolucaoInstancia = null;
+        let chartCasasInstancia = null;
+
+        // INICIALIZAÇÃO
+        window.onload = function() {
+            document.getElementById('ap-data').valueAsDate = new Date();
+            if (usuarioLogado) {
+                entrarNoSistema();
+            }
+        };
+
+        function realizarLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value.trim();
+
+            if (usuarios[u] && usuarios[u].senha === p) {
+                usuarioLogado = u;
+                perfilLogado = usuarios[u].perfil;
+                sessionStorage.setItem('betcontrol_user', u);
+                sessionStorage.setItem('betcontrol_perfil', perfilLogado);
+                entrarNoSistema();
+            } else {
+                document.getElementById('login-error').style.display = 'block';
+            }
+        }
+
+        function realizarLogout() {
+            sessionStorage.clear();
+            location.reload();
+        }
+
+        function entrarNoSistema() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-container').style.display = 'flex';
+            document.getElementById('user-badge').innerText = perfilLogado;
+
+            if (perfilLogado === 'Leitura') {
+                document.getElementById('card-nova-aposta').style.display = 'none';
+                document.getElementById('card-configuracoes').style.display = 'none';
+                document.getElementById('th-acoes').style.display = 'none';
+            }
+
+            atualizarSelectCasas();
+            renderizarTudo();
+        }
+
+        function mudarAba(abaId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('tab-' + abaId).classList.add('active');
+            event.currentTarget.classList.add('active');
+
+            if (abaId === 'dashboard') {
+                setTimeout(renderizarGraficos, 100);
+            }
+        }
+
+        function atualizarSelectCasas() {
+            const select = document.getElementById('ap-casa');
+            select.innerHTML = '';
+            dadosSistema.casas.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.nome;
+                opt.textContent = c.nome;
+                select.appendChild(opt);
+            });
+        }
+
+        function salvarDados() {
+            localStorage.setItem('betcontrol_dados', JSON.stringify(dadosSistema));
+        }
+
+        // GERENCIAMENTO DE CASAS
+        function adicionarCasa() {
+            const nome = document.getElementById('nova-casa-nome').value.trim();
+            const saldo = parseFloat(document.getElementById('nova-casa-saldo').value);
+
+            if (!nome || isNaN(saldo)) {
+                alert('Preencha o nome e a banca inicial corretamente.');
+                return;
+            }
+
+            if (dadosSistema.casas.some(c => c.nome.toLowerCase() === nome.toLowerCase())) {
+                alert('Esta casa já está cadastrada.');
+                return;
+            }
+
+            dadosSistema.casas.push({ nome, saldoInicial: saldo });
+            salvarDados();
+            document.getElementById('nova-casa-nome').value = '';
+            document.getElementById('nova-casa-saldo').value = '';
+            atualizarSelectCasas();
+            renderizarTudo();
+        }
+
+        function excluirCasa(index) {
+            if (confirm('Deseja realmente excluir esta casa?')) {
+                dadosSistema.casas.splice(index, 1);
+                salvarDados();
+                atualizarSelectCasas();
+                renderizarTudo();
+            }
+        }
+
+        // GERENCIAMENTO DE APOSTAS
+        function adicionarAposta(e) {
+            e.preventDefault();
+            const novaAposta = {
+                id: Date.now(),
+                data: document.getElementById('ap-data').value,
+                casa: document.getElementById('ap-casa').value,
+                esporte: document.getElementById('ap-esporte').value,
+                evento: document.getElementById('ap-evento').value,
+                mercado: document.getElementById('ap-mercado').value,
+                valor: parseFloat(document.getElementById('ap-valor').value),
+                odd: parseFloat(document.getElementById('ap-odd').value),
+                status: document.getElementById('ap-status').value
+            };
+
+            dadosSistema.apostas.push(novaAposta);
+            salvarDados();
+            e.target.reset();
+            document.getElementById('ap-data').valueAsDate = new Date();
+            renderizarTudo();
+        }
+
+        function excluirAposta(id) {
+            if (confirm('Deseja excluir esta aposta?')) {
+                dadosSistema.apostas = dadosSistema.apostas.filter(a => a.id !== id);
+                salvarDados();
+                renderizarTudo();
+            }
+        }
+
+        // RENDERIZAÇÃO GERAL E MÉTRICAS
+        function renderizarTudo() {
+            let corpoApostas = document.getElementById('tabela-apostas-corpo');
+            corpoApostas.innerHTML = '';
+
+            let totalInvestido = 0;
+            let retornoTotal = 0;
+            let totalApostasCount = dadosSistema.apostas.length;
+
+            // Ordenar por data decrescente
+            let apostasOrdenadas = [...dadosSistema.apostas].sort((a,b) => new Date(b.data) - new Date(a.data));
+
+            apostasOrdenadas.forEach(ap => {
+                totalInvestido += ap.valor;
+                let retorno = 0;
+                let statusClass = 'status-yellow';
+
+                if (ap.status === 'Green') {
+                    retorno = ap.valor * ap.odd;
+                    retornoTotal += retorno;
+                    statusClass = 'status-green';
+                } else if (ap.status === 'Red') {
+                    retorno = 0;
+                    statusClass = 'status-red';
+                } else if (ap.status === 'Anulado') {
+                    retorno = ap.valor;
+                    retornoTotal += retorno;
+                    statusClass = 'status-yellow';
+                } else {
+                    retorno = ap.valor; // Pendente segura o caixa provisoriamente
+                    retornoTotal += retorno;
+                }
+
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${ap.data.split('-').reverse().join('/')}</td>
+                    <td><b>${ap.casa}</b></td>
+                    <td>${ap.evento} <br><small style="color:var(--text-muted);">${ap.esporte}</small></td>
+                    <td>${ap.mercado}</td>
+                    <td>R$ ${ap.valor.toFixed(2)}</td>
+                    <td>${ap.odd.toFixed(2)}</td>
+                    <td>R$ ${retorno.toFixed(2)}</td>
+                    <td><span class="status-badge ${statusClass}">${ap.status}</span></td>
+                    ${perfilLogado === 'Leitura' ? '' : `<td><button class="btn-sm btn-danger" onclick="excluirAposta(${ap.id})">Excluir</button></td>`}
+                `;
+                corpoApostas.appendChild(tr);
+            });
+
+            // Tabela de Casas
+            let corpoCasas = document.getElementById('tabela-casas-corpo');
+            corpoCasas.innerHTML = '';
+            let somaBancasIniciais = 0;
+
+            dadosSistema.casas.forEach((c, index) => {
+                somaBancasIniciais += c.saldoInicial;
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><b>${c.nome}</b></td>
+                    <td>R$ ${c.saldoInicial.toFixed(2)}</td>
+                    <td>${perfilLogado === 'Leitura' ? '-' : `<button class="btn-sm btn-danger" onclick="excluirCasa(${index})">Remover</button>`}</td>
+                `;
+                corpoCasas.appendChild(tr);
+            });
+
+            let lucroLiquido = retornoTotal - totalInvestido;
+            let bancaTotalAtual = somaBancasIniciais + lucroLiquido;
+            let roiGeral = totalInvestido > 0 ? (lucroLiquido / totalInvestido) * 100 : 0;
+
+            document.getElementById('m-banca-total').innerText = `R$ ${bancaTotalAtual.toFixed(2)}`;
+            let elLucro = document.getElementById('m-lucro');
+            elLucro.innerText = `R$ ${lucroLiquido.toFixed(2)}`;
+            elLucro.className = `metric-value ${lucroLiquido >= 0 ? 'text-green' : 'text-red'}`;
+
+            let elRoi = document.getElementById('m-roi');
+            elRoi.innerText = `${roiGeral.toFixed(2)}%`;
+            elRoi.className = `metric-value ${roiGeral >= 0 ? 'text-green' : 'text-red'}`;
+
+            document.getElementById('m-total-apostas').innerText = totalApostasCount;
+        }
+
+        // GRÁFICOS
+        function renderizarGraficos() {
+            const ctxEvolucao = document.getElementById('chartEvolucao').getContext('2d');
+            const ctxCasas = document.getElementById('chartCasas').getContext('2d');
+
+            if (chartEvolucaoInstancia) chartEvolucaoInstancia.destroy();
+            if (chartCasasInstancia) chartCasasInstancia.destroy();
+
+            // Dados Evolução Temporal
+            let acumulado = 0;
+            let datasLabels = [];
+            let dadosEvolucao = [];
+
+            let apostasCronologicas = [...dadosSistema.apostas].sort((a,b) => new Date(a.data) - new Date(b.data));
+            apostasCronologicas.forEach(ap => {
+                if (ap.status === 'Green') acumulado += (ap.valor * ap.odd) - ap.valor;
+                if (ap.status === 'Red') acumulado -= ap.valor;
+                
+                datasLabels.push(ap.data.split('-').reverse().join('/'));
+                dadosEvolucao.push(acumulado);
+            });
+
+            chartEvolucaoInstancia = new Chart(ctxEvolucao, {
+                type: 'line',
+                data: {
+                    labels: datasLabels.length ? datasLabels : ['Início'],
+                    datasets: [{
+                        label: 'Lucro Acumulado (R$)',
+                        data: dadosEvolucao.length ? dadosEvolucao : [0],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } } }
+            });
+
+            // Dados por Casa
+            let casasNomes = dadosSistema.casas.map(c => c.nome);
+            let casasLucros = casasNomes.map(casa => {
+                let total = 0;
+                dadosSistema.apostas.filter(a => a.casa === casa).forEach(ap => {
+                    if (ap.status === 'Green') total += (ap.valor * ap.odd) - ap.valor;
+                    if (ap.status === 'Red') total -= ap.valor;
+                });
+                return total;
+            });
+
+            chartCasasInstancia = new Chart(ctxCasas, {
+                type: 'bar',
+                data: {
+                    labels: casasNomes,
+                    datasets: [{
+                        label: 'Lucro por Casa (R$)',
+                        data: casasLucros,
+                        backgroundColor: casasLucros.map(v => v >= 0 ? '#10b981' : '#ef4444')
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } } }
+            });
+        }
+    </script>
 </body>
 </html>
