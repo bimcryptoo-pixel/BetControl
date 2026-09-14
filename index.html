@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>BetControl - Gestão Operacional</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* Estilização para forçar o picker de calendário nativo visível e clicável */
     input[type="date"]::-webkit-calendar-picker-indicator {
       filter: invert(1);
       cursor: pointer;
@@ -16,7 +17,6 @@
       opacity: 1;
     }
 
-    /* Regras de impressão configuradas para permitir múltiplas páginas A4 */
     @media print {
       @page {
         size: A4 landscape;
@@ -96,8 +96,6 @@
     <div class="absolute -bottom-32 -right-32 w-72 h-72 md:w-96 md:h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
     <div class="w-full max-w-md bg-[#111520] border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl relative z-10 backdrop-blur-xl">
-      
-      <!-- LOGOTIPO DESTAQUE NA TELA DE LOGIN -->
       <div class="flex flex-col items-center mb-6 md:mb-8">
         <div class="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-2xl p-[2px] shadow-xl shadow-emerald-500/20 mb-3 md:mb-4 group">
           <div class="w-full h-full bg-[#0c0e14] rounded-[14px] flex items-center justify-center relative overflow-hidden">
@@ -114,7 +112,6 @@
         <p class="text-[10px] md:text-xs uppercase font-bold tracking-widest text-gray-400 mt-1">Gestão Operacional Segura</p>
       </div>
 
-      <!-- FORMULÁRIO DE AUTENTICAÇÃO -->
       <form onsubmit="realizarLogin(event)" class="space-y-4">
         <div>
           <label class="block text-xs font-bold uppercase text-gray-300 mb-1.5">Usuário de Acesso</label>
@@ -134,13 +131,17 @@
           Acessar Sistema
         </button>
       </form>
+
+      <div class="mt-6 pt-4 border-t border-white/5 text-center space-y-1">
+        <p class="text-[11px] text-gray-500">Admin (Completo): <strong class="text-gray-400">admin</strong> / <strong class="text-gray-400">123456</strong></p>
+        <p class="text-[11px] text-gray-500">Operador (Leitura): <strong class="text-gray-400">operador</strong> / <strong class="text-gray-400">123456</strong></p>
+      </div>
     </div>
   </div>
 
   <!-- ================= APLICAÇÃO PRINCIPAL ================= -->
   <div id="app-container" class="hidden flex-col flex-1">
     
-    <!-- HEADER RESPONSIVO -->
     <header class="sticky top-0 z-40 bg-[#0c0e14] border-b border-white/10 px-4 md:px-8 py-3 md:py-4 flex flex-col md:flex-row items-center justify-between gap-3 no-print">
       <div class="flex items-center justify-between w-full md:w-auto">
         <div class="flex items-center gap-3">
@@ -162,7 +163,6 @@
           </div>
         </div>
 
-        <!-- Botão Sair mobile (visível apenas em telas pequenas no topo) -->
         <div class="flex md:hidden items-center gap-2">
           <button onclick="realizarLogout()" title="Sair" class="p-2 bg-red-600/20 text-red-400 rounded-lg text-xs font-bold">
             🔒 Sair
@@ -170,7 +170,6 @@
         </div>
       </div>
 
-      <!-- FILTROS E CONTROLES DO TOPO -->
       <div class="flex flex-wrap items-center justify-end gap-2 md:gap-4 w-full md:w-auto">
         <div class="flex items-center gap-2 bg-[#131620] p-1.5 rounded-lg border border-white/10 shadow-inner overflow-x-auto max-w-full">
           <div class="relative">
@@ -191,7 +190,6 @@
           </select>
         </div>
 
-        <!-- INFO USUÁRIO E LOGOUT (DESKTOP) -->
         <div class="hidden md:flex items-center gap-3 pl-2 border-l border-white/10">
           <div class="text-right">
             <span id="headerNomeUsuario" class="block text-xs font-bold text-white">admin</span>
@@ -204,10 +202,7 @@
       </div>
     </header>
 
-    <!-- LAYOUT PRINCIPAL: SIDEBAR HORIZONTAL NO MOBILE / VERTICAL NO DESKTOP -->
     <div class="flex flex-col md:flex-row flex-1">
-      
-      <!-- MENU DE ABAS (Responsivo: Linha horizontal no celular, coluna no PC) -->
       <aside class="w-full md:w-64 bg-[#090a0f] md:border-r border-b md:border-b-0 border-white/10 p-3 md:p-6 flex md:flex-col gap-2 overflow-x-auto no-print shrink-0">
         <button id="btn-dashboard" onclick="mudarAba('dashboard')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-emerald-600 text-white font-medium text-xs md:text-sm transition shadow-md shadow-emerald-900/30">
           📊 Dashboard
@@ -229,43 +224,29 @@
         </button>
       </aside>
 
-      <!-- CONTEÚDO PRINCIPAL -->
       <main class="flex-1 p-4 md:p-8 overflow-x-hidden" id="conteudo-principal">
-        <!-- Conteúdo injetado por JavaScript -->
       </main>
     </div>
   </div>
 
   <script>
+    const SUPABASE_URL = 'https://esflUt9ywKNd57UxpRzC5g.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_esflUt9ywKNd57UxpRzC5g_FS2aFvAW';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
     const DADOS_INICIAIS = {
       abaAtiva: 'dashboard',
       dataFormulario: new Date().toISOString().split('T')[0],
       descontoPercentual: 0,
       ordemRelatorio: 'desc',
-      filtros: {
-        dataInicio: '',
-        dataFim: '',
-        operadorId: ''
-      },
+      filtros: { dataInicio: '', dataFim: '', operadorId: '' },
       usuarios: [
         { id: 'usr-1', usuario: 'admin', senha: '123456', perfil: 'editor', nome: 'Administrador Mestre' },
         { id: 'usr-2', usuario: 'operador', senha: '123456', perfil: 'leitura', nome: 'Operador Padrão' }
       ],
-      operadores: [
-        { id: 'operador-1', nome: 'LUCAS' },
-        { id: 'operador-2', nome: 'Maria Santos' },
-      ],
-      casas: [
-        { id: 'casa-1', nome: 'HM Bets', operadorId: 'operador-1' },
-        { id: 'casa-2', nome: 'BET Certa', operadorId: 'operador-1' },
-        { id: 'casa-3', nome: 'Bet365', operadorId: 'operador-2' },
-      ],
-      apostas: [
-        { id: 'aposta-1', operadorId: 'operador-1', casaId: 'casa-2', data: '2026-09-07', stake: 1500, retorno: 0, finalizada: true },
-        { id: 'aposta-2', operadorId: 'operador-1', casaId: 'casa-2', data: '2026-09-07', stake: 1500, retorno: 2355, finalizada: true },
-        { id: 'aposta-3', operadorId: 'operador-1', casaId: 'casa-2', data: '2026-09-07', stake: 1000, retorno: 0, finalizada: true },
-        { id: 'aposta-4', operadorId: 'operador-1', casaId: 'casa-2', data: '2026-09-07', stake: 1000, retorno: 0, finalizada: true },
-      ]
+      operadores: [],
+      casas: [],
+      apostas: []
     };
 
     let estado = carregarDadosDoLocalStorage();
@@ -289,16 +270,79 @@
               { id: 'usr-2', usuario: 'operador', senha: '123456', perfil: 'leitura', nome: 'Operador Padrão' }
             ];
           }
-          if (parsed.clientes && !parsed.operadores) {
-            parsed.operadores = parsed.clientes;
-            delete parsed.clientes;
-          }
           return parsed;
         } catch (e) {
-          console.error('Erro ao ler do localStorage, carregando padrão.', e);
+          console.error('Erro ao ler do localStorage:', e);
         }
       }
       return DADOS_INICIAIS;
+    }
+
+    // Sincronização e nuvem
+    async function carregarDadosDoServidorOuLocal() {
+      try {
+        const { data: ops } = await supabaseClient.from('operadores').select('*');
+        const { data: css } = await supabaseClient.from('casas').select('*');
+        const { data: aps } = await supabaseClient.from('apostas').select('*');
+        const { data: usrs } = await supabaseClient.from('usuarios').select('*');
+
+        if (ops && ops.length > 0) {
+          estado.operadores = ops;
+          estado.casas = css.map(c => ({ id: c.id, operadorId: c.operador_id, nome: c.nome }));
+          estado.apostas = aps.map(a => ({ 
+            id: a.id, 
+            operadorId: a.operador_id, 
+            casaId: a.casa_id, 
+            data: a.data, 
+            stake: Number(a.stake), 
+            retorno: a.retorno !== null ? Number(a.retorno) : null, 
+            finalizada: a.finalizada 
+          }));
+          if (usrs && usrs.length > 0) estado.usuarios = usrs;
+          salvarDadosNoLocalStorage();
+        }
+      } catch (erro) {
+        console.warn("Modo Offline ativado: Usando cache local.", erro);
+        estado = carregarDadosDoLocalStorage();
+      }
+      verificarAutenticacao();
+    }
+
+    async function salvarNaNuvemELocal(tipo, dadosObjeto) {
+      salvarDadosNoLocalStorage();
+      try {
+        if (tipo === 'aposta') {
+          await supabaseClient.from('apostas').upsert({
+            id: dadosObjeto.id,
+            operador_id: dadosObjeto.operadorId,
+            casa_id: dadosObjeto.casaId,
+            data: dadosObjeto.data,
+            stake: dadosObjeto.stake,
+            retorno: dadosObjeto.retorno,
+            finalizada: dadosObjeto.finalizada
+          });
+        } else if (tipo === 'operador') {
+          await supabaseClient.from('operadores').upsert({ id: dadosObjeto.id, nome: dadosObjeto.nome });
+        } else if (tipo === 'casa') {
+          await supabaseClient.from('casas').upsert({ id: dadosObjeto.id, operador_id: dadosObjeto.operadorId, nome: dadosObjeto.nome });
+        } else if (tipo === 'usuario') {
+          await supabaseClient.from('usuarios').upsert({ id: dadosObjeto.id, usuario: dadosObjeto.usuario, senha: dadosObjeto.senha, perfil: dadosObjeto.perfil, nome: dadosObjeto.nome });
+        }
+      } catch (erro) {
+        console.error("Erro ao sincronizar com Supabase (salvo localmente):", erro);
+      }
+    }
+
+    async function deletarDaNuvemELocal(tipo, id) {
+      salvarDadosNoLocalStorage();
+      try {
+        if (tipo === 'aposta') await supabaseClient.from('apostas').delete().eq('id', id);
+        if (tipo === 'operador') await supabaseClient.from('operadores').delete().eq('id', id);
+        if (tipo === 'casa') await supabaseClient.from('casas').delete().eq('id', id);
+        if (tipo === 'usuario') await supabaseClient.from('usuarios').delete().eq('id', id);
+      } catch (erro) {
+        console.error("Erro ao deletar na nuvem:", erro);
+      }
     }
 
     function obterUsuarioLogado() {
@@ -363,8 +407,8 @@
       }
     }
 
-    window.onload = () => {
-      verificarAutenticacao();
+    window.onload = async () => {
+      await carregarDadosDoServidorOuLocal();
     };
 
     function restaurarFiltrosNaUI() {
@@ -627,7 +671,7 @@
       });
     }
 
-    function adicionarAposta(event) {
+    async function adicionarAposta(event) {
       event.preventDefault();
       if (!verificarSeTemPermissaoEdicao()) return;
       const operadorId = document.getElementById('apostaOperador').value;
@@ -643,7 +687,7 @@
 
       estado.dataFormulario = dataAposta;
       for (let i = 0; i < qtd; i++) {
-        estado.apostas.push({
+        const novaAposta = {
           id: `aposta-${Date.now()}-${i}`,
           operadorId,
           casaId,
@@ -651,14 +695,15 @@
           stake,
           retorno: null,
           finalizada: false
-        });
+        };
+        estado.apostas.push(novaAposta);
+        await salvarNaNuvemELocal('aposta', novaAposta);
       }
 
-      salvarDadosNoLocalStorage();
       renderizarAba();
     }
 
-    function salvarRetornoAposta(apostaId) {
+    async function salvarRetornoAposta(apostaId) {
       if (!verificarSeTemPermissaoEdicao()) return;
       const input = document.getElementById(`input-retorno-${apostaId}`);
       if (!input || input.value === '') {
@@ -670,19 +715,19 @@
         aposta.retorno = parseFloat(input.value);
         aposta.finalizada = true;
         aposta.editando = false;
-        salvarDadosNoLocalStorage();
+        await salvarNaNuvemELocal('aposta', aposta);
         renderizarAba();
       }
     }
 
-    function zerarApostaDirectly(apostaId) {
+    async function zerarApostaDirectly(apostaId) {
       if (!verificarSeTemPermissaoEdicao()) return;
       const aposta = estado.apostas.find(a => a.id === apostaId);
       if (aposta) {
         aposta.retorno = 0;
         aposta.finalizada = true;
         aposta.editando = false;
-        salvarDadosNoLocalStorage();
+        await salvarNaNuvemELocal('aposta', aposta);
         renderizarAba();
       }
     }
@@ -704,11 +749,11 @@
       }
     }
 
-    function deletarAposta(apostaId) {
+    async function deletarAposta(apostaId) {
       if (!verificarSeTemPermissaoEdicao()) return;
       if (confirm("Excluir esta aposta?")) {
         estado.apostas = estado.apostas.filter(a => a.id !== apostaId);
-        salvarDadosNoLocalStorage();
+        await deletarDaNuvemELocal('aposta', apostaId);
         renderizarAba();
       }
     }
@@ -762,25 +807,26 @@
       `;
     }
 
-    function adicionarOperador(e) {
+    async function adicionarOperador(e) {
       e.preventDefault();
       if (!verificarSeTemPermissaoEdicao()) return;
-      estado.operadores.push({
+      const novoOp = {
         id: `operador-${Date.now()}`,
         nome: document.getElementById('novoNome').value
-      });
-      salvarDadosNoLocalStorage();
+      };
+      estado.operadores.push(novoOp);
+      await salvarNaNuvemELocal('operador', novoOp);
       atualizarSelectOperadores();
       renderizarAba();
     }
 
-    function deletarOperador(id) {
+    async function deletarOperador(id) {
       if (!verificarSeTemPermissaoEdicao()) return;
       if (confirm("Excluir operador e dados associados?")) {
         estado.operadores = estado.operadores.filter(o => o.id !== id);
         estado.apostas = estado.apostas.filter(a => (a.operadorId || a.clienteId) !== id);
         estado.casas = estado.casas.filter(cs => (cs.operadorId || cs.clienteId) !== id);
-        salvarDadosNoLocalStorage();
+        await deletarDaNuvemELocal('operador', id);
         atualizarSelectOperadores();
         renderizarAba();
       }
@@ -839,23 +885,24 @@
       `;
     }
 
-    function adicionarCasa(e) {
+    async function adicionarCasa(e) {
       e.preventDefault();
       if (!verificarSeTemPermissaoEdicao()) return;
-      estado.casas.push({
+      const novaCasa = {
         id: `casa-${Date.now()}`,
         operadorId: document.getElementById('casaOperadorId').value,
         nome: document.getElementById('casaNome').value
-      });
-      salvarDadosNoLocalStorage();
+      };
+      estado.casas.push(novaCasa);
+      await salvarNaNuvemELocal('casa', novaCasa);
       renderizarAba();
     }
 
-    function deletarCasa(id) {
+    async function deletarCasa(id) {
       if (!verificarSeTemPermissaoEdicao()) return;
       if (confirm("Deletar esta casa de apostas?")) {
         estado.casas = estado.casas.filter(c => c.id !== id);
-        salvarDadosNoLocalStorage();
+        await deletarDaNuvemELocal('casa', id);
         renderizarAba();
       }
     }
@@ -888,19 +935,6 @@
       const roi = volumeTotal > 0 ? ((lucroTotal / volumeTotal) * 100).toFixed(2) : '0.00';
       const winrate = totalFinalizadas > 0 ? ((greens / totalFinalizadas) * 100).toFixed(1) : '0.0';
       const apostaMedia = apostasFiltradas.length > 0 ? (volumeTotal / apostasFiltradas.length).toFixed(2) : '0.00';
-
-      const relatorioPorCasa = {};
-      apostasFiltradas.forEach(a => {
-        if (!relatorioPorCasa[a.casaId]) {
-          const casaObj = estado.casas.find(c => c.id === a.casaId);
-          relatorioPorCasa[a.casaId] = { nome: casaObj ? casaObj.nome : 'Desconhecida', qtd: 0, volume: 0, lucro: 0 };
-        }
-        relatorioPorCasa[a.casaId].qtd++;
-        relatorioPorCasa[a.casaId].volume += a.stake;
-        if (a.finalizada && a.retorno !== null) {
-          relatorioPorCasa[a.casaId].lucro += (a.retorno - a.stake);
-        }
-      });
 
       const casasParaFiltro = operadorFiltro ? estado.casas.filter(c => (c.operadorId || c.clienteId) === operadorFiltro) : estado.casas;
 
@@ -1017,19 +1051,10 @@
         apostasFiltradas = apostasFiltradas.filter(a => a.casaId === filtroCasaPagamento);
       }
 
-      const relatorioPorCasa = {};
       let resultadoLiquidoBruto = 0;
       apostasFiltradas.forEach(a => {
-        if (!relatorioPorCasa[a.casaId]) {
-          const casaObj = estado.casas.find(c => c.id === a.casaId);
-          relatorioPorCasa[a.casaId] = { nome: casaObj ? casaObj.nome : 'Desconhecida', qtd: 0, volume: 0, lucro: 0 };
-        }
-        relatorioPorCasa[a.casaId].qtd++;
-        relatorioPorCasa[a.casaId].volume += a.stake;
         if (a.finalizada && a.retorno !== null) {
-          const lucroAposta = a.retorno - a.stake;
-          relatorioPorCasa[a.casaId].lucro += lucroAposta;
-          resultadoLiquidoBruto += lucroAposta;
+          resultadoLiquidoBruto += (a.retorno - a.stake);
         }
       });
 
@@ -1159,7 +1184,7 @@
       `;
     }
 
-    function adicionarUsuario(e) {
+    async function adicionarUsuario(e) {
       e.preventDefault();
       if (!verificarSeTemPermissaoEdicao()) return;
       const nome = document.getElementById('novoUsuarioNome').value.trim();
@@ -1172,17 +1197,18 @@
         return;
       }
 
-      estado.usuarios.push({ id: `usr-${Date.now()}`, nome, usuario, senha, perfil });
-      salvarDadosNoLocalStorage();
+      const novoUsr = { id: `usr-${Date.now()}`, nome, usuario, senha, perfil };
+      estado.usuarios.push(novoUsr);
+      await salvarNaNuvemELocal('usuario', novoUsr);
       renderizarAba();
       alert("Usuário criado!");
     }
 
-    function deletarUsuario(id) {
+    async function deletarUsuario(id) {
       if (!verificarSeTemPermissaoEdicao()) return;
       if (confirm("Excluir este usuário?")) {
         estado.usuarios = estado.usuarios.filter(u => u.id !== id);
-        salvarDadosNoLocalStorage();
+        await deletarDaNuvemELocal('usuario', id);
         renderizarAba();
       }
     }
