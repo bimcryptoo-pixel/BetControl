@@ -390,12 +390,27 @@
       return DADOS_INICIAIS;
     }
 
+    async function buscarTodosPaginado(tabela) {
+      const lote = 1000;
+      let inicio = 0;
+      let todos = [];
+      while (true) {
+        const { data, error } = await supabaseClient.from(tabela).select('*').range(inicio, inicio + lote - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        todos = todos.concat(data);
+        if (data.length < lote) break;
+        inicio += lote;
+      }
+      return todos;
+    }
+
     async function carregarDadosDoServidorOuLocal() {
       try {
-        const { data: ops } = await supabaseClient.from('operadores').select('*');
-        const { data: css } = await supabaseClient.from('casas').select('*');
-        const { data: aps } = await supabaseClient.from('apostas').select('*');
-        const { data: usrs } = await supabaseClient.from('usuarios').select('*');
+        const ops = await buscarTodosPaginado('operadores');
+        const css = await buscarTodosPaginado('casas');
+        const aps = await buscarTodosPaginado('apostas');
+        const usrs = await buscarTodosPaginado('usuarios');
 
         if (ops) {
           estado.operadores = ops;
