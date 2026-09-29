@@ -5,13 +5,72 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>BetControl - Gestão Operacional</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Supabase JS Client -->
+  
+  <!-- Configuração Dinâmica do Tailwind com Temas -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            base: 'var(--color-base)',
+            panel: 'var(--color-panel)',
+            panelAlt: 'var(--color-panel-alt)',
+            input: 'var(--color-input)',
+            texto: 'var(--color-text)',
+            mutado: 'var(--color-text-muted)',
+            linha: 'var(--color-border)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Supabase JS Client & Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
   <style>
+    /* TEMAS DE CORES */
+    :root, [data-theme="dark"] {
+      --color-base: #090a0f;
+      --color-panel: #131620;
+      --color-panel-alt: #181c28;
+      --color-input: #1a1f2e;
+      --color-text: #ffffff;
+      --color-text-muted: #9ca3af;
+      --color-border: rgba(255, 255, 255, 0.1);
+    }
+    [data-theme="light"] {
+      --color-base: #f3f4f6;
+      --color-panel: #ffffff;
+      --color-panel-alt: #f9fafb;
+      --color-input: #e5e7eb;
+      --color-text: #111827;
+      --color-text-muted: #4b5563;
+      --color-border: rgba(0, 0, 0, 0.15);
+    }
+    [data-theme="medium"] {
+      --color-base: #1e293b;
+      --color-panel: #334155;
+      --color-panel-alt: #475569;
+      --color-input: #0f172a;
+      --color-text: #f8fafc;
+      --color-text-muted: #cbd5e1;
+      --color-border: rgba(255, 255, 255, 0.15);
+    }
+
+    body {
+      background-color: var(--color-base);
+      color: var(--color-text);
+    }
+
     input[type="date"]::-webkit-calendar-picker-indicator {
-      filter: invert(1);
+      filter: invert(0.8);
       cursor: pointer;
       opacity: 0.8;
+    }
+    [data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: none;
     }
     input[type="date"]::-webkit-calendar-picker-indicator:hover {
       opacity: 1;
@@ -19,86 +78,56 @@
 
     @media print {
       @page {
-        size: A4 landscape;
-        margin: 10mm;
+        size: A4 portrait;
+        margin: 6mm;
       }
-      
       header, aside, .no-print, #tela-login {
         display: none !important;
       }
-
-      html, body {
+      html, body, main {
         width: 100% !important;
         height: auto !important;
         overflow: visible !important;
         margin: 0 !important;
         padding: 0 !important;
-        background-color: #0d1117 !important;
-        color: #f0f6fc !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        font-size: 8.5pt !important;
       }
-
-      main {
-        padding: 0 !important;
-        margin: 0 !important;
-        width: 100% !important;
-        transform: none !important;
+      .print-card, div, table {
+        background-color: #ffffff !important;
+        border-color: #e5e7eb !important;
+        color: #000000 !important;
       }
-
-      .print-header {
-        display: flex !important;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 2px solid #10b981;
-        padding-bottom: 8px;
-        margin-bottom: 16px;
-      }
-
-      .print-card {
-        background-color: #161b22 !important;
-        border: 1px solid #30363d !important;
-        border-radius: 8px !important;
-        padding: 12px !important;
-        margin-bottom: 16px !important;
-      }
-
-      table {
-        width: 100% !important;
-        border-collapse: collapse !important;
-      }
-
       th {
-        background-color: #1f2937 !important;
-        color: #ffffff !important;
-        font-size: 11px !important;
-        padding: 6px 8px !important;
+        background-color: #f3f4f6 !important;
+        color: #000000 !important;
+        font-size: 8pt !important;
+        padding: 4px 6px !important;
+        border: 1px solid #d1d5db !important;
       }
-
       td {
-        border-bottom: 1px solid #2d3748 !important;
-        font-size: 11px !important;
-        padding: 6px 8px !important;
-      }
-
-      tr {
-        break-inside: avoid !important;
-        page-break-inside: avoid !important;
+        border-bottom: 1px solid #e5e7eb !important;
+        border-left: 1px solid #e5e7eb !important;
+        border-right: 1px solid #e5e7eb !important;
+        font-size: 8pt !important;
+        padding: 4px 6px !important;
+        color: #000000 !important;
       }
     }
   </style>
 </head>
-<body class="bg-[#090a0f] text-white min-h-screen flex flex-col">
+<body class="bg-base text-texto min-h-screen flex flex-col">
 
   <!-- ================= TELA DE LOGIN ================= -->
-  <div id="tela-login" class="fixed inset-0 z-50 bg-[#07090e] flex items-center justify-center p-4">
+  <div id="tela-login" class="fixed inset-0 z-50 bg-base flex items-center justify-center p-4">
     <div class="absolute -top-32 -left-32 w-72 h-72 md:w-96 md:h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
     <div class="absolute -bottom-32 -right-32 w-72 h-72 md:w-96 md:h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-    <div class="w-full max-w-md bg-[#111520] border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl relative z-10 backdrop-blur-xl">
+    <div class="w-full max-w-md bg-panel border border-linha rounded-2xl p-6 md:p-8 shadow-2xl relative z-10 backdrop-blur-xl">
       <div class="flex flex-col items-center mb-6 md:mb-8">
         <div class="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-2xl p-[2px] shadow-xl shadow-emerald-500/20 mb-3 md:mb-4 group">
-          <div class="w-full h-full bg-[#0c0e14] rounded-[14px] flex items-center justify-center relative overflow-hidden">
+          <div class="w-full h-full bg-input rounded-[14px] flex items-center justify-center relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 opacity-70"></div>
             <span class="font-black text-2xl md:text-3xl tracking-tighter bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent transform -skew-x-6 drop-shadow-md">
               BC
@@ -106,21 +135,21 @@
           </div>
         </div>
 
-        <h1 class="text-xl md:text-2xl font-black tracking-tight text-white">
+        <h1 class="text-xl md:text-2xl font-black tracking-tight text-texto">
           Bet<span class="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">Control</span>
         </h1>
-        <p class="text-[10px] md:text-xs uppercase font-bold tracking-widest text-gray-400 mt-1">Gestão Operacional Segura</p>
+        <p class="text-[10px] md:text-xs uppercase font-bold tracking-widest text-mutado mt-1">Gestão Operacional Segura</p>
       </div>
 
       <form onsubmit="realizarLogin(event)" class="space-y-4">
         <div>
-          <label class="block text-xs font-bold uppercase text-gray-300 mb-1.5">Usuário de Acesso</label>
-          <input type="text" id="loginUsuario" required placeholder="Ex: admin" class="w-full px-4 py-3 bg-[#181d2c] border border-white/10 rounded-xl text-white text-sm outline-none focus:border-emerald-500 transition">
+          <label class="block text-xs font-bold uppercase text-mutado mb-1.5">Usuário de Acesso</label>
+          <input type="text" id="loginUsuario" required placeholder="Ex: admin" class="w-full px-4 py-3 bg-input border border-linha rounded-xl text-texto text-sm outline-none focus:border-emerald-500 transition">
         </div>
 
         <div>
-          <label class="block text-xs font-bold uppercase text-gray-300 mb-1.5">Senha de Segurança</label>
-          <input type="password" id="loginSenha" required placeholder="••••••••" class="w-full px-4 py-3 bg-[#181d2c] border border-white/10 rounded-xl text-white text-sm outline-none focus:border-emerald-500 transition">
+          <label class="block text-xs font-bold uppercase text-mutado mb-1.5">Senha de Segurança</label>
+          <input type="password" id="loginSenha" required placeholder="••••••••" class="w-full px-4 py-3 bg-input border border-linha rounded-xl text-texto text-sm outline-none focus:border-emerald-500 transition">
         </div>
 
         <div id="loginErro" class="hidden text-xs text-red-400 font-bold text-center bg-red-500/10 border border-red-500/20 py-2 rounded-lg">
@@ -131,22 +160,17 @@
           Acessar Sistema
         </button>
       </form>
-
-      <div class="mt-6 pt-4 border-t border-white/5 text-center space-y-1">
-        <p class="text-[11px] text-gray-500">Admin (Completo): <strong class="text-gray-400">admin</strong> / <strong class="text-gray-400">123456</strong></p>
-        <p class="text-[11px] text-gray-500">Operador (Leitura): <strong class="text-gray-400">operador</strong> / <strong class="text-gray-400">123456</strong></p>
-      </div>
     </div>
   </div>
 
   <!-- ================= APLICAÇÃO PRINCIPAL ================= -->
   <div id="app-container" class="hidden flex-col flex-1">
     
-    <header class="sticky top-0 z-40 bg-[#0c0e14] border-b border-white/10 px-4 md:px-8 py-3 md:py-4 flex flex-col md:flex-row items-center justify-between gap-3 no-print">
+    <header class="sticky top-0 z-40 bg-base border-b border-linha px-4 md:px-8 py-3 md:py-4 flex flex-col md:flex-row items-center justify-between gap-3 no-print">
       <div class="flex items-center justify-between w-full md:w-auto">
         <div class="flex items-center gap-3">
           <div class="relative w-10 h-10 md:w-11 md:h-11 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-xl p-[1px] shadow-lg shadow-emerald-500/25 group cursor-pointer">
-            <div class="w-full h-full bg-[#0c0e14] rounded-[11px] flex items-center justify-center relative overflow-hidden">
+            <div class="w-full h-full bg-input rounded-[11px] flex items-center justify-center relative overflow-hidden">
               <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 opacity-50"></div>
               <span class="font-black text-lg md:text-xl tracking-tighter bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent transform -skew-x-6 drop-shadow">
                 BC
@@ -156,10 +180,10 @@
 
           <div>
             <div class="flex items-center text-xl md:text-2xl font-black tracking-tight font-sans">
-              <span class="text-white drop-shadow">Bet</span>
+              <span class="text-texto drop-shadow">Bet</span>
               <span class="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">Control</span>
             </div>
-            <p class="text-[9px] md:text-[10px] uppercase font-bold tracking-widest text-gray-400 -mt-1">Gestão Operacional</p>
+            <p class="text-[9px] md:text-[10px] uppercase font-bold tracking-widest text-mutado -mt-1">Gestão Operacional</p>
           </div>
         </div>
 
@@ -170,29 +194,43 @@
         </div>
       </div>
 
-      <div class="flex flex-wrap items-center justify-end gap-2 md:gap-4 w-full md:w-auto">
-        <div class="flex items-center gap-2 bg-[#131620] p-1.5 rounded-lg border border-white/10 shadow-inner overflow-x-auto max-w-full">
+      <!-- BARRA DE FILTROS SUPERIOR -->
+      <div class="flex flex-wrap items-center justify-end gap-2 md:gap-3 w-full md:w-auto">
+        <div class="flex items-center gap-2 bg-panel p-1.5 rounded-lg border border-linha shadow-inner overflow-x-auto max-w-full">
           <div class="relative">
-            <label class="block text-[8px] md:text-[9px] text-white uppercase font-bold px-1">De</label>
-            <input type="date" id="filtroDataInicio" onchange="atualizarFiltrosGlobais()" onclick="this.showPicker &amp;&amp; this.showPicker()" class="bg-[#1a1f2e] text-white text-[11px] md:text-xs px-2 py-1 rounded border border-white/10 outline-none cursor-pointer">
+            <label class="block text-[8px] md:text-[9px] text-texto uppercase font-bold px-1">De</label>
+            <input type="date" id="filtroDataInicio" onchange="atualizarFiltrosGlobais()" onclick="this.showPicker && this.showPicker()" class="bg-input text-texto text-[11px] md:text-xs px-2 py-1 rounded border border-linha outline-none cursor-pointer">
           </div>
-          <span class="text-gray-500 text-xs self-end mb-1">até</span>
+          <span class="text-mutado text-xs self-end mb-1">até</span>
           <div class="relative">
-            <label class="block text-[8px] md:text-[9px] text-white uppercase font-bold px-1">Até</label>
-            <input type="date" id="filtroDataFim" onchange="atualizarFiltrosGlobais()" onclick="this.showPicker &amp;&amp; this.showPicker()" class="bg-[#1a1f2e] text-white text-[11px] md:text-xs px-2 py-1 rounded border border-white/10 outline-none cursor-pointer">
+            <label class="block text-[8px] md:text-[9px] text-texto uppercase font-bold px-1">Até</label>
+            <input type="date" id="filtroDataFim" onchange="atualizarFiltrosGlobais()" onclick="this.showPicker && this.showPicker()" class="bg-input text-texto text-[11px] md:text-xs px-2 py-1 rounded border border-linha outline-none cursor-pointer">
           </div>
-          <button onclick="limparFiltroDatas()" class="text-[11px] text-gray-300 hover:text-white px-2 py-1 bg-white/5 hover:bg-white/10 rounded border border-white/10 transition self-end">Limpar</button>
+          <button onclick="limparFiltroDatas()" class="text-[11px] text-mutado hover:text-texto px-2 py-1 bg-input hover:brightness-110 rounded border border-linha transition self-end">Limpar</button>
         </div>
 
         <div>
-          <select id="selectOperador" onchange="atualizarFiltrosGlobais()" class="px-2.5 py-2 bg-[#131620] border border-white/10 rounded-lg text-white text-xs cursor-pointer hover:border-white transition outline-none">
+          <select id="selectOperador" onchange="atualizarFiltrosGlobais()" class="px-2.5 py-2 bg-panel border border-linha rounded-lg text-texto text-xs cursor-pointer hover:border-emerald-500 transition outline-none">
             <option value="">Todos os Operadores</option>
           </select>
         </div>
 
-        <div class="hidden md:flex items-center gap-3 pl-2 border-l border-white/10">
-          <div class="text-right">
-            <span id="headerNomeUsuario" class="block text-xs font-bold text-white">admin</span>
+        <div>
+          <select id="selectCasaGlobal" onchange="atualizarFiltrosGlobais()" class="px-2.5 py-2 bg-panel border border-linha rounded-lg text-texto text-xs cursor-pointer hover:border-emerald-500 transition outline-none">
+            <option value="">Todas as Casas</option>
+          </select>
+        </div>
+
+        <div class="hidden md:flex items-center gap-3 pl-2 border-l border-linha">
+          <!-- SELETOR DE TEMA -->
+          <select id="selectTema" onchange="mudarTema(this.value)" class="px-2 py-1.5 bg-input border border-linha rounded-lg text-xs text-texto outline-none cursor-pointer hover:border-emerald-500 transition">
+            <option value="dark">🌙 Escuro</option>
+            <option value="light">☀️ Claro</option>
+            <option value="medium">🌤️ Mediano</option>
+          </select>
+
+          <div class="text-right border-l border-linha pl-3">
+            <span id="headerNomeUsuario" class="block text-xs font-bold text-texto">admin</span>
             <span id="headerPerfilUsuario" class="block text-[9px] text-emerald-400 font-bold uppercase">Editor</span>
           </div>
           <button onclick="realizarLogout()" title="Sair do Sistema" class="px-3 py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1">
@@ -203,23 +241,32 @@
     </header>
 
     <div class="flex flex-col md:flex-row flex-1">
-      <aside class="w-full md:w-64 bg-[#090a0f] md:border-r border-b md:border-b-0 border-white/10 p-3 md:p-6 flex md:flex-col gap-2 overflow-x-auto no-print shrink-0">
-        <button id="btn-dashboard" onclick="mudarAba('dashboard')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-emerald-600 text-white font-medium text-xs md:text-sm transition shadow-md shadow-emerald-900/30">
+      <aside id="menu-lateral" class="w-full md:w-64 bg-base md:border-r border-b md:border-b-0 border-linha p-3 md:p-6 flex md:flex-col gap-2 overflow-x-auto no-print shrink-0">
+        <button id="nav-dashboard" onclick="mudarAba('dashboard')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-emerald-600 text-white font-medium text-xs md:text-sm transition shadow-md shadow-emerald-900/30">
           📊 Dashboard
         </button>
-        <button id="btn-operadores" onclick="mudarAba('operadores')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-[#131620] text-gray-300 hover:bg-[#1a1f2e] font-medium text-xs md:text-sm transition">
+        <button id="nav-volumemes" onclick="mudarAba('volumemes')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
+          📈 Volume Mês
+        </button>
+        <button id="nav-operadores" onclick="mudarAba('operadores')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
           👥 Operadores
         </button>
-        <button id="btn-casas" onclick="mudarAba('casas')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-[#131620] text-gray-300 hover:bg-[#1a1f2e] font-medium text-xs md:text-sm transition">
+        <button id="nav-casas" onclick="mudarAba('casas')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
           🏛️ Casas de Apostas
         </button>
-        <button id="btn-relatorios" onclick="mudarAba('relatorios')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-[#131620] text-gray-300 hover:bg-[#1a1f2e] font-medium text-xs md:text-sm transition">
+        <button id="nav-relatorios" onclick="mudarAba('relatorios')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
           📑 Relatórios
         </button>
-        <button id="btn-pagamentos" onclick="mudarAba('pagamentos')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-[#131620] text-gray-300 hover:bg-[#1a1f2e] font-medium text-xs md:text-sm transition">
+        <button id="nav-lucro" onclick="mudarAba('lucro')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
+          💰 Lucro
+        </button>
+        <button id="nav-pagamentos" onclick="mudarAba('pagamentos')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
           💳 Pagamento
         </button>
-        <button id="btn-usuarios" onclick="mudarAba('usuarios')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-[#131620] text-gray-300 hover:bg-[#1a1f2e] font-medium text-xs md:text-sm transition">
+        <button id="nav-backup" onclick="mudarAba('backup')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
+          💾 Backup & Importação
+        </button>
+        <button id="nav-usuarios" onclick="mudarAba('usuarios')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
           🔐 Usuários
         </button>
       </aside>
@@ -230,19 +277,26 @@
   </div>
 
   <script>
-    const SUPABASE_URL = 'https://esflUt9ywKNd57UxpRzC5g.supabase.co';
-    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_esflUt9ywKNd57UxpRzC5g_FS2aFvAW';
+    const SUPABASE_URL = 'https://uxwuxlkvxubbknaffkca.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_ALboDYr5YVBcsso2qH5mig_HlLFPfle';
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
+    let graficoVolumeInstancia = null; // Instância global do Chart.js para evitar sobreposição
+
     const DADOS_INICIAIS = {
+      tema: 'dark',
       abaAtiva: 'dashboard',
       dataFormulario: new Date().toISOString().split('T')[0],
-      descontoPercentual: 0,
+      descontosOperadores: {}, 
       ordemRelatorio: 'desc',
-      filtros: { dataInicio: '', dataFim: '', operadorId: '' },
+      ordemDashboard: 'desc',
+      ordemVolumeMes: 'desc',
+      ordemLucroMes: 'desc',
+      filtroPendentes: false,
+      filtros: { dataInicio: '', dataFim: '', operadorId: '', casaId: '' },
       usuarios: [
-        { id: 'usr-1', usuario: 'admin', senha: '123456', perfil: 'editor', nome: 'Administrador Mestre' },
-        { id: 'usr-2', usuario: 'operador', senha: '123456', perfil: 'leitura', nome: 'Operador Padrão' }
+        { id: 'usr-1', usuario: 'admin', senha: '123456', perfil: 'editor', nome: 'Administrador Mestre', permissoesLeitor: [] },
+        { id: 'usr-2', usuario: 'operador', senha: '123456', perfil: 'leitura', nome: 'Operador Padrão', permissoesLeitor: ['dashboard', 'volumemes', 'relatorios', 'lucro'] }
       ],
       operadores: [],
       casas: [],
@@ -250,6 +304,54 @@
     };
 
     let estado = carregarDadosDoLocalStorage();
+
+    function aplicarTema() {
+      document.documentElement.setAttribute('data-theme', estado.tema || 'dark');
+      const select = document.getElementById('selectTema');
+      if (select) select.value = estado.tema || 'dark';
+    }
+    
+    aplicarTema();
+
+    function mudarTema(novoTema) {
+      estado.tema = novoTema;
+      salvarDadosNoLocalStorage();
+      aplicarTema();
+      renderizarAba(); // Recarrega para atualizar as cores do gráfico se estiver no módulo Volume
+    }
+
+    function formatarDataBR(dataIso) {
+      if (!dataIso) return '';
+      const partes = dataIso.split('-');
+      if (partes.length !== 3) return dataIso;
+      return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+
+    function normalizarNomeCasa(nome) {
+      if (!nome) return 'OUTRAS / N/A';
+      return nome.trim().replace(/\s+/g, ' ').toUpperCase();
+    }
+
+    function renderizarFlagCasa(nomeCasa) {
+      if (!nomeCasa) return '<span class="text-mutado">N/A</span>';
+      
+      const nomeLimpo = normalizarNomeCasa(nomeCasa);
+      let estilo = "background-color: #ffffff; color: #000000; border: 1px solid rgba(0,0,0,0.1);";
+
+      if (/^HM\s*BETS$/i.test(nomeLimpo)) {
+        estilo = "background-color: #f97316; color: #000000;";
+      } else if (/^BET\s*ZAP$/i.test(nomeLimpo)) {
+        estilo = "background-color: #22c55e; color: #000000;";
+      } else if (/^BET\s*CERTA$/i.test(nomeLimpo)) {
+        estilo = "background-color: #ff0000; color: #ffffff;";
+      } else if (/^X\s*BETS$/i.test(nomeLimpo)) {
+        estilo = "background-color: #800080; color: #ffffff;";
+      } else if (/^GG\s*BETS$/i.test(nomeLimpo)) {
+        estilo = "background-color: #ffffff; color: #000000;";
+      }
+
+      return `<span class="px-2.5 py-1 rounded-md text-[11px] md:text-xs font-black inline-flex items-center shadow-sm uppercase" style="${estilo}">${nomeLimpo}</span>`;
+    }
 
     function salvarDadosNoLocalStorage() {
       localStorage.setItem('betcontrol_dados', JSON.stringify(estado));
@@ -260,15 +362,25 @@
       if (dadosSalvos) {
         try {
           const parsed = JSON.parse(dadosSalvos);
+          if (!parsed.tema) parsed.tema = 'dark';
           if (!parsed.dataFormulario) parsed.dataFormulario = new Date().toISOString().split('T')[0];
-          if (!parsed.filtros) parsed.filtros = { dataInicio: '', dataFim: '', operadorId: '' };
-          if (parsed.descontoPercentual === undefined) parsed.descontoPercentual = 0;
+          if (!parsed.filtros) parsed.filtros = { dataInicio: '', dataFim: '', operadorId: '', casaId: '' };
+          if (parsed.filtros.casaId === undefined) parsed.filtros.casaId = '';
+          if (!parsed.descontosOperadores) parsed.descontosOperadores = {};
           if (!parsed.ordemRelatorio) parsed.ordemRelatorio = 'desc';
-          if (!parsed.usuarios) {
+          if (!parsed.ordemDashboard) parsed.ordemDashboard = 'desc';
+          if (!parsed.ordemVolumeMes) parsed.ordemVolumeMes = 'desc';
+          if (!parsed.ordemLucroMes) parsed.ordemLucroMes = 'desc';
+          if (parsed.filtroPendentes === undefined) parsed.filtroPendentes = false;
+          if (!parsed.usuarios || parsed.usuarios.length === 0) {
             parsed.usuarios = [
-              { id: 'usr-1', usuario: 'admin', senha: '123456', perfil: 'editor', nome: 'Administrador Mestre' },
-              { id: 'usr-2', usuario: 'operador', senha: '123456', perfil: 'leitura', nome: 'Operador Padrão' }
+              { id: 'usr-1', usuario: 'admin', senha: '123456', perfil: 'editor', nome: 'Administrador Mestre', permissoesLeitor: [] },
+              { id: 'usr-2', usuario: 'operador', senha: '123456', perfil: 'leitura', nome: 'Operador Padrão', permissoesLeitor: ['dashboard', 'volumemes', 'relatorios', 'lucro'] }
             ];
+          } else {
+            parsed.usuarios.forEach(u => {
+              if (!u.permissoesLeitor) u.permissoesLeitor = [];
+            });
           }
           return parsed;
         } catch (e) {
@@ -278,7 +390,6 @@
       return DADOS_INICIAIS;
     }
 
-    // Sincronização e nuvem
     async function carregarDadosDoServidorOuLocal() {
       try {
         const { data: ops } = await supabaseClient.from('operadores').select('*');
@@ -286,9 +397,13 @@
         const { data: aps } = await supabaseClient.from('apostas').select('*');
         const { data: usrs } = await supabaseClient.from('usuarios').select('*');
 
-        if (ops && ops.length > 0) {
+        if (ops) {
           estado.operadores = ops;
+        }
+        if (css) {
           estado.casas = css.map(c => ({ id: c.id, operadorId: c.operador_id, nome: c.nome }));
+        }
+        if (aps) {
           estado.apostas = aps.map(a => ({ 
             id: a.id, 
             operadorId: a.operador_id, 
@@ -298,9 +413,14 @@
             retorno: a.retorno !== null ? Number(a.retorno) : null, 
             finalizada: a.finalizada 
           }));
-          if (usrs && usrs.length > 0) estado.usuarios = usrs;
-          salvarDadosNoLocalStorage();
         }
+        if (usrs && usrs.length > 0) {
+          estado.usuarios = usrs.map(u => ({
+            ...u,
+            permissoesLeitor: u.permissoes_leitor ? (typeof u.permissoes_leitor === 'string' ? JSON.parse(u.permissoes_leitor) : u.permissoes_leitor) : (u.permissoesLeitor || [])
+          }));
+        }
+        salvarDadosNoLocalStorage();
       } catch (erro) {
         console.warn("Modo Offline ativado: Usando cache local.", erro);
         estado = carregarDadosDoLocalStorage();
@@ -322,14 +442,21 @@
             finalizada: dadosObjeto.finalizada
           });
         } else if (tipo === 'operador') {
-          await supabaseClient.from('operadores').upsert({ id: dadosObjeto.id, nome: dadosObjeto.nome });
+          await supabaseClient.from('operadores').upsert({ id: dadosObjeto.id, nome: dadosObjeto.nome, documento: dadosObjeto.documento || '', telefone: dadosObjeto.telefone || '', cep1: dadosObjeto.cep1 || '', cep2: dadosObjeto.cep2 || '', cep3: dadosObjeto.cep3 || '', digitos: dadosObjeto.digitos || '' });
         } else if (tipo === 'casa') {
           await supabaseClient.from('casas').upsert({ id: dadosObjeto.id, operador_id: dadosObjeto.operadorId, nome: dadosObjeto.nome });
         } else if (tipo === 'usuario') {
-          await supabaseClient.from('usuarios').upsert({ id: dadosObjeto.id, usuario: dadosObjeto.usuario, senha: dadosObjeto.senha, perfil: dadosObjeto.perfil, nome: dadosObjeto.nome });
+          await supabaseClient.from('usuarios').upsert({ 
+            id: dadosObjeto.id, 
+            usuario: dadosObjeto.usuario, 
+            senha: dadosObjeto.senha, 
+            perfil: dadosObjeto.perfil, 
+            nome: dadosObjeto.nome,
+            permissoes_leitor: JSON.stringify(dadosObjeto.permissoesLeitor || [])
+          });
         }
       } catch (erro) {
-        console.error("Erro ao sincronizar com Supabase (salvo localmente):", erro);
+        console.error("Erro ao sincronizar com Supabase:", erro);
       }
     }
 
@@ -355,6 +482,15 @@
       const usr = obterUsuarioLogado();
       if (!usr) return false;
       return usr.perfil === 'editor';
+    }
+
+    function verificarPermissaoAba(aba) {
+      const usr = obterUsuarioLogado();
+      if (!usr) return false;
+      if (usr.perfil === 'editor') return true;
+      if (aba === 'usuarios' || aba === 'backup') return false;
+      const permissoes = usr.permissoesLeitor || [];
+      return permissoes.includes(aba);
     }
 
     function realizarLogin(e) {
@@ -393,12 +529,25 @@
           const elPerfil = document.getElementById('headerPerfilUsuario');
           if (elNome) elNome.textContent = usr.usuario;
           if (elPerfil) elPerfil.textContent = usr.perfil === 'editor' ? '✏️ Editor' : '👁️ Leitura';
+          
+          atualizarVisibilidadeMenuLateral(usr);
+
+          if (!verificarPermissaoAba(estado.abaAtiva)) {
+            const abasPossiveis = ['dashboard', 'volumemes', 'operadores', 'casas', 'relatorios', 'lucro', 'pagamentos', 'backup', 'usuarios'];
+            const primeiraPermitida = abasPossiveis.find(a => verificarPermissaoAba(a));
+            if (primeiraPermitida) {
+              estado.abaAtiva = primeiraPermitida;
+            } else {
+              estado.abaAtiva = 'dashboard';
+            }
+          }
         }
         telaLogin.classList.add('hidden');
         appContainer.classList.remove('hidden');
         appContainer.classList.add('flex');
         restaurarFiltrosNaUI();
         atualizarSelectOperadores();
+        atualizarSelectCasasGlobais();
         renderizarAba();
       } else {
         appContainer.classList.remove('flex');
@@ -407,7 +556,44 @@
       }
     }
 
+    function atualizarVisibilidadeMenuLateral(usr) {
+      const mapaBotoes = {
+        'dashboard': 'nav-dashboard',
+        'volumemes': 'nav-volumemes',
+        'operadores': 'nav-operadores',
+        'casas': 'nav-casas',
+        'relatorios': 'nav-relatorios',
+        'lucro': 'nav-lucro',
+        'pagamentos': 'nav-pagamentos',
+        'backup': 'nav-backup',
+        'usuarios': 'nav-usuarios'
+      };
+
+      Object.keys(mapaBotoes).forEach(aba => {
+        const btnId = mapaBotoes[aba];
+        const btnEl = document.getElementById(btnId);
+        if (!btnEl) return;
+
+        if (usr.perfil === 'editor') {
+          btnEl.style.display = 'flex';
+        } else {
+          if (aba === 'backup') {
+            btnEl.style.display = 'none';
+          } else if (aba === 'usuarios') {
+            btnEl.style.display = 'flex';
+          } else {
+            if (usr.permissoesLeitor && usr.permissoesLeitor.includes(aba)) {
+              btnEl.style.display = 'flex';
+            } else {
+              btnEl.style.display = 'none';
+            }
+          }
+        }
+      });
+    }
+
     window.onload = async () => {
+      aplicarTema();
       await carregarDadosDoServidorOuLocal();
     };
 
@@ -424,19 +610,24 @@
       estado.filtros = {
         dataInicio: document.getElementById('filtroDataInicio').value,
         dataFim: document.getElementById('filtroDataFim').value,
-        operadorId: document.getElementById('selectOperador').value
+        operadorId: document.getElementById('selectOperador').value,
+        casaId: document.getElementById('selectCasaGlobal').value
       };
       salvarDadosNoLocalStorage();
       renderizarAba();
     }
 
     function mudarAba(novaAba) {
+      if (!verificarPermissaoAba(novaAba)) {
+        alert("Você não possui permissão para acessar esta seção.");
+        return;
+      }
       estado.abaAtiva = novaAba;
       salvarDadosNoLocalStorage();
       document.querySelectorAll('.aba-btn').forEach(btn => {
-        btn.className = 'aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-[#131620] text-gray-300 hover:bg-[#1a1f2e] font-medium text-xs md:text-sm transition';
+        btn.className = 'aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition';
       });
-      const btnAtivo = document.getElementById(`btn-${novaAba}`);
+      const btnAtivo = document.getElementById(`nav-${novaAba}`);
       if (btnAtivo) {
         btnAtivo.className = 'aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-emerald-600 text-white font-medium text-xs md:text-sm transition shadow-md shadow-emerald-900/30';
       }
@@ -446,16 +637,51 @@
     function atualizarSelectOperadores() {
       const select = document.getElementById('selectOperador');
       if (!select) return;
+      const usr = obterUsuarioLogado();
+
       select.innerHTML = '<option value="">Todos os Operadores</option>';
       
-      estado.operadores.forEach(op => {
+      const operadoresDisponiveis = (usr && usr.perfil !== 'editor')
+        ? estado.operadores.filter(op => op.nome.toLowerCase() === usr.nome.toLowerCase() || op.id === usr.operadorId)
+        : estado.operadores;
+
+      operadoresDisponiveis.forEach(op => {
         const option = document.createElement('option');
         option.value = op.id;
         option.textContent = op.nome;
         select.appendChild(option);
       });
-      if (estado.filtros && estado.filtros.operadorId) {
-        select.value = estado.filtros.operadorId;
+
+      if (usr && usr.perfil !== 'editor' && operadoresDisponiveis.length === 1) {
+        select.value = operadoresDisponiveis[0].id;
+        select.disabled = true;
+      } else {
+        select.disabled = false;
+        if (estado.filtros && estado.filtros.operadorId) {
+          select.value = estado.filtros.operadorId;
+        }
+      }
+    }
+
+    function atualizarSelectCasasGlobais() {
+      const select = document.getElementById('selectCasaGlobal');
+      if (!select) return;
+      
+      const operadorFiltro = estado.filtros ? estado.filtros.operadorId : '';
+      const casasDisponíveis = operadorFiltro 
+        ? estado.casas.filter(c => (c.operadorId || c.clienteId) === operadorFiltro)
+        : estado.casas;
+
+      select.innerHTML = '<option value="">Todas as Casas</option>';
+      casasDisponíveis.forEach(c => {
+        const option = document.createElement('option');
+        option.value = c.id;
+        option.textContent = c.nome;
+        select.appendChild(option);
+      });
+
+      if (estado.filtros && estado.filtros.casaId) {
+        select.value = estado.filtros.casaId;
       }
     }
 
@@ -466,27 +692,111 @@
     }
 
     function filtrarApostasPorGeral(apostas) {
+      const usr = obterUsuarioLogado();
+      let apostasBase = apostas;
+
+      if (usr && usr.perfil !== 'editor') {
+        const operadoresDoLeitor = estado.operadores.filter(op => op.nome.toLowerCase() === usr.nome.toLowerCase() || op.id === usr.operadorId);
+        const idsOpValidos = operadoresDoLeitor.map(op => op.id);
+        apostasBase = apostas.filter(a => {
+          const opId = a.operadorId || a.clienteId;
+          return idsOpValidos.includes(opId);
+        });
+      }
+
+      if (estado.filtroPendentes && estado.abaAtiva === 'dashboard') {
+        return apostasBase.filter(a => {
+          const opId = a.operadorId || a.clienteId;
+          const operadorFiltro = estado.filtros ? estado.filtros.operadorId : '';
+          const casaFiltro = estado.filtros ? estado.filtros.casaId : '';
+          if (operadorFiltro && opId !== operadorFiltro) return false;
+          if (casaFiltro && a.casaId !== casaFiltro) return false;
+          return !a.finalizada;
+        });
+      }
+
       const operadorFiltro = estado.filtros ? estado.filtros.operadorId : '';
+      const casaFiltro = estado.filtros ? estado.filtros.casaId : '';
       const dataInicio = estado.filtros ? estado.filtros.dataInicio : '';
       const dataFim = estado.filtros ? estado.filtros.dataFim : '';
 
-      return apostas.filter(a => {
+      return apostasBase.filter(a => {
         const opId = a.operadorId || a.clienteId;
         if (operadorFiltro && opId !== operadorFiltro) return false;
+        if (casaFiltro && a.casaId !== casaFiltro) return false;
         if (dataInicio && a.data < dataInicio) return false;
         if (dataFim && a.data > dataFim) return false;
         return true;
       });
     }
 
+    async function sincronizarTudoManual() {
+      const btn = document.getElementById('btnSincronizarManual');
+      if (btn) {
+        btn.innerHTML = '⏳ Sincronizando...';
+        btn.disabled = true;
+      }
+      
+      salvarDadosNoLocalStorage();
+      
+      try {
+        for (const op of estado.operadores) {
+          await supabaseClient.from('operadores').upsert({ id: op.id, nome: op.nome, documento: op.documento || '', telefone: op.telefone || '', cep1: op.cep1 || '', cep2: op.cep2 || '', cep3: op.cep3 || '', digitos: op.digitos || '' });
+        }
+        for (const casa of estado.casas) {
+          await supabaseClient.from('casas').upsert({ id: casa.id, operador_id: casa.operadorId, nome: casa.nome });
+        }
+        for (const aposta of estado.apostas) {
+          await supabaseClient.from('apostas').upsert({
+            id: aposta.id,
+            operador_id: aposta.operadorId,
+            casa_id: aposta.casaId,
+            data: aposta.data,
+            stake: aposta.stake,
+            retorno: aposta.retorno,
+            finalizada: aposta.finalizada
+          });
+        }
+        if (verificarSeTemPermissaoEdicao()) {
+            for (const u of estado.usuarios) {
+              await supabaseClient.from('usuarios').upsert({ 
+                id: u.id, 
+                usuario: u.usuario, 
+                senha: u.senha, 
+                perfil: u.perfil, 
+                nome: u.nome,
+                permissoes_leitor: JSON.stringify(u.permissoesLeitor || [])
+              });
+            }
+        }
+        
+        alert("✅ Todos os dados foram salvos e sincronizados com a nuvem com sucesso!");
+      } catch (erro) {
+        console.error("Erro na sincronização:", erro);
+        alert("⚠️ Houve um erro ao sincronizar com a nuvem. Seus dados estão protegidos localmente.");
+      } finally {
+        if (btn) {
+          btn.innerHTML = '💾 Salvar Tudo (Sincronizar)';
+          btn.disabled = false;
+        }
+      }
+    }
+
     function renderizarAba() {
       const main = document.getElementById('conteudo-principal');
+      if (!verificarPermissaoAba(estado.abaAtiva)) {
+        main.innerHTML = `<div class="p-6 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-center">Acesso negado a esta seção.</div>`;
+        return;
+      }
 
       if (estado.abaAtiva === 'dashboard') renderizarDashboard(main);
+      else if (estado.abaAtiva === 'volumemes') renderizarVolumeMes(main);
       else if (estado.abaAtiva === 'operadores') renderizarOperadores(main);
       else if (estado.abaAtiva === 'casas') renderizarCasas(main);
       else if (estado.abaAtiva === 'relatorios') renderizarRelatorios(main);
+      else if (estado.abaAtiva === 'lucro') renderizarLucro(main);
       else if (estado.abaAtiva === 'pagamentos') renderizarPagamentos(main);
+      else if (estado.abaAtiva === 'backup') renderizarBackup(main);
       else if (estado.abaAtiva === 'usuarios') renderizarUsuarios(main);
     }
 
@@ -494,6 +804,10 @@
     function renderizarDashboard(container) {
       const apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
       const podeEditar = verificarSeTemPermissaoEdicao();
+
+      apostasFiltradas.sort((a, b) => {
+        return estado.ordemDashboard === 'asc' ? new Date(a.data) - new Date(b.data) : new Date(b.data) - new Date(a.data);
+      });
 
       let lucroTotal = 0;
       let totalVolume = 0;
@@ -509,50 +823,50 @@
 
       container.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
-          <div class="bg-[#131620] border border-white/10 rounded-xl p-5 md:p-6">
-            <p class="text-xs md:text-sm text-gray-400 mb-1">Total Apostado (Volume)</p>
-            <h3 class="text-xl md:text-2xl font-bold text-white">R$ ${totalVolume.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
+          <div class="bg-panel border border-linha rounded-xl p-5 md:p-6">
+            <p class="text-xs md:text-sm text-mutado mb-1">Total Apostado (Volume)</p>
+            <h3 class="text-xl md:text-2xl font-bold text-texto">R$ ${totalVolume.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
           </div>
-          <div class="bg-[#131620] border border-white/10 rounded-xl p-5 md:p-6">
-            <p class="text-xs md:text-sm text-gray-400 mb-1">Apostas Registradas</p>
-            <h3 class="text-xl md:text-2xl font-bold text-white">${apostasFiltradas.length}</h3>
+          <div class="bg-panel border border-linha rounded-xl p-5 md:p-6">
+            <p class="text-xs md:text-sm text-mutado mb-1">Apostas Registradas</p>
+            <h3 class="text-xl md:text-2xl font-bold text-texto">${apostasFiltradas.length}</h3>
           </div>
-          <div class="bg-[#131620] border border-white/10 rounded-xl p-5 md:p-6">
-            <p class="text-xs md:text-sm text-gray-400 mb-1">Lucro Operacional (Finalizados)</p>
-            <h3 class="text-xl md:text-2xl font-bold ${lucroTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}">
+          <div class="bg-panel border border-linha rounded-xl p-5 md:p-6">
+            <p class="text-xs md:text-sm text-mutado mb-1">Lucro Operacional (Finalizados)</p>
+            <h3 class="text-xl md:text-2xl font-bold ${lucroTotal > 0 ? 'text-emerald-500' : lucroTotal < 0 ? 'text-red-500' : 'text-texto'}">
               R$ ${lucroTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
             </h3>
           </div>
         </div>
 
         ${podeEditar ? `
-          <div class="bg-[#131620] border border-white/10 rounded-xl p-4 md:p-6 mb-6 md:mb-8 no-print">
-            <h3 class="text-sm md:text-md font-bold mb-4 text-white uppercase tracking-wide">⚡ LANÇAR APOSTA</h3>
+          <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6 md:mb-8 no-print">
+            <h3 class="text-sm md:text-md font-bold mb-4 text-texto uppercase tracking-wide">⚡ LANÇAR APOSTA</h3>
             <form onsubmit="adicionarAposta(event)" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3">
               <div>
-                <label class="block text-xs text-gray-400 mb-1">Data da Aposta</label>
-                <input type="date" id="apostaData" value="${estado.dataFormulario}" onchange="atualizarDataFormulario(this.value)" onclick="this.showPicker &amp;&amp; this.showPicker()" required class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none cursor-pointer">
+                <label class="block text-xs text-mutado mb-1">Data da Aposta</label>
+                <input type="date" id="apostaData" value="${estado.dataFormulario}" onchange="atualizarDataFormulario(this.value)" onclick="this.showPicker && this.showPicker()" required class="w-full px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none cursor-pointer">
               </div>
               <div>
-                <label class="block text-xs text-gray-400 mb-1">Operador</label>
-                <select id="apostaOperador" required onchange="atualizarCasasFormAposta()" class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
+                <label class="block text-xs text-mutado mb-1">Operador</label>
+                <select id="apostaOperador" required onchange="atualizarCasasFormAposta()" class="w-full px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none">
                   <option value="">Selecione...</option>
                   ${operadoresParaForm.map(o => `<option value="${o.id}">${o.nome}</option>`).join('')}
                 </select>
               </div>
               <div>
-                <label class="block text-xs text-gray-400 mb-1">Casa de Aposta</label>
-                <select id="apostaCasa" required class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
+                <label class="block text-xs text-mutado mb-1">Casa de Aposta</label>
+                <select id="apostaCasa" required class="w-full px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none">
                   <option value="">Selecione Operador...</option>
                 </select>
               </div>
               <div>
-                <label class="block text-xs text-gray-400 mb-1">Stake / Valor (R$)</label>
-                <input type="number" step="0.01" id="apostaStake" required placeholder="1000" class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
+                <label class="block text-xs text-mutado mb-1">Stake / Valor (R$)</label>
+                <input type="number" step="0.01" id="apostaStake" required placeholder="1000" class="w-full px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none">
               </div>
               <div>
-                <label class="block text-xs text-gray-400 mb-1">Qtd. Apostas</label>
-                <input type="number" min="1" max="50" id="apostaQtd" value="1" required class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none font-bold">
+                <label class="block text-xs text-mutado mb-1">Qtd. Apostas</label>
+                <input type="number" min="1" max="50" id="apostaQtd" value="1" required class="w-full px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none font-bold">
               </div>
               <div class="flex items-end">
                 <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 font-bold text-white rounded text-xs transition">
@@ -562,79 +876,110 @@
             </form>
           </div>
         ` : `
-          <div class="bg-blue-500/10 border border-blue-500/20 text-blue-300 p-4 rounded-xl mb-6 text-xs font-semibold">
-            ℹ️ Perfil atual: <strong>Somente Leitura</strong>. Lançamentos e alterações de apostas estão desativados.
+          <div class="bg-blue-500/10 border border-blue-500/20 text-blue-500 p-4 rounded-xl mb-6 text-xs font-semibold">
+            ℹ️ Perfil atual: <strong>Somente Leitura</strong>. Você visualiza apenas as suas apostas.
           </div>
         `}
 
-        <div class="bg-[#131620] border border-white/10 rounded-xl p-4 md:p-6">
-          <h2 class="text-base md:text-lg font-bold mb-4 text-white">Gestão de Apostas</h2>
-          <div class="overflow-x-auto rounded-lg border border-white/10">
-            <table class="w-full text-left text-xs md:text-sm text-gray-300 min-w-[700px]">
-              <thead class="bg-[#1a1f2e] text-white uppercase text-[10px] md:text-xs">
+        <div class="bg-panel border border-linha rounded-xl p-4 mb-4 flex flex-wrap items-center justify-between gap-3 no-print">
+          <h2 class="text-base md:text-lg font-bold text-texto" style="color: var(--color-text);">Gestão de Apostas</h2>
+          <div class="flex flex-wrap items-center gap-3">
+            
+            ${podeEditar ? `<button id="btnSincronizarManual" onclick="sincronizarTudoManual()" class="px-3 py-1.5 rounded text-xs font-bold transition flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20">💾 Salvar Tudo (Sincronizar)</button>` : ''}
+            
+            <button onclick="alternarFiltroPendentes()" class="px-3 py-1.5 rounded text-xs font-bold transition flex items-center gap-1.5 ${estado.filtroPendentes ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/20' : 'bg-input text-yellow-500 border border-yellow-500/30 hover:bg-yellow-500/10'}">
+              ⏳ ${estado.filtroPendentes ? 'Exibindo Apenas Pendentes' : 'Filtrar Pendentes'}
+            </button>
+            
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-texto">Ordem:</span>
+              <select id="selectOrdemDashboard" onchange="estado.ordemDashboard=this.value;salvarDadosNoLocalStorage();renderizarAba()" class="px-2.5 py-1.5 bg-input border border-linha rounded text-xs text-texto outline-none font-bold">
+                <option value="desc" ${estado.ordemDashboard === 'desc' ? 'selected' : ''}>🔽 Recentes</option>
+                <option value="asc" ${estado.ordemDashboard === 'asc' ? 'selected' : ''}>🔼 Antigas</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
+          <div class="overflow-x-auto rounded-lg border border-linha">
+            <table class="w-full text-left text-xs md:text-sm text-mutado min-w-[700px]">
+              <thead class="bg-panelAlt text-texto uppercase text-[10px] md:text-xs">
                 <tr>
-                  <th class="p-3">Data</th>
-                  <th class="p-3">Operador</th>
-                  <th class="p-3">Casa</th>
-                  <th class="p-3">Stake</th>
-                  <th class="p-3">Valor de Retorno (R$)</th>
-                  <th class="p-3">Status</th>
-                  <th class="p-3 text-right no-print">Ação</th>
+                  <th class="p-3 border-b border-linha">Data</th>
+                  <th class="p-3 border-b border-linha">Operador</th>
+                  <th class="p-3 border-b border-linha">Casa</th>
+                  <th class="p-3 border-b border-linha">Stake</th>
+                  <th class="p-3 border-b border-linha">Valor de Retorno (R$)</th>
+                  <th class="p-3 border-b border-linha">Status</th>
+                  <th class="p-3 text-right no-print border-b border-linha">Ação</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-white/5">
-                ${apostasFiltradas.length === 0 ? '<tr><td colspan="7" class="p-4 text-center text-gray-500">Nenhuma aposta encontrada.</td></tr>' : ''}
+              <tbody class="divide-y divide-linha">
+                ${apostasFiltradas.length === 0 ? '<tr><td colspan="7" class="p-4 text-center text-mutado">Nenhuma aposta encontrada.</td></tr>' : ''}
                 ${apostasFiltradas.map((a, index) => {
                   const opId = a.operadorId || a.clienteId;
                   const operador = estado.operadores.find(o => o.id === opId);
                   const casa = estado.casas.find(cs => cs.id === a.casaId);
-                  const bgClass = index % 2 === 0 ? 'bg-[#131620]' : 'bg-[#181c28]';
+                  const bgClass = index % 2 === 0 ? 'bg-panel' : 'bg-panelAlt';
                   
-                  let statusTag = '<span class="bg-yellow-500/20 text-yellow-400 px-2.5 py-1 rounded text-[10px] md:text-xs font-bold">PENDENTE</span>';
+                  let statusTag = '<span class="bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-2.5 py-1 rounded text-[10px] md:text-xs font-bold">PENDENTE</span>';
                   
                   if (a.finalizada && a.retorno !== null) {
                     const lucroOuPrejuizo = a.retorno - a.stake;
-                    if (a.retorno > a.stake) {
-                      statusTag = `<span class="bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded text-[10px] md:text-xs font-bold">GREEN (+R$ ${lucroOuPrejuizo.toLocaleString('pt-BR', {minimumFractionDigits: 2})})</span>`;
-                    } else if (a.retorno < a.stake) {
-                      statusTag = `<span class="bg-red-500/20 text-red-400 px-2.5 py-1 rounded text-[10px] md:text-xs font-bold">RED (-R$ ${Math.abs(lucroOuPrejuizo).toLocaleString('pt-BR', {minimumFractionDigits: 2})})</span>`;
+                    const sinalStr = lucroOuPrejuizo > 0 ? `+R$ ${lucroOuPrejuizo.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : lucroOuPrejuizo < 0 ? `-R$ ${Math.abs(lucroOuPrejuizo).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : `R$ 0,00`;
+                    
+                    if (lucroOuPrejuizo > 0) {
+                      statusTag = `<span class="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded text-[10px] md:text-xs font-bold">${sinalStr}</span>`;
+                    } else if (lucroOuPrejuizo < 0) {
+                      statusTag = `<span class="bg-red-500/20 text-red-600 dark:text-red-400 px-2.5 py-1 rounded text-[10px] md:text-xs font-bold">${sinalStr}</span>`;
                     } else {
-                      statusTag = `<span class="bg-gray-500/20 text-gray-400 px-2.5 py-1 rounded text-[10px] md:text-xs font-bold">VOID</span>`;
+                      statusTag = `<span class="bg-gray-500/20 text-gray-700 dark:text-gray-300 px-2.5 py-1 rounded text-[10px] md:text-xs font-bold">${sinalStr}</span>`;
                     }
                   }
 
                   return `
-                    <tr class="${bgClass} hover:bg-[#1f2536] transition-colors">
-                      <td class="p-3">${a.data}</td>
-                      <td class="p-3 font-semibold text-white">${operador ? operador.nome : 'N/A'}</td>
-                      <td class="p-3">${casa ? casa.nome : 'N/A'}</td>
-                      <td class="p-3">R$ ${a.stake.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                    <tr class="${bgClass} hover:opacity-80 transition-opacity">
+                      <td class="p-3 text-texto">${formatarDataBR(a.data)}</td>
+                      <td class="p-3 font-semibold text-texto">${operador ? operador.nome : 'N/A'}</td>
                       <td class="p-3">
+                        ${podeEditar && a.editando ? `
+                          <select id="input-casa-${a.id}" class="w-full px-2 py-1 bg-input border border-linha rounded text-texto text-xs outline-none">
+                            ${estado.casas.filter(c => (c.operadorId || c.clienteId) === opId).map(c => `<option value="${c.id}" ${c.id === a.casaId ? 'selected' : ''}>${c.nome}</option>`).join('')}
+                          </select>
+                        ` : (casa ? renderizarFlagCasa(casa.nome) : 'N/A')}
+                      </td>
+                      <td class="p-3 text-texto">
+                        ${podeEditar && a.editando ? `
+                          <input type="number" step="0.01" id="input-stake-${a.id}" value="${a.stake}" class="w-24 px-2 py-1 bg-input border border-linha rounded text-texto text-xs outline-none">
+                        ` : `R$ ${a.stake.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`}
+                      </td>
+                      <td class="p-3 text-texto">
                         ${podeEditar ? (
                           a.editando ? `
-                            <input type="number" step="0.01" id="input-retorno-${a.id}" value="${a.retorno !== null ? a.retorno : ''}" placeholder="Ex: 2700" class="w-28 px-2 py-1 bg-[#1a1f2e] border border-white rounded text-white text-xs outline-none">
-                          ` : (a.finalizada ? `R$ ${a.retorno.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : `
-                            <input type="number" step="0.01" id="input-retorno-${a.id}" placeholder="Ex: 2700" class="w-28 px-2 py-1 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
+                            <input type="number" step="0.01" id="input-retorno-${a.id}" value="${a.retorno !== null ? a.retorno : ''}" placeholder="Ex: 0" class="w-28 px-2 py-1 bg-input border border-linha rounded text-texto text-xs outline-none">
+                          ` : (a.retorno !== null ? `R$ ${a.retorno.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : `
+                            <input type="number" step="0.01" id="input-retorno-${a.id}" placeholder="Ex: 0" class="w-28 px-2 py-1 bg-input border border-linha rounded text-texto text-xs outline-none">
                           `)
-                        ) : (a.finalizada ? `R$ ${a.retorno.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-')}
+                        ) : (a.retorno !== null ? `R$ ${a.retorno.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-')}
                       </td>
                       <td class="p-3">${statusTag}</td>
                       <td class="p-3 text-right no-print">
                         ${podeEditar ? `
                           <div class="flex items-center justify-end gap-1.5">
                             ${a.editando ? `
-                              <button onclick="salvarRetornoAposta('${a.id}')" class="px-2.5 py-1 bg-emerald-600 text-white text-xs rounded font-bold">Salvar</button>
-                              <button onclick="zerarApostaDirectly('${a.id}')" class="px-2 py-1 bg-red-600 text-white text-xs rounded font-bold">Zerar</button>
+                              <button onclick="salvarEdicaoAposta('${a.id}')" class="px-2.5 py-1 bg-emerald-600 text-white text-xs rounded font-bold">Salvar</button>
                               <button onclick="cancelarEdicao('${a.id}')" class="px-2 py-1 bg-gray-600 text-gray-200 text-xs rounded">X</button>
                             ` : (a.finalizada ? `
-                              <button onclick="habilitarEdicao('${a.id}')" class="px-2.5 py-1 bg-blue-600/20 text-blue-400 text-xs rounded font-bold">Editar</button>
+                              <button onclick="habilitarEdicao('${a.id}')" class="px-2.5 py-1 bg-blue-600/20 text-blue-500 border border-blue-500/40 hover:bg-blue-600 hover:text-white text-xs rounded font-bold transition">EDITAR</button>
                             ` : `
-                              <button onclick="salvarRetornoAposta('${a.id}')" class="px-2.5 py-1 bg-emerald-600/30 text-emerald-300 text-xs rounded font-bold">Ok</button>
-                              <button onclick="zerarApostaDirectly('${a.id}')" class="px-2 py-1 bg-red-600/20 text-red-400 text-xs rounded font-bold">Zerar</button>
+                              <button onclick="habilitarEdicao('${a.id}')" class="px-2.5 py-1 bg-blue-600/20 text-blue-500 border border-blue-500/40 hover:bg-blue-600 hover:text-white text-xs rounded font-bold transition">EDITAR</button>
+                              <button onclick="salvarRetornoAposta('${a.id}')" class="px-2.5 py-1 bg-emerald-600/30 text-emerald-600 dark:text-emerald-400 text-xs rounded font-bold">FINALIZAR</button>
+                              <button onclick="zerarApostaDirectly('${a.id}')" class="px-2.5 py-1 bg-red-600/20 text-red-500 text-xs rounded font-bold">ZERAR</button>
                             `)}
-                            <button onclick="deletarAposta('${a.id}')" class="text-gray-500 hover:text-red-400 text-xs p-1">🗑️</button>
+                            <button onclick="deletarAposta('${a.id}')" class="text-mutado hover:text-red-500 text-xs p-1">🗑️</button>
                           </div>
-                        ` : '<span class="text-xs text-gray-500">-</span>'}
+                        ` : '<span class="text-xs text-mutado">-</span>'}
                       </td>
                     </tr>
                   `;
@@ -644,6 +989,256 @@
           </div>
         </div>
       `;
+    }
+
+    function alternarFiltroPendentes() {
+      estado.filtroPendentes = !estado.filtroPendentes;
+      salvarDadosNoLocalStorage();
+      renderizarAba();
+    }
+
+    // ================= 1.1 MÓDULO VOLUME MÊS =================
+    function renderizarVolumeMes(container) {
+      const apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
+
+      const dadosPorData = {};
+      let volumeTotalGeral = 0;
+      let lucroLiquidoTotalGeral = 0;
+      let totalQtdApostasGeral = apostasFiltradas.length;
+
+      apostasFiltradas.forEach(a => {
+        const dataAposta = a.data || 'Sem Data';
+        const stakeAposta = a.stake || 0;
+        let lucroLiquidoAposta = 0;
+
+        if (a.finalizada && a.retorno !== null) {
+          lucroLiquidoAposta = a.retorno - a.stake;
+        }
+
+        volumeTotalGeral += stakeAposta;
+        lucroLiquidoTotalGeral += lucroLiquidoAposta;
+
+        if (!dadosPorData[dataAposta]) {
+          dadosPorData[dataAposta] = {
+            data: dataAposta,
+            volumeDia: 0,
+            lucroLiquidoDia: 0,
+            quantidade: 0,
+            casasNoDia: new Set()
+          };
+        }
+
+        dadosPorData[dataAposta].volumeDia += stakeAposta;
+        dadosPorData[dataAposta].lucroLiquidoDia += lucroLiquidoAposta;
+        dadosPorData[dataAposta].quantidade += 1;
+
+        const casaObj = estado.casas.find(c => c.id === a.casaId);
+        if (casaObj) {
+          dadosPorData[dataAposta].casasNoDia.add(normalizarNomeCasa(casaObj.nome));
+        }
+      });
+
+      const datasOrdenadas = Object.keys(dadosPorData).sort((a, b) => {
+        return estado.ordemVolumeMes === 'asc' ? new Date(a) - new Date(b) : new Date(b) - new Date(a);
+      });
+
+      // Preparação de dados para o Gráfico (sempre cronológico)
+      const datasCronologicas = Object.keys(dadosPorData).sort((a, b) => new Date(a) - new Date(b));
+      const labelsGrafico = [];
+      const dataVolumeAcumulado = [];
+      const dataLucroAcumulado = [];
+      
+      let volAcum = 0;
+      let lucroAcum = 0;
+      
+      datasCronologicas.forEach(dataStr => {
+        const item = dadosPorData[dataStr];
+        volAcum += item.volumeDia;
+        lucroAcum += item.lucroLiquidoDia;
+        labelsGrafico.push(formatarDataBR(dataStr));
+        dataVolumeAcumulado.push(volAcum);
+        dataLucroAcumulado.push(lucroAcum);
+      });
+
+      container.innerHTML = `
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
+          <div>
+            <h2 class="text-xl md:text-2xl font-bold text-texto">📈 Módulo Volume Mês</h2>
+            <p class="text-xs text-mutado">Síntese de volume de apostas e lucro líquido consolidado por data com base nos filtros do dashboard.</p>
+          </div>
+          <button onclick="window.print()" class="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition shadow-lg shadow-emerald-900/40">
+            🖨️ Imprimir / Salvar PDF
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="bg-panel border border-linha rounded-xl p-5">
+            <p class="text-xs text-mutado mb-1">Volume Total Acumulado</p>
+            <h3 class="text-xl md:text-2xl font-black text-blue-500">
+              R$ ${volumeTotalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+            </h3>
+          </div>
+          <div class="bg-panel border border-linha rounded-xl p-5">
+            <p class="text-xs text-mutado mb-1">Lucro Líquido do Mês / Período</p>
+            <h3 class="text-xl md:text-2xl font-bold ${lucroLiquidoTotalGeral > 0 ? 'text-emerald-500' : lucroLiquidoTotalGeral < 0 ? 'text-red-500' : 'text-texto'}">
+              R$ ${lucroLiquidoTotalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+            </h3>
+          </div>
+          <div class="bg-panel border border-linha rounded-xl p-5">
+            <p class="text-xs text-mutado mb-1">Total de Apostas Sintetizadas</p>
+            <h3 class="text-xl md:text-2xl font-bold text-texto">${totalQtdApostasGeral}</h3>
+          </div>
+        </div>
+
+        <!-- GRÁFICO DE EVOLUÇÃO (LINHAS ACUMULADAS) -->
+        ${datasCronologicas.length > 0 ? `
+        <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6 no-print">
+          <h3 class="text-sm font-bold text-texto uppercase tracking-wider mb-4">📉 Gráfico de Evolução (Acumulado)</h3>
+          <div class="relative h-64 md:h-80 w-full">
+            <canvas id="graficoVolumeMes"></canvas>
+          </div>
+        </div>
+        ` : ''}
+
+        <div class="bg-panel border border-linha rounded-xl p-4 mb-4 flex items-center justify-between gap-3 no-print">
+          <h3 class="text-sm md:text-md font-bold text-texto uppercase tracking-wider">📅 Dashboard Sintético por Data</h3>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-texto">Ordem:</span>
+            <select id="selectOrdemVolumeMes" onchange="estado.ordemVolumeMes=this.value;salvarDadosNoLocalStorage();renderizarAba()" class="px-2.5 py-1.5 bg-input border border-linha rounded text-xs text-texto outline-none font-bold">
+              <option value="desc" ${estado.ordemVolumeMes === 'desc' ? 'selected' : ''}>🔽 Recentes</option>
+              <option value="asc" ${estado.ordemVolumeMes === 'asc' ? 'selected' : ''}>🔼 Antigas</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
+          <div class="overflow-x-auto rounded-lg border border-linha">
+            <table class="w-full text-left text-xs text-mutado min-w-[700px]">
+              <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+                <tr>
+                  <th class="p-3 border-b border-linha">Data (DD/MM/AAAA)</th>
+                  <th class="p-3 border-b border-linha">Ano / Mês</th>
+                  <th class="p-3 border-b border-linha">Qtd. Apostas</th>
+                  <th class="p-3 border-b border-linha">Casas Envolvidas</th>
+                  <th class="p-3 border-b border-linha">Volume Apostado (Dia)</th>
+                  <th class="p-3 border-b border-linha">Lucro Líquido (Dia)</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-linha">
+                ${datasOrdenadas.length === 0 ? '<tr><td colspan="6" class="p-4 text-center text-mutado">Nenhum registro encontrado para o filtro selecionado.</td></tr>' : ''}
+                ${datasOrdenadas.map((dataStr, index) => {
+                  const item = dadosPorData[dataStr];
+                  const [ano, mes, dia] = dataStr.split('-');
+                  const mesAnoStr = `${mes}/${ano}`;
+                  const casasLista = Array.from(item.casasNoDia).map(c => renderizarFlagCasa(c)).join(' ');
+                  const corLucroDia = item.lucroLiquidoDia > 0 ? 'text-emerald-500 font-bold' : item.lucroLiquidoDia < 0 ? 'text-red-500 font-bold' : 'text-texto font-bold';
+
+                  return `
+                    <tr class="${index % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'} hover:opacity-80 transition-opacity">
+                      <td class="p-3 font-bold text-texto">${formatarDataBR(dataStr)}</td>
+                      <td class="p-3 font-semibold text-emerald-500">${mesAnoStr}</td>
+                      <td class="p-3 text-texto">${item.quantidade}</td>
+                      <td class="p-3">${casasLista || '<span class="text-mutado">N/A</span>'}</td>
+                      <td class="p-3 font-semibold text-blue-500">R$ ${item.volumeDia.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                      <td class="p-3 ${corLucroDia}">R$ ${item.lucroLiquidoDia.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+
+      // Inicialização do Gráfico após inserir o HTML
+      if (datasCronologicas.length > 0) {
+        setTimeout(() => {
+          const ctx = document.getElementById('graficoVolumeMes');
+          if (!ctx) return;
+
+          if (window.graficoVolumeInstancia) {
+            window.graficoVolumeInstancia.destroy();
+          }
+
+          const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+          const textColor = isDark ? '#9ca3af' : '#4b5563';
+          const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+
+          window.graficoVolumeInstancia = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: labelsGrafico,
+              datasets: [
+                {
+                  label: 'Volume Acumulado',
+                  data: dataVolumeAcumulado,
+                  borderColor: '#3b82f6', // blue-500
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  borderWidth: 2,
+                  fill: true,
+                  tension: 0.3,
+                  yAxisID: 'y'
+                },
+                {
+                  label: 'Lucro Líquido Acumulado',
+                  data: dataLucroAcumulado,
+                  borderColor: '#10b981', // emerald-500
+                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                  borderWidth: 2,
+                  fill: true,
+                  tension: 0.3,
+                  yAxisID: 'y1'
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              plugins: {
+                legend: { 
+                  labels: { color: textColor, font: { family: 'ui-sans-serif, system-ui, sans-serif', size: 11, weight: 'bold' } } 
+                },
+                tooltip: {
+                  backgroundColor: isDark ? '#1f2937' : '#ffffff',
+                  titleColor: isDark ? '#ffffff' : '#111827',
+                  bodyColor: isDark ? '#d1d5db' : '#4b5563',
+                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                  borderWidth: 1,
+                  callbacks: {
+                    label: function(context) {
+                      let label = context.dataset.label || '';
+                      if (label) label += ': ';
+                      if (context.parsed.y !== null) {
+                        label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed.y);
+                      }
+                      return label;
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: { 
+                  ticks: { color: textColor, font: { size: 10 } }, 
+                  grid: { color: gridColor, drawBorder: false } 
+                },
+                y: {
+                  type: 'linear', display: true, position: 'left',
+                  title: { display: true, text: 'Volume (R$)', color: '#3b82f6', font: {size: 10, weight: 'bold'} },
+                  ticks: { color: '#3b82f6', font: {size: 10}, callback: value => 'R$ ' + (value/1000) + 'k' },
+                  grid: { color: gridColor, drawBorder: false }
+                },
+                y1: {
+                  type: 'linear', display: true, position: 'right',
+                  title: { display: true, text: 'Lucro (R$)', color: '#10b981', font: {size: 10, weight: 'bold'} },
+                  ticks: { color: '#10b981', font: {size: 10}, callback: value => 'R$ ' + (value/1000) + 'k' },
+                  grid: { drawOnChartArea: false, drawBorder: false }
+                }
+              }
+            }
+          });
+        }, 50);
+      }
     }
 
     function atualizarDataFormulario(novaData) {
@@ -720,6 +1315,29 @@
       }
     }
 
+    async function salvarEdicaoAposta(apostaId) {
+      if (!verificarSeTemPermissaoEdicao()) return;
+      const inputCasa = document.getElementById(`input-casa-${apostaId}`);
+      const inputStake = document.getElementById(`input-stake-${apostaId}`);
+      const inputRetorno = document.getElementById(`input-retorno-${apostaId}`);
+      
+      const aposta = estado.apostas.find(a => a.id === apostaId);
+      if (aposta) {
+        if (inputCasa) aposta.casaId = inputCasa.value;
+        if (inputStake && inputStake.value !== '') aposta.stake = parseFloat(inputStake.value);
+        if (inputRetorno && inputRetorno.value !== '') {
+          aposta.retorno = parseFloat(inputRetorno.value);
+          aposta.finalizada = true;
+        } else if (inputRetorno && inputRetorno.value === '') {
+          aposta.retorno = null;
+          aposta.finalizada = false;
+        }
+        aposta.editando = false;
+        await salvarNaNuvemELocal('aposta', aposta);
+        renderizarAba();
+      }
+    }
+
     async function zerarApostaDirectly(apostaId) {
       if (!verificarSeTemPermissaoEdicao()) return;
       const aposta = estado.apostas.find(a => a.id === apostaId);
@@ -763,39 +1381,60 @@
       const podeEditar = verificarSeTemPermissaoEdicao();
       container.innerHTML = `
         <div class="mb-6">
-          <h2 class="text-xl md:text-2xl font-bold text-white">Gestão de Operadores</h2>
+          <h2 class="text-xl md:text-2xl font-bold text-texto" style="color: var(--color-text);">Gestão de Operadores & Rasterização Documental</h2>
+          <p class="text-xs text-mutado">Controle de perfis, nomes completos, telefones e pixels cadastrais com 3 códigos postais e dígitos.</p>
         </div>
 
         ${podeEditar ? `
-          <div class="bg-[#131620] border border-white/10 rounded-xl p-4 md:p-6 mb-6 no-print">
-            <h3 class="text-sm font-bold mb-3 text-white">➕ Cadastrar Novo Operador</h3>
-            <form onsubmit="adicionarOperador(event)" class="flex flex-col sm:flex-row gap-3">
-              <input type="text" id="novoNome" required class="flex-1 px-4 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none" placeholder="Nome do Operador">
-              <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 font-bold text-white rounded text-xs transition">
-                Adicionar
-              </button>
+          <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6 no-print">
+            <h3 id="tituloFormOperador" class="text-sm font-bold mb-3 text-texto">➕ Cadastrar Novo Operador</h3>
+            <form onsubmit="salvarOperadorForm(event)" class="space-y-3">
+              <input type="hidden" id="editOperadorId" value="">
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                <input type="text" id="novoNome" required class="px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none" placeholder="Nome Completo">
+                <input type="text" id="novoTelefone" class="px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none" placeholder="Telefone">
+                <input type="text" id="novoDocumento" class="px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none" placeholder="PIX 1">
+                <input type="text" id="novoCep1" class="px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none" placeholder="PIX 2">
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="submit" id="btnSalvarOperador" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 font-bold text-white rounded text-xs transition">
+                  Salvar Operador
+                </button>
+                <button type="button" id="btnCancelarOperador" onclick="cancelarEdicaoOperador()" class="hidden px-4 py-2 bg-gray-600 hover:bg-gray-500 font-bold text-white rounded text-xs transition">
+                  Cancelar Edição
+                </button>
+              </div>
             </form>
           </div>
         ` : ''}
 
-        <div class="bg-[#131620] border border-white/10 rounded-xl p-4 md:p-6">
-          <h3 class="text-sm font-bold mb-4 text-white">Operadores Cadastrados</h3>
-          <div class="overflow-x-auto rounded-lg border border-white/10">
-            <table class="w-full text-left text-xs md:text-sm text-gray-300">
-              <thead class="bg-[#1a1f2e] text-white uppercase text-[10px] md:text-xs">
+        <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
+          <h3 class="text-sm font-bold mb-4 text-texto">Operadores Cadastrados (Rasterização de Documentos)</h3>
+          <div class="overflow-x-auto rounded-lg border border-linha">
+            <table class="w-full text-left text-xs md:text-sm text-mutado">
+              <thead class="bg-panelAlt text-texto uppercase text-[10px] md:text-xs">
                 <tr>
-                  <th class="p-3">Nome</th>
-                  <th class="p-3 text-right no-print">Ações</th>
+                  <th class="p-3 border-b border-linha">Nome Completo</th>
+                  <th class="p-3 border-b border-linha">Telefone</th>
+                  <th class="p-3 border-b border-linha">PIX 1</th>
+                  <th class="p-3 border-b border-linha">PIX 2</th>
+                  <th class="p-3 text-right no-print border-b border-linha">Ações</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-white/5">
-                ${estado.operadores.length === 0 ? '<tr><td colspan="2" class="p-4 text-center text-gray-500">Nenhum operador cadastrado.</td></tr>' : ''}
+              <tbody class="divide-y divide-linha">
+                ${estado.operadores.length === 0 ? '<tr><td colspan="5" class="p-4 text-center text-mutado">Nenhum operador cadastrado.</td></tr>' : ''}
                 ${estado.operadores.map((op, index) => `
-                  <tr class="${index % 2 === 0 ? 'bg-[#131620]' : 'bg-[#181c28]'}">
-                    <td class="p-3 font-semibold text-white">${op.nome}</td>
+                  <tr class="${index % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
+                    <td class="p-3 font-semibold text-texto">${op.nome || '-'}</td>
+                    <td class="p-3 text-texto">${op.telefone || '-'}</td>
+                    <td class="p-3 font-mono text-xs text-emerald-500">${op.documento || '-'}</td>
+                    <td class="p-3 font-mono text-xs text-texto">${op.cep1 || '-'}</td>
                     <td class="p-3 text-right no-print">
                       ${podeEditar ? `
-                        <button onclick="deletarOperador('${op.id}')" class="px-2.5 py-1 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded text-xs transition font-bold">Excluir</button>
+                        <div class="flex items-center justify-end gap-1.5">
+                          <button onclick="carregarOperadorParaEdicao('${op.id}')" class="px-2.5 py-1 bg-blue-600/20 text-blue-500 hover:bg-blue-600 hover:text-white rounded text-xs transition font-bold">Editar</button>
+                          <button onclick="deletarOperador('${op.id}')" class="px-2.5 py-1 bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white rounded text-xs transition font-bold">Excluir</button>
+                        </div>
                       ` : '-'}
                     </td>
                   </tr>
@@ -807,17 +1446,72 @@
       `;
     }
 
-    async function adicionarOperador(e) {
+    async function salvarOperadorForm(e) {
       e.preventDefault();
       if (!verificarSeTemPermissaoEdicao()) return;
-      const novoOp = {
-        id: `operador-${Date.now()}`,
-        nome: document.getElementById('novoNome').value
-      };
-      estado.operadores.push(novoOp);
-      await salvarNaNuvemELocal('operador', novoOp);
+      
+      const idExistente = document.getElementById('editOperadorId').value;
+      const nomeVal = document.getElementById('novoNome').value;
+      const telefoneVal = document.getElementById('novoTelefone').value;
+      const documentoVal = document.getElementById('novoDocumento').value;
+      const cep1Val = document.getElementById('novoCep1').value;
+
+      if (idExistente) {
+        const op = estado.operadores.find(o => o.id === idExistente);
+        if (op) {
+          op.nome = nomeVal;
+          op.telefone = telefoneVal;
+          op.documento = documentoVal;
+          op.cep1 = cep1Val;
+          await salvarNaNuvemELocal('operador', op);
+        }
+      } else {
+        const novoOp = {
+          id: `operador-${Date.now()}`,
+          nome: nomeVal,
+          telefone: telefoneVal,
+          documento: documentoVal,
+          cep1: cep1Val,
+          cep2: '',
+          cep3: '',
+          digitos: ''
+        };
+        estado.operadores.push(novoOp);
+        await salvarNaNuvemELocal('operador', novoOp);
+      }
+
       atualizarSelectOperadores();
+      atualizarSelectCasasGlobais();
       renderizarAba();
+    }
+
+    function carregarOperadorParaEdicao(id) {
+      const op = estado.operadores.find(o => o.id === id);
+      if (!op) return;
+
+      document.getElementById('editOperadorId').value = op.id;
+      document.getElementById('novoNome').value = op.nome || '';
+      document.getElementById('novoTelefone').value = op.telefone || '';
+      document.getElementById('novoDocumento').value = op.documento || '';
+      document.getElementById('novoCep1').value = op.cep1 || '';
+
+      document.getElementById('tituloFormOperador').textContent = `✏️ Editando Operador: ${op.nome}`;
+      document.getElementById('btnSalvarOperador').textContent = 'Atualizar Operador';
+      document.getElementById('btnCancelarOperador').classList.remove('hidden');
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function cancelarEdicaoOperador() {
+      document.getElementById('editOperadorId').value = '';
+      document.getElementById('novoNome').value = '';
+      document.getElementById('novoTelefone').value = '';
+      document.getElementById('novoDocumento').value = '';
+      document.getElementById('novoCep1').value = '';
+
+      document.getElementById('tituloFormOperador').textContent = '➕ Cadastrar Novo Operador';
+      document.getElementById('btnSalvarOperador').textContent = 'Salvar Operador';
+      document.getElementById('btnCancelarOperador').classList.add('hidden');
     }
 
     async function deletarOperador(id) {
@@ -826,8 +1520,10 @@
         estado.operadores = estado.operadores.filter(o => o.id !== id);
         estado.apostas = estado.apostas.filter(a => (a.operadorId || a.clienteId) !== id);
         estado.casas = estado.casas.filter(cs => (cs.operadorId || cs.clienteId) !== id);
+        delete estado.descontosOperadores[id];
         await deletarDaNuvemELocal('operador', id);
         atualizarSelectOperadores();
+        atualizarSelectCasasGlobais();
         renderizarAba();
       }
     }
@@ -835,26 +1531,28 @@
     // ================= 3. CASAS DE APOSTAS =================
     function renderizarCasas(container) {
       const operadorFiltro = estado.filtros.operadorId;
-      const casasFiltradas = operadorFiltro ? estado.casas.filter(c => (c.operadorId || c.clienteId) === operadorFiltro) : estado.casas;
+      const operadoresFiltrados = operadorFiltro 
+        ? estado.operadores.filter(o => o.id === operadorFiltro) 
+        : estado.operadores;
       const podeEditar = verificarSeTemPermissaoEdicao();
 
       container.innerHTML = `
         <div class="mb-6">
-          <h2 class="text-xl md:text-2xl font-bold text-white">Casas de Apostas</h2>
+          <h2 class="text-xl md:text-2xl font-bold text-texto" style="color: var(--color-text);">Casas de Apostas</h2>
         </div>
 
         ${podeEditar ? `
-          <div class="bg-[#131620] border border-white/10 rounded-xl p-4 md:p-6 mb-6 no-print">
-            <h3 class="text-sm font-bold mb-3 text-white">🏛️ Cadastrar Nova Casa</h3>
+          <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6 no-print">
+            <h3 class="text-sm font-bold mb-3 text-texto">🏛️ Cadastrar Nova Casa</h3>
             <form onsubmit="adicionarCasa(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <select id="casaOperadorId" required class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
+                <select id="casaOperadorId" required class="w-full px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none">
                   <option value="">Selecione Operador...</option>
                   ${estado.operadores.map(o => `<option value="${o.id}">${o.nome}</option>`).join('')}
                 </select>
               </div>
               <div>
-                <input type="text" id="casaNome" required placeholder="Nome da Casa (Ex: Bet365)" class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
+                <input type="text" id="casaNome" required placeholder="Nome da Casa (Ex: HM Bets)" class="w-full px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none">
               </div>
               <div>
                 <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 font-bold text-white rounded text-xs transition">
@@ -865,19 +1563,34 @@
           </div>
         ` : ''}
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          ${casasFiltradas.length === 0 ? '<div class="col-span-3 text-center text-gray-500 py-4">Nenhuma casa cadastrada.</div>' : ''}
-          ${casasFiltradas.map(casa => {
-            const operador = estado.operadores.find(o => o.id === (casa.operadorId || casa.clienteId));
+        <div class="space-y-6">
+          ${operadoresFiltrados.length === 0 ? '<div class="text-center text-mutado py-4">Nenhum operador encontrado.</div>' : ''}
+          ${operadoresFiltrados.map(op => {
+            const casasDoOperador = estado.casas.filter(c => (c.operadorId || c.clienteId) === op.id);
             return `
-              <div class="bg-[#131620] border border-white/10 rounded-xl p-4">
-                <div class="flex justify-between items-center mb-2">
-                  <h3 class="text-base font-bold text-white">${casa.nome}</h3>
-                  <span class="text-[10px] bg-white/5 px-2 py-0.5 rounded text-gray-400">${operador ? operador.nome : 'N/A'}</span>
+              <div class="bg-panel border border-linha rounded-xl p-4 md:p-5">
+                <div class="flex items-center justify-between mb-4 pb-2 border-b border-linha">
+                  <h3 class="text-sm md:text-md font-bold text-emerald-500 flex items-center gap-2">
+                    👤 ${op.nome}
+                  </h3>
+                  <span class="text-xs bg-panelAlt px-2.5 py-1 rounded text-mutado font-semibold border border-linha">
+                    ${casasDoOperador.length} casa(s)
+                  </span>
                 </div>
-                ${podeEditar ? `
-                  <button onclick="deletarCasa('${casa.id}')" class="mt-3 w-full py-1 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded text-xs font-bold no-print">Excluir</button>
-                ` : ''}
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  ${casasDoOperador.length === 0 ? '<div class="col-span-full text-xs text-mutado italic py-2">Nenhuma casa cadastrada para este operador.</div>' : ''}
+                  ${casasDoOperador.map(casa => `
+                    <div class="bg-panelAlt border border-linha rounded-lg p-3.5 flex flex-col justify-between">
+                      <div class="flex justify-between items-center mb-3">
+                        ${renderizarFlagCasa(casa.nome)}
+                      </div>
+                      ${podeEditar ? `
+                        <button onclick="deletarCasa('${casa.id}')" class="w-full py-1 bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white rounded text-xs font-bold transition no-print">Excluir</button>
+                      ` : ''}
+                    </div>
+                  `).join('')}
+                </div>
               </div>
             `;
           }).join('')}
@@ -891,10 +1604,11 @@
       const novaCasa = {
         id: `casa-${Date.now()}`,
         operadorId: document.getElementById('casaOperadorId').value,
-        nome: document.getElementById('casaNome').value
+        nome: document.getElementById('casaNome').value.trim()
       };
       estado.casas.push(novaCasa);
       await salvarNaNuvemELocal('casa', novaCasa);
+      atualizarSelectCasasGlobais();
       renderizarAba();
     }
 
@@ -903,134 +1617,197 @@
       if (confirm("Deletar esta casa de apostas?")) {
         estado.casas = estado.casas.filter(c => c.id !== id);
         await deletarDaNuvemELocal('casa', id);
+        atualizarSelectCasasGlobais();
         renderizarAba();
       }
     }
 
-    // ================= 4. RELATÓRIOS =================
+    // ================= 4. RELATÓRIOS (CORRIGIDO: AGRUPAMENTO E OPERADOR) =================
     function renderizarRelatorios(container) {
-      const operadorFiltro = estado.filtros.operadorId;
-      const filtroCasaRelatorio = window.filtroCasaRelatorio || '';
-      let apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
-
-      if (filtroCasaRelatorio) {
-        apostasFiltradas = apostasFiltradas.filter(a => a.casaId === filtroCasaRelatorio);
-      }
+      const apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
+      const operadorSelecionadoId = estado.filtros ? estado.filtros.operadorId : '';
+      const operadorSelecionadoObj = operadorSelecionadoId ? estado.operadores.find(o => o.id === operadorSelecionadoId) : null;
 
       apostasFiltradas.sort((a, b) => {
         return estado.ordemRelatorio === 'asc' ? new Date(a.data) - new Date(b.data) : new Date(b.data) - new Date(a.data);
       });
 
       let volumeTotal = 0, lucroTotal = 0, totalFinalizadas = 0, greens = 0, reds = 0;
+      const resumoPorCasa = {};
+
       apostasFiltradas.forEach(a => {
         volumeTotal += a.stake;
+
+        const opId = a.operadorId || a.clienteId;
+        const opObj = estado.operadores.find(o => o.id === opId);
+        const casaObj = estado.casas.find(cs => cs.id === a.casaId);
+        
+        // Normalização que elimina duplicações acidentais por espaçamento ou caixa
+        const nomeCasa = normalizarNomeCasa(casaObj ? casaObj.nome : 'Outras / N/A');
+        const nomeOperador = opObj ? opObj.nome : 'N/A';
+
+        // Chave de agrupamento: se operador selecionado, agrupa por Operador + Casa
+        const chaveAgrupamento = operadorSelecionadoId ? `${opId}___${nomeCasa}` : nomeCasa;
+
+        if (!resumoPorCasa[chaveAgrupamento]) {
+          resumoPorCasa[chaveAgrupamento] = {
+            nome: nomeCasa,
+            operadorNome: nomeOperador,
+            volume: 0,
+            numeroApostas: 0,
+            lucroLiquido: 0
+          };
+        }
+
+        resumoPorCasa[chaveAgrupamento].volume += a.stake;
+        resumoPorCasa[chaveAgrupamento].numeroApostas += 1;
+
         if (a.finalizada && a.retorno !== null) {
           totalFinalizadas++;
-          lucroTotal += (a.retorno - a.stake);
+          const lucroAposta = a.retorno - a.stake;
+          lucroTotal += lucroAposta;
+          resumoPorCasa[chaveAgrupamento].lucroLiquido += lucroAposta;
+
           if (a.retorno > a.stake) greens++;
           else if (a.retorno < a.stake) reds++;
         }
       });
 
+      const casasDetalhadasOrdenadas = Object.values(resumoPorCasa).sort((a, b) => b.lucroLiquido - a.lucroLiquido);
+
       const roi = volumeTotal > 0 ? ((lucroTotal / volumeTotal) * 100).toFixed(2) : '0.00';
       const winrate = totalFinalizadas > 0 ? ((greens / totalFinalizadas) * 100).toFixed(1) : '0.0';
       const apostaMedia = apostasFiltradas.length > 0 ? (volumeTotal / apostasFiltradas.length).toFixed(2) : '0.00';
 
-      const casasParaFiltro = operadorFiltro ? estado.casas.filter(c => (c.operadorId || c.clienteId) === operadorFiltro) : estado.casas;
-
       container.innerHTML = `
         <div class="hidden print-header">
           <div class="flex items-center gap-3">
-            <span class="font-black text-lg bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">BC BetControl</span>
+            <span class="font-black text-xs text-texto">BetControl - Relatório Analítico Sintético</span>
           </div>
-          <div class="text-right text-[10px]">Gerado em: ${new Date().toLocaleDateString('pt-BR')}</div>
+          <div class="text-right text-[8px] text-mutado">Emitido em: ${new Date().toLocaleDateString('pt-BR')}</div>
         </div>
 
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
           <div>
-            <h2 class="text-xl md:text-2xl font-bold text-white">📊 Relatório Analítico</h2>
-            <p class="text-xs text-gray-400">Análise detalhada de banca e assertividade.</p>
+            <h2 class="text-xl md:text-2xl font-bold text-texto" style="color: var(--color-text);">📊 Relatório Analítico Sintético</h2>
+            <p class="text-xs text-mutado">Resumo consolidado unificado e discriminado por operador e casa de aposta.</p>
           </div>
           <button onclick="window.print()" class="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition shadow-lg shadow-emerald-900/40">
             🖨️ Imprimir / Salvar PDF
           </button>
         </div>
 
-        <div class="bg-[#131620] border border-white/10 rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-2 w-full sm:w-auto">
-            <span class="text-xs font-bold text-white">Casa:</span>
-            <select id="selectRelatorioCasa" onchange="window.filtroCasaRelatorio=this.value;renderizarAba()" class="px-2.5 py-1.5 bg-[#1a1f2e] border border-white/10 rounded text-xs text-white outline-none flex-1">
-              <option value="">Todas</option>
-              ${casasParaFiltro.map(c => `<option value="${c.id}" ${filtroCasaRelatorio === c.id ? 'selected' : ''}>${c.nome}</option>`).join('')}
-            </select>
+        <div class="bg-panel border border-linha rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-3 no-print">
+          <div class="text-xs text-mutado">
+            ${operadorSelecionadoObj 
+              ? `🎯 Exibindo dados discriminados para o operador: <strong class="text-emerald-500 uppercase">${operadorSelecionadoObj.nome}</strong>` 
+              : `🌐 Modo Global: agrupando todas as casas de forma unificada (HM BETS consolidada).`}
           </div>
-
           <div class="flex items-center gap-2 w-full sm:w-auto">
-            <span class="text-xs font-bold text-white">Ordem:</span>
-            <select id="selectOrdemRelatorio" onchange="estado.ordemRelatorio=this.value;salvarDadosNoLocalStorage();renderizarAba()" class="px-2.5 py-1.5 bg-[#1a1f2e] border border-white/10 rounded text-xs text-white outline-none font-bold flex-1">
+            <span class="text-xs font-bold text-texto">Ordem:</span>
+            <select id="selectOrdemRelatorio" onchange="estado.ordemRelatorio=this.value;salvarDadosNoLocalStorage();renderizarAba()" class="px-2.5 py-1.5 bg-input border border-linha rounded text-xs text-texto outline-none font-bold flex-1">
               <option value="desc" ${estado.ordemRelatorio === 'desc' ? 'selected' : ''}>🔽 Recentes</option>
               <option value="asc" ${estado.ordemRelatorio === 'asc' ? 'selected' : ''}>🔼 Antigas</option>
             </select>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-          <div class="print-card bg-[#131620] border border-white/10 rounded-xl p-4">
-            <p class="text-[11px] text-gray-400 mb-1">ROI</p>
-            <h3 class="text-lg md:text-xl font-black ${parseFloat(roi) >= 0 ? 'text-emerald-400' : 'text-red-400'}">${roi}%</h3>
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+          <div class="print-card bg-panel border border-linha rounded-xl p-3 shadow-md">
+            <p class="text-[9px] text-mutado mb-0.5 uppercase tracking-wider font-bold">Nº Apostas</p>
+            <h3 class="text-sm md:text-xl font-black text-texto">${apostasFiltradas.length}</h3>
           </div>
-          <div class="print-card bg-[#131620] border border-white/10 rounded-xl p-4">
-            <p class="text-[11px] text-gray-400 mb-1">Volume</p>
-            <h3 class="text-base md:text-xl font-bold text-blue-400">R$ ${volumeTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
+          <div class="print-card bg-panel border border-linha rounded-xl p-3 shadow-md">
+            <p class="text-[9px] text-mutado mb-0.5 uppercase tracking-wider font-bold">Volume Total</p>
+            <h3 class="text-xs md:text-lg font-black text-blue-500">R$ ${volumeTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
           </div>
-          <div class="print-card bg-[#131620] border border-white/10 rounded-xl p-4">
-            <p class="text-[11px] text-gray-400 mb-1">Lucro/Prejuízo</p>
-            <h3 class="text-base md:text-xl font-bold ${lucroTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}">R$ ${lucroTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
+          <div class="print-card bg-panel border border-linha rounded-xl p-3 shadow-md">
+            <p class="text-[9px] text-mutado mb-0.5 uppercase tracking-wider font-bold">Lucro Líquido</p>
+            <h3 class="text-xs md:text-lg font-black ${lucroTotal > 0 ? 'text-emerald-500' : lucroTotal < 0 ? 'text-red-500' : 'text-texto'}">R$ ${lucroTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
           </div>
-          <div class="print-card bg-[#131620] border border-white/10 rounded-xl p-4">
-            <p class="text-[11px] text-gray-400 mb-1">Winrate</p>
-            <h3 class="text-base md:text-xl font-bold text-teal-300">${winrate}%</h3>
+          <div class="print-card bg-panel border border-linha rounded-xl p-3 shadow-md">
+            <p class="text-[9px] text-mutado mb-0.5 uppercase tracking-wider font-bold">ROI Geral</p>
+            <h3 class="text-sm md:text-xl font-black ${parseFloat(roi) > 0 ? 'text-emerald-500' : parseFloat(roi) < 0 ? 'text-red-500' : 'text-texto'}">${roi}%</h3>
           </div>
-          <div class="print-card bg-[#131620] border border-white/10 rounded-xl p-4 col-span-2 md:col-span-1">
-            <p class="text-[11px] text-gray-400 mb-1">Stake Média</p>
-            <h3 class="text-base md:text-xl font-bold text-purple-300">R$ ${parseFloat(apostaMedia).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
+          <div class="print-card bg-panel border border-linha rounded-xl p-3 shadow-md">
+            <p class="text-[9px] text-mutado mb-0.5 uppercase tracking-wider font-bold">Winrate</p>
+            <h3 class="text-sm md:text-xl font-black text-teal-500">${winrate}%</h3>
+          </div>
+          <div class="print-card bg-panel border border-linha rounded-xl p-3 shadow-md">
+            <p class="text-[9px] text-mutado mb-0.5 uppercase tracking-wider font-bold">Stake Média</p>
+            <h3 class="text-xs md:text-lg font-black text-purple-500">R$ ${parseFloat(apostaMedia).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
           </div>
         </div>
 
-        <div class="print-card bg-[#131620] border border-white/10 rounded-xl p-4 md:p-6 mb-6">
-          <h3 class="text-sm font-bold mb-3 text-white">📋 Detalhamento das Apostas</h3>
-          <div class="overflow-x-auto rounded-lg border border-white/10">
-            <table class="w-full text-left text-xs md:text-sm text-gray-300 min-w-[600px]">
-              <thead class="bg-[#1a1f2e] text-white uppercase text-[10px] md:text-xs">
+        <div class="print-card bg-panel border border-linha rounded-xl p-3 md:p-6 mb-6">
+          <h3 class="text-xs md:text-sm font-bold mb-2.5 text-texto uppercase tracking-wider">
+            🏛️ Detalhamento Analítico de Apostas por Casa ${operadorSelecionadoObj ? `(Operador: ${operadorSelecionadoObj.nome})` : ''}
+          </h3>
+          <div class="overflow-x-auto rounded-lg border border-linha">
+            <table class="w-full text-left text-xs text-mutado">
+              <thead class="bg-panelAlt text-texto uppercase text-[8.5px] md:text-xs">
                 <tr>
-                  <th class="p-2.5">Data</th>
-                  <th class="p-2.5">Operador</th>
-                  <th class="p-2.5">Casa</th>
-                  <th class="p-2.5">Stake</th>
-                  <th class="p-2.5">Retorno</th>
-                  <th class="p-2.5">Resultado</th>
+                  <th class="p-2 md:p-3 border-b border-linha">Casa de Aposta</th>
+                  ${operadorSelecionadoId ? '<th class="p-2 md:p-3 border-b border-linha">Operador</th>' : ''}
+                  <th class="p-2 md:p-3 border-b border-linha">Número de Apostas</th>
+                  <th class="p-2 md:p-3 border-b border-linha">Volume Apostado</th>
+                  <th class="p-2 md:p-3 border-b border-linha">Lucro Líquido Detalhado</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-white/5">
-                ${apostasFiltradas.length === 0 ? '<tr><td colspan="6" class="p-4 text-center text-gray-500">Nenhuma aposta encontrada.</td></tr>' : ''}
+              <tbody class="divide-y divide-linha">
+                ${casasDetalhadasOrdenadas.length === 0 ? `<tr><td colspan="${operadorSelecionadoId ? 5 : 4}" class="p-3 text-center text-mutado">Nenhum dado por casa encontrado.</td></tr>` : ''}
+                ${casasDetalhadasOrdenadas.map((item, index) => {
+                  const corLucroCasa = item.lucroLiquido > 0 ? 'text-emerald-500 font-bold' : item.lucroLiquido < 0 ? 'text-red-500 font-bold' : 'text-texto font-bold';
+                  const sinalLucroStr = item.lucroLiquido > 0 ? `+R$ ${item.lucroLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : item.lucroLiquido < 0 ? `-R$ ${Math.abs(item.lucroLiquido).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : `R$ 0,00`;
+
+                  return `
+                    <tr class="${index % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
+                      <td class="p-2 md:p-3 text-texto">${renderizarFlagCasa(item.nome)}</td>${operadorSelecionadoId ? `<td class="p-2 md:p-3 font-bold text-texto">${item.operadorNome}</td>` : ''}
+                      <td class="p-2 md:p-3 font-semibold text-texto">${item.numeroApostas}</td>
+                      <td class="p-2 md:p-3 font-semibold text-blue-500">R$ ${item.volume.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                      <td class="p-2 md:p-3 ${corLucroCasa}">${sinalLucroStr}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="print-card bg-panel border border-linha rounded-xl p-3 md:p-6 mb-6">
+          <h3 class="text-xs md:text-sm font-bold mb-2.5 text-texto uppercase tracking-wider">📋 Detalhamento Analítico das Apostas</h3>
+          <div class="overflow-x-auto rounded-lg border border-linha">
+            <table class="w-full text-left text-xs text-mutado">
+              <thead class="bg-panelAlt text-texto uppercase text-[8.5px] md:text-xs">
+                <tr>
+                  <th class="p-1.5 md:p-2 border-b border-linha">Data</th>
+                  <th class="p-1.5 md:p-2 border-b border-linha">Operador</th>
+                  <th class="p-1.5 md:p-2 border-b border-linha">Casa</th>
+                  <th class="p-1.5 md:p-2 border-b border-linha">Stake</th>
+                  <th class="p-1.5 md:p-2 border-b border-linha">Retorno</th>
+                  <th class="p-1.5 md:p-2 border-b border-linha">Resultado</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-linha">
+                ${apostasFiltradas.length === 0 ? '<tr><td colspan="6" class="p-3 text-center text-mutado">Nenhuma aposta encontrada.</td></tr>' : ''}
                 ${apostasFiltradas.map((a, index) => {
                   const operador = estado.operadores.find(o => o.id === (a.operadorId || a.clienteId));
                   const casa = estado.casas.find(cs => cs.id === a.casaId);
-                  let resTexto = "PENDENTE", resCor = "text-yellow-400 font-bold";
+                  let resTexto = "PENDENTE", resCor = "text-yellow-600 dark:text-yellow-400 font-bold";
                   if (a.finalizada && a.retorno !== null) {
                     const diff = a.retorno - a.stake;
-                    if (diff > 0) { resTexto = `+R$ ${diff.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`; resCor = "text-emerald-400 font-bold"; }
-                    else if (diff < 0) { resTexto = `-R$ ${Math.abs(diff).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`; resCor = "text-red-400 font-bold"; }
-                    else { resTexto = "VOID"; resCor = "text-gray-400"; }
+                    if (diff > 0) { resTexto = `+R$ ${diff.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`; resCor = "text-emerald-500 font-bold"; }
+                    else if (diff < 0) { resTexto = `-R$ ${Math.abs(diff).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`; resCor = "text-red-500 font-bold"; }
+                    else { resTexto = `R$ 0,00`; resCor = "text-texto font-bold"; }
                   }
                   return `
-                    <tr class="${index % 2 === 0 ? 'bg-[#131620]' : 'bg-[#181c28]'}">
-                      <td class="p-2.5">${a.data}</td>
-                      <td class="p-2.5 font-bold text-white">${operador ? operador.nome : 'N/A'}</td>
-                      <td class="p-2.5">${casa ? casa.nome : 'N/A'}</td>
-                      <td class="p-2.5">R$ ${a.stake.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                      <td class="p-2.5">${a.retorno !== null ? `R$ ${a.retorno.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-'}</td>
-                      <td class="p-2.5 ${resCor}">${resTexto}</td>
+                    <tr class="${index % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
+                      <td class="p-1.5 md:p-2 text-texto">${formatarDataBR(a.data)}</td>
+                      <td class="p-1.5 md:p-2 font-bold text-texto">${operador ? operador.nome : 'N/A'}</td>
+                      <td class="p-1.5 md:p-2">${casa ? renderizarFlagCasa(casa.nome) : 'N/A'}</td>
+                      <td class="p-1.5 md:p-2 text-texto">R$ ${a.stake.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                      <td class="p-1.5 md:p-2 text-texto">${a.retorno !== null ? `R$ ${a.retorno.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-'}</td>
+                      <td class="p-1.5 md:p-2 ${resCor}">${resTexto}</td>
                     </tr>
                   `;
                 }).join('')}
@@ -1041,189 +1818,579 @@
       `;
     }
 
-    // ================= 5. ABA DE PAGAMENTO =================
-    function renderizarPagamentos(container) {
-      const operadorFiltro = estado.filtros.operadorId;
-      const filtroCasaPagamento = window.filtroCasaPagamento || '';
-      let apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
+    // ================= 5. MÓDULO LUCRO =================
+    function renderizarLucro(container) {
+      const apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
 
-      if (filtroCasaPagamento) {
-        apostasFiltradas = apostasFiltradas.filter(a => a.casaId === filtroCasaPagamento);
-      }
+      const lucroPorMes = {};
+      const lucroPorCasa = {};
 
-      let resultadoLiquidoBruto = 0;
+      let lucroGeralFinalizado = 0;
+      let volumeGeral = 0;
+
       apostasFiltradas.forEach(a => {
+        volumeGeral += a.stake;
         if (a.finalizada && a.retorno !== null) {
-          resultadoLiquidoBruto += (a.retorno - a.stake);
+          const lucroAposta = a.retorno - a.stake;
+          lucroGeralFinalizado += lucroAposta;
+
+          const mesAno = a.data ? a.data.substring(0, 7) : 'Desconhecido';
+          if (!lucroPorMes[mesAno]) {
+            lucroPorMes[mesAno] = { lucro: 0, volume: 0, totalApostas: 0 };
+          }
+          lucroPorMes[mesAno].lucro += lucroAposta;
+          lucroPorMes[mesAno].volume += a.stake;
+          lucroPorMes[mesAno].totalApostas++;
+
+          const casaObj = estado.casas.find(c => c.id === a.casaId);
+          const nomeCasa = normalizarNomeCasa(casaObj ? casaObj.nome : 'Outras / N/A');
+          if (!lucroPorCasa[nomeCasa]) {
+            lucroPorCasa[nomeCasa] = { lucro: 0, volume: 0, totalApostas: 0 };
+          }
+          lucroPorCasa[nomeCasa].lucro += lucroAposta;
+          lucroPorCasa[nomeCasa].volume += a.stake;
+          lucroPorCasa[nomeCasa].totalApostas++;
         }
       });
 
-      const pctDesconto = estado.descontoPercentual || 0;
-      const valorDesconto = resultadoLiquidoBruto * (pctDesconto / 100);
-      const totalLiquidoAPagar = resultadoLiquidoBruto - valorDesconto;
-      const casasParaFiltro = operadorFiltro ? estado.casas.filter(c => (c.operadorId || c.clienteId) === operadorFiltro) : estado.casas;
-      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=00020126360014BR.GOV.BCB.PIX0114008436963975204000053039865405${Math.max(0, totalLiquidoAPagar).toFixed(2)}5802BR5925FABIO%20WELLINGTON%20VENTURA%20M6009FORTALEZA62070503***6304`;
+      const mesesOrdenados = Object.keys(lucroPorMes).sort((a, b) => {
+        return estado.ordemLucroMes === 'asc' ? a.localeCompare(b) : b.localeCompare(a);
+      });
+      const casasOrdenadas = Object.keys(lucroPorCasa).sort((a, b) => lucroPorCasa[b].lucro - lucroPorCasa[a].lucro);
 
       container.innerHTML = `
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
           <div>
-            <h2 class="text-xl md:text-2xl font-bold text-white">💳 Gestão de Pagamentos</h2>
-            <p class="text-xs text-gray-400">Apuração de valores e PIX.</p>
+            <h2 class="text-xl md:text-2xl font-bold text-texto" style="color: var(--color-text);">💰 Dashboard de Lucratividade</h2>
+            <p class="text-xs text-mutado">Relatórios consolidados de lucros por mês e por casas de apostas.</p>
           </div>
           <button onclick="window.print()" class="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition">
             🖨️ Imprimir / Salvar PDF
           </button>
         </div>
 
-        <div class="bg-[#131620] border border-white/10 rounded-xl p-4 mb-6 grid grid-cols-1 md:grid-cols-3 gap-3 items-center no-print">
-          <div>
-            <label class="block text-xs font-bold text-white mb-1">Filtrar Casa:</label>
-            <select id="selectPagamentoCasa" onchange="window.filtroCasaPagamento=this.value;renderizarAba()" class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-xs text-white outline-none">
-              <option value="">Todas</option>
-              ${casasParaFiltro.map(c => `<option value="${c.id}" ${filtroCasaPagamento === c.id ? 'selected' : ''}>${c.nome}</option>`).join('')}
-            </select>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="bg-panel border border-linha rounded-xl p-5">
+            <p class="text-xs text-mutado mb-1">Lucro Líquido Consolidado</p>
+            <h3 class="text-xl md:text-2xl font-black ${lucroGeralFinalizado > 0 ? 'text-emerald-500' : lucroGeralFinalizado < 0 ? 'text-red-500' : 'text-texto'}">
+              R$ ${lucroGeralFinalizado.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+            </h3>
           </div>
-          <div>
-            <label class="block text-xs font-bold text-white mb-1">Desconto / Taxa (%):</label>
-            <input type="number" step="0.1" min="0" max="100" value="${pctDesconto}" onchange="atualizarDescontoPercentual(this.value)" class="w-full px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none font-bold">
+          <div class="bg-panel border border-linha rounded-xl p-5">
+            <p class="text-xs text-mutado mb-1">Volume Total Analisado</p>
+            <h3 class="text-xl md:text-2xl font-bold text-blue-500">R$ ${volumeGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
           </div>
-          <div class="bg-[#161b26] p-3 rounded-lg border border-white/5 text-right">
-            <span class="text-[10px] text-gray-400 uppercase block font-bold">Líquido A Pagar</span>
-            <span class="text-lg md:text-xl font-black ${totalLiquidoAPagar >= 0 ? 'text-emerald-400' : 'text-red-400'}">R$ ${totalLiquidoAPagar.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+          <div class="bg-panel border border-linha rounded-xl p-5">
+            <p class="text-xs text-mutado mb-1">ROI Geral do Período</p>
+            <h3 class="text-xl md:text-2xl font-bold text-teal-500">
+              ${volumeGeral > 0 ? ((lucroGeralFinalizado / volumeGeral) * 100).toFixed(2) : '0.00'}%
+            </h3>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div class="print-card bg-[#131620] border border-white/10 rounded-xl p-5 flex flex-col justify-between">
-            <div>
-              <h3 class="text-xs font-bold text-white mb-3 uppercase tracking-wider border-b border-white/10 pb-2">Apuração Bruta</h3>
-              <div class="space-y-2 text-xs">
-                <div class="flex justify-between text-gray-400"><span>Bruto:</span><span class="font-bold text-white">R$ ${resultadoLiquidoBruto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
-                ${pctDesconto > 0 ? `<div class="flex justify-between text-gray-400"><span>Desconto (${pctDesconto}%):</span><span class="font-bold text-red-400">- R$ ${valorDesconto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>` : ''}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
+            <div class="flex items-center justify-between mb-4 no-print">
+              <h3 class="text-sm md:text-md font-bold text-texto uppercase tracking-wider">📅 Relatório por Mês</h3>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-texto">Ordem:</span>
+                <select id="selectOrdemLucroMes" onchange="estado.ordemLucroMes=this.value;salvarDadosNoLocalStorage();renderizarAba()" class="px-2.5 py-1.5 bg-input border border-linha rounded text-xs text-texto outline-none font-bold">
+                  <option value="desc" ${estado.ordemLucroMes === 'desc' ? 'selected' : ''}>🔽 Recentes</option>
+                  <option value="asc" ${estado.ordemLucroMes === 'asc' ? 'selected' : ''}>🔼 Antigas</option>
+                </select>
               </div>
             </div>
-            <div class="mt-4 pt-3 border-t border-white/5 text-[11px] text-gray-400">
-              <p>Total de Bilhetes: <strong class="text-white">${apostasFiltradas.length}</strong></p>
+            <div class="overflow-x-auto rounded-lg border border-linha">
+              <table class="w-full text-left text-xs text-mutado">
+                <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+                  <tr>
+                    <th class="p-3 border-b border-linha">Mês / Ano</th>
+                    <th class="p-3 border-b border-linha">Apostas</th>
+                    <th class="p-3 border-b border-linha">Volume</th>
+                    <th class="p-3 border-b border-linha">Lucro / Prejuízo</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-linha">
+                  ${mesesOrdenados.length === 0 ? '<tr><td colspan="4" class="p-4 text-center text-mutado">Nenhum dado financeiro finalizado.</td></tr>' : ''}
+                  ${mesesOrdenados.map((mes, index) => {
+                    const dados = lucroPorMes[mes];
+                    const [ano, mesNum] = mes.split('-');
+                    const nomeMesFormatado = `${mesNum}/${ano}`;
+                    const corLucro = dados.lucro > 0 ? 'text-emerald-500 font-bold' : dados.lucro < 0 ? 'text-red-500 font-bold' : 'text-texto font-bold';
+                    return `
+                      <tr class="${index % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
+                        <td class="p-3 font-semibold text-texto">${nomeMesFormatado}</td>
+                        <td class="p-3 text-texto">${dados.totalApostas}</td>
+                        <td class="p-3 text-texto">R$ ${dados.volume.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        <td class="p-3 ${corLucro}">R$ ${dados.lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          <div class="print-card md:col-span-2 bg-gradient-to-br from-[#131620] to-[#181d2a] border border-emerald-500/30 rounded-xl p-5 flex flex-col sm:flex-row items-center gap-4">
-            <div class="bg-white p-2 rounded-xl shadow shrink-0">
-              <img src="${qrCodeUrl}" alt="QR Code PIX" class="w-36 h-36 object-contain">
-            </div>
-            <div class="flex-1 space-y-2 text-left w-full">
-              <span class="inline-block bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full">PIX Oficial</span>
-              <h4 class="text-xs font-black text-white">FABIO WELLINGTON VENTURA MARANHAO FILHO</h4>
-              <div>
-                <span class="text-[9px] text-gray-400 uppercase block font-bold">Chave (CPF)</span>
-                <span class="text-xs font-mono font-bold text-emerald-400">00843696397</span>
-              </div>
-              <button onclick="copiarChavePix('00843696397', this)" class="w-full px-3 py-1.5 bg-emerald-600/30 hover:bg-emerald-600 border border-emerald-500 text-emerald-300 hover:text-white text-xs font-bold rounded transition">
-                📋 Copiar Chave PIX
-              </button>
+          <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
+            <h3 class="text-sm md:text-md font-bold mb-4 text-texto uppercase tracking-wider">🏛️ Relatório por Casas de Apostas</h3>
+            <div class="overflow-x-auto rounded-lg border border-linha">
+              <table class="w-full text-left text-xs text-mutado">
+                <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+                  <tr>
+                    <th class="p-3 border-b border-linha">Casa</th>
+                    <th class="p-3 border-b border-linha">Apostas</th>
+                    <th class="p-3 border-b border-linha">Volume</th>
+                    <th class="p-3 border-b border-linha">Lucro / Prejuízo</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-linha">
+                  ${casasOrdenadas.length === 0 ? '<tr><td colspan="4" class="p-4 text-center text-mutado">Nenhum dado financeiro finalizado.</td></tr>' : ''}
+                  ${casasOrdenadas.map((casaNome, index) => {
+                    const dados = lucroPorCasa[casaNome];
+                    const corLucro = dados.lucro > 0 ? 'text-emerald-500 font-bold' : dados.lucro < 0 ? 'text-red-500 font-bold' : 'text-texto font-bold';
+                    return `
+                      <tr class="${index % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
+                        <td class="p-3 text-texto">${renderizarFlagCasa(casaNome)}</td>
+                        <td class="p-3 text-texto">${dados.totalApostas}</td>
+                        <td class="p-3 text-texto">R$ ${dados.volume.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        <td class="p-3 ${corLucro}">R$ ${dados.lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       `;
     }
 
-    // ================= 6. ABA DE USUÁRIOS =================
-    function renderizarUsuarios(container) {
-      const podeEditar = verificarSeTemPermissaoEdicao();
+    // ================= 6. ABA DE PAGAMENTO =================
+    function renderizarPagamentos(container) {
+      const usuarioLogado = obterUsuarioLogado();
+      const ehAdmin = usuarioLogado && usuarioLogado.perfil === 'editor';
+
+      let operadorIdAlvo = '';
+      if (ehAdmin) {
+        operadorIdAlvo = estado.filtros.operadorId || '';
+      } else {
+        const opDoUser = estado.operadores.find(op => op.nome.toLowerCase() === usuarioLogado.nome.toLowerCase() || op.id === usuarioLogado.operadorId);
+        if (opDoUser) operadorIdAlvo = opDoUser.id;
+      }
+
+      const dataInicio = estado.filtros.dataInicio || '';
+      const dataFim = estado.filtros.dataFim || '';
+      const casaFiltro = estado.filtros.casaId || '';
+
+      const apostasPagamento = estado.apostas.filter(a => {
+        const opId = a.operadorId || a.clienteId;
+        if (operadorIdAlvo && opId !== operadorIdAlvo) return false;
+        if (casaFiltro && a.casaId !== casaFiltro) return false;
+        if (dataInicio && a.data < dataInicio) return false;
+        if (dataFim && a.data > dataFim) return false;
+        return true;
+      });
+
+      let resultadoLiquidoBruto = 0;
+      apostasPagamento.forEach(a => {
+        if (a.finalizada && a.retorno !== null) {
+          resultadoLiquidoBruto += (a.retorno - a.stake);
+        }
+      });
+
+      const pctDesconto = (ehAdmin && operadorIdAlvo) ? (estado.descontosOperadores[operadorIdAlvo] || 0) : 0;
+      const valorDesconto = (ehAdmin && operadorIdAlvo) ? (resultadoLiquidoBruto * (pctDesconto / 100)) : 0;
+      const totalLiquidoAPagar = resultadoLiquidoBruto - valorDesconto;
+      
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=00020126360014BR.GOV.BCB.PIX0114008436963975204000053039865405${Math.max(0, totalLiquidoAPagar).toFixed(2)}5802BR5925FABIO%20WELLINGTON%20VENTURA%20M6009FORTALEZA62070503***6304`;
+
       container.innerHTML = `
-        <div class="mb-6">
-          <h2 class="text-xl md:text-2xl font-bold text-white">🔐 Gestão de Usuários</h2>
-          <p class="text-xs text-gray-400">Gerencie contas e permissões.</p>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
+          <div>
+            <h2 class="text-xl md:text-2xl font-bold text-texto" style="color: var(--color-text);">💳 Gestão de Pagamentos</h2>
+            <p class="text-xs text-mutado">Apuração de valores e PIX por operador.</p>
+          </div>
+          <button onclick="window.print()" class="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition">
+            🖨️ Imprimir / Salvar PDF
+          </button>
         </div>
 
-        ${podeEditar ? `
-          <div class="bg-[#131620] border border-white/10 rounded-xl p-4 md:p-6 mb-6 no-print">
-            <h3 class="text-sm font-bold mb-3 text-white">➕ Novo Usuário</h3>
-            <form onsubmit="adicionarUsuario(event)" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              <input type="text" id="novoUsuarioNome" required placeholder="Nome Completo" class="px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
-              <input type="text" id="novoUsuarioLogin" required placeholder="Login (ex: joao)" class="px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
-              <input type="password" id="novoUsuarioSenha" required placeholder="Senha" class="px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none">
-              <select id="novoUsuarioPerfil" class="px-3 py-2 bg-[#1a1f2e] border border-white/10 rounded text-white text-xs outline-none font-bold">
-                <option value="leitura">Somente Leitura</option>
-                <option value="editor">Editor (Completo)</option>
-              </select>
-              <div class="md:col-span-4 flex justify-end">
-                <button type="submit" class="px-5 py-2 bg-emerald-600 font-bold text-white rounded text-xs">Salvar Usuário</button>
+        ${ehAdmin ? `
+          <div class="bg-panel border border-linha rounded-xl p-4 mb-6 no-print">
+            <h3 class="text-xs font-bold text-texto mb-3 uppercase tracking-wider">⚙️ Configurar Desconto/Taxa por Operador (Visível apenas para Admin)</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+              <div>
+                <label class="block text-xs text-mutado mb-1">Selecione o Operador:</label>
+                <select id="selectOpDescontoAdmin" onchange="trocarOperadorDescontoAdmin(this.value)" class="w-full px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none">
+                  <option value="">Selecione...</option>
+                  ${estado.operadores.map(op => `<option value="${op.id}" ${operadorIdAlvo === op.id ? 'selected' : ''}>${op.nome}</option>`).join('')}
+                </select>
               </div>
-            </form>
+              <div>
+                <label class="block text-xs text-mutado mb-1">Desconto / Taxa (%):</label>
+                <input type="number" step="0.1" min="0" max="100" id="inputDescontoValorAdmin" value="${operadorIdAlvo ? (estado.descontosOperadores[operadorIdAlvo] || 0) : 0}" class="w-full px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none" placeholder="Ex: 10">
+              </div>
+              <div>
+                <button onclick="salvarDescontoOperadorAdmin()" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 font-bold text-white rounded text-xs transition">
+                  Salvar Desconto para este Operador
+                </button>
+              </div>
+            </div>
           </div>
         ` : ''}
 
-        <div class="bg-[#131620] border border-white/10 rounded-xl p-4 md:p-6">
-          <h3 class="text-sm font-bold mb-4 text-white">Contas Cadastradas</h3>
-          <div class="overflow-x-auto rounded-lg border border-white/10">
-            <table class="w-full text-left text-xs md:text-sm text-gray-300">
-              <thead class="bg-[#1a1f2e] text-white uppercase text-[10px] md:text-xs">
-                <tr>
-                  <th class="p-3">Nome</th>
-                  <th class="p-3">Login</th>
-                  <th class="p-3">Perfil</th>
-                  <th class="p-3 text-right no-print">Ação</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-white/5">
-                ${estado.usuarios.map((u, index) => `
-                  <tr class="${index % 2 === 0 ? 'bg-[#131620]' : 'bg-[#181c28]'}">
-                    <td class="p-3 font-semibold text-white">${u.nome}</td>
-                    <td class="p-3 font-mono text-emerald-300">${u.usuario}</td>
-                    <td class="p-3">${u.perfil === 'editor' ? '<span class="text-emerald-400 font-bold">Editor</span>' : '<span class="text-blue-400 font-bold">Leitura</span>'}</td>
-                    <td class="p-3 text-right no-print">
-                      ${podeEditar && u.usuario !== 'admin' ? `<button onclick="deletarUsuario('${u.id}')" class="px-2.5 py-1 bg-red-600/20 text-red-400 rounded text-xs font-bold">Excluir</button>` : '-'}
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
+        <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <p class="text-[10px] uppercase text-mutado font-bold mb-1">Operador em Apuração:</p>
+            <h3 class="text-sm md:text-base font-bold text-emerald-500 uppercase tracking-wider">${operadorIdAlvo ? estado.operadores.find(o => o.id === operadorIdAlvo)?.nome : 'Todos / Não selecionado'}</h3>
+          </div>
+          <div class="text-right bg-panelAlt p-3 rounded-lg border border-linha">
+            <p class="text-[10px] uppercase text-mutado font-bold mb-1">LÍQUIDO A PAGAR</p>
+            <h3 class="text-xl md:text-2xl font-black ${totalLiquidoAPagar >= 0 ? 'text-emerald-500' : 'text-red-500'}">
+              R$ ${totalLiquidoAPagar.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+            </h3>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-panel border border-linha rounded-xl p-6 flex flex-col items-center justify-center text-center">
+            <h3 class="text-xs font-bold text-texto uppercase tracking-wider mb-4">📷 QR Code PIX</h3>
+            <div class="bg-white p-3 rounded-xl shadow-lg mb-4 inline-block">
+              <img src="${qrCodeUrl}" alt="QR Code PIX" class="w-48 h-48 object-contain">
+            </div>
+            <p class="text-[11px] text-mutado mb-2">Escaneie com o aplicativo do seu banco</p>
+            <div class="text-[10px] text-gray-300 font-mono select-all bg-input border border-linha p-3 rounded w-full break-all max-w-[300px]">
+              CPF: 008.436.963-97<br>
+              Banco: C6 BANK<br>
+              Titular: FABIO WELLINGTON VENTURA M
+            </div>
+          </div>
+
+          <div class="bg-panel border border-linha rounded-xl p-6 flex flex-col justify-start">
+            <h3 class="text-sm font-bold text-texto uppercase tracking-wider mb-4">📋 Resumo do Fechamento</h3>
+            <div class="space-y-3 text-sm">
+              <div class="flex justify-between py-2 border-b border-linha">
+                <span class="text-mutado">Resultado Bruto:</span>
+                <span class="font-bold text-texto">R$ ${resultadoLiquidoBruto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+              </div>
+              
+              ${ehAdmin ? `
+                <div class="flex justify-between py-2 border-b border-linha">
+                  <span class="text-mutado">Desconto / Taxa Aplicada (${pctDesconto}%):</span>
+                  <span class="font-bold text-red-500">- R$ ${valorDesconto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                </div>
+              ` : ''}
+
+              <div class="flex justify-between py-3 mt-2 text-base">
+                <span class="font-bold text-texto">Total Líquido:</span>
+                <span class="font-black ${totalLiquidoAPagar >= 0 ? 'text-emerald-500' : 'text-red-500'}">R$ ${Math.max(0, totalLiquidoAPagar).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+              </div>
+            </div>
           </div>
         </div>
       `;
     }
 
-    async function adicionarUsuario(e) {
-      e.preventDefault();
-      if (!verificarSeTemPermissaoEdicao()) return;
-      const nome = document.getElementById('novoUsuarioNome').value.trim();
-      const usuario = document.getElementById('novoUsuarioLogin').value.trim().toLowerCase();
-      const senha = document.getElementById('novoUsuarioSenha').value.trim();
-      const perfil = document.getElementById('novoUsuarioPerfil').value;
+    function trocarOperadorDescontoAdmin(opId) {
+      const inputVal = document.getElementById('inputDescontoValorAdmin');
+      if (inputVal) {
+        inputVal.value = opId ? (estado.descontosOperadores[opId] || 0) : 0;
+      }
+    }
 
-      if (estado.usuarios.some(u => u.usuario === usuario)) {
-        alert("Este login já existe.");
+    function salvarDescontoOperadorAdmin() {
+      const selectOp = document.getElementById('selectOpDescontoAdmin');
+      const inputVal = document.getElementById('inputDescontoValorAdmin');
+      if (!selectOp || !selectOp.value) {
+        alert("Selecione um operador primeiro.");
+        return;
+      }
+      const opId = selectOp.value;
+      const desconto = parseFloat(inputVal.value) || 0;
+      estado.descontosOperadores[opId] = desconto;
+      salvarDadosNoLocalStorage();
+      alert("Desconto salvo para este operador com sucesso!");
+      renderizarAba();
+    }
+
+    // ================= 7. BACKUP & IMPORTAÇÃO =================
+    function renderizarBackup(container) {
+      if (!verificarSeTemPermissaoEdicao()) {
+        container.innerHTML = `<div class="p-6 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl text-center">Acesso restrito a administradores.</div>`;
         return;
       }
 
-      const novoUsr = { id: `usr-${Date.now()}`, nome, usuario, senha, perfil };
+      container.innerHTML = `
+        <div class="mb-6">
+          <h2 class="text-xl md:text-2xl font-bold text-texto" style="color: var(--color-text);">💾 Backup & Importação de Dados</h2>
+          <p class="text-xs text-mutado">Exporte ou importe todos os registros do BetControl via arquivo JSON.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-panel border border-linha rounded-xl p-6 flex flex-col justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-texto mb-2">📥 Exportar Dados (Backup)</h3>
+              <p class="text-xs text-mutado mb-4">Baixe um arquivo contendo operadores, casas, apostas e usuários do sistema.</p>
+            </div>
+            <button onclick="exportarBackupJSON()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition">
+              Baixar Arquivo JSON
+            </button>
+          </div>
+
+          <div class="bg-panel border border-linha rounded-xl p-6 flex flex-col justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-texto mb-2">📤 Importar Dados (Restaurar)</h3>
+              <p class="text-xs text-mutado mb-4">Selecione um arquivo JSON de backup válido para restaurar as informações.</p>
+              <input type="file" id="inputFileBackup" accept=".json" class="w-full text-xs text-mutado file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-500 cursor-pointer mb-3">
+            </div>
+            <button onclick="importarBackupJSON()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition">
+              Restaurar Dados do Arquivo
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function exportarBackupJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(estado, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `betcontrol_backup_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importarBackupJSON() {
+      const fileInput = document.getElementById('inputFileBackup');
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert("Selecione um arquivo JSON primeiro.");
+        return;
+      }
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        try {
+          const dadosImportados = JSON.parse(e.target.result);
+          if (dadosImportados && dadosImportados.usuarios) {
+            estado = dadosImportados;
+            salvarDadosNoLocalStorage();
+            alert("Backup restaurado com sucesso!");
+            window.location.reload();
+          } else {
+            alert("Arquivo de backup inválido.");
+          }
+        } catch (err) {
+          alert("Erro ao ler o arquivo JSON.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // ================= 8. USUÁRIOS =================
+    function renderizarUsuarios(container) {
+      const usuarioLogado = obterUsuarioLogado();
+      const ehAdmin = usuarioLogado && usuarioLogado.perfil === 'editor';
+
+      container.innerHTML = `
+        <div class="mb-6">
+          <h2 class="text-xl md:text-2xl font-bold text-texto" style="color: var(--color-text);">🔐 Gestão de Usuários & Permissões</h2>
+          <p class="text-xs text-mutado">Edite sua senha e selecione as permissões de acesso às abas do sistema.</p>
+        </div>
+
+        ${ehAdmin ? `
+          <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6 no-print">
+            <h3 id="tituloFormUsuario" class="text-sm font-bold mb-3 text-texto">➕ Cadastrar Novo Usuário</h3>
+            <form onsubmit="salvarNovoUsuario(event)" class="space-y-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                <input type="text" id="novoUserLogin" required class="px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none" placeholder="Nome de Usuário (Ex: joao)">
+                <input type="text" id="novoUserNome" required class="px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none" placeholder="Nome Completo">
+                <input type="password" id="novoUserSenha" required class="px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none" placeholder="Senha de Acesso">
+                <select id="novoUserPerfil" class="px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none">
+                  <option value="leitura">Leitura (Personalizado)</option>
+                  <option value="editor">Editor (Admin Total)</option>
+                </select>
+              </div>
+              <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 font-bold text-white rounded text-xs transition">
+                Adicionar Usuário
+              </button>
+            </form>
+          </div>
+        ` : `
+          <div class="bg-blue-500/10 border border-blue-500/20 text-blue-300 p-4 rounded-xl mb-6 text-xs font-semibold">
+            ℹ️ Gerencie seus próprios dados de acesso e permissões abaixo.
+          </div>
+        `}
+
+        <div class="space-y-4">
+          ${estado.usuarios.map(u => {
+            if (!ehAdmin && u.usuario !== usuarioLogado.usuario) return '';
+            const isEditando = u.editandoPermissoes;
+            const permissoesAtuais = u.permissoesLeitor || [];
+
+            return `
+              <div class="bg-panel border border-linha rounded-xl p-4 md:p-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-linha">
+                  <div>
+                    <h3 class="text-sm font-bold text-texto flex items-center gap-2">
+                      👤 ${u.nome} <span class="text-xs font-mono text-mutado">(@${u.usuario})</span>
+                    </h3>
+                    <p class="text-[10px] text-emerald-500 uppercase font-bold mt-0.5">Perfil: ${u.perfil === 'editor' ? '✏️ Editor (Administrador)' : '👁️ Leitura'}</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    ${!isEditando ? `
+                      <button onclick="habilitarEdicaoUsuario('${u.id}')" class="px-3 py-1.5 bg-blue-600/20 text-blue-500 hover:bg-blue-600 hover:text-white text-xs font-bold rounded-lg transition">
+                        ✏️ EDITAR
+                      </button>
+                    ` : `
+                      <button onclick="salvarEdicaoUsuario('${u.id}')" class="px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg transition">
+                        💾 Salvar Alterações
+                      </button>
+                      <button onclick="cancelarEdicaoUsuario('${u.id}')" class="px-3 py-1.5 bg-gray-600 text-gray-200 text-xs font-bold rounded-lg transition">
+                        Cancelar
+                      </button>
+                    `}
+                    ${ehAdmin && u.usuario !== 'admin' ? `
+                      <button onclick="deletarUsuario('${u.id}')" class="px-3 py-1.5 bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white text-xs font-bold rounded-lg transition">
+                        🗑️ Excluir
+                      </button>
+                    ` : ''}
+                  </div>
+                </div>
+
+                ${isEditando ? `
+                  <div class="mt-4 pt-3 space-y-4">
+                    <div>
+                      <label class="block text-xs font-bold text-mutado mb-1">Nova Senha de Acesso</label>
+                      <input type="text" id="input-senha-${u.id}" value="${u.senha}" class="w-full sm:w-72 px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none">
+                    </div>
+
+                    ${u.perfil !== 'editor' ? `
+                      <div>
+                        <label class="block text-xs font-bold text-mutado mb-2">Permissões de Acesso às Abas</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
+                            <input type="checkbox" value="dashboard" ${permissoesAtuais.includes('dashboard') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Dashboard
+                          </label>
+                          <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
+                            <input type="checkbox" value="volumemes" ${permissoesAtuais.includes('volumemes') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Volume Mês
+                          </label>
+                          <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
+                            <input type="checkbox" value="operadores" ${permissoesAtuais.includes('operadores') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Operadores
+                          </label>
+                          <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
+                            <input type="checkbox" value="casas" ${permissoesAtuais.includes('casas') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Casas
+                          </label>
+                          <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
+                            <input type="checkbox" value="relatorios" ${permissoesAtuais.includes('relatorios') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Relatórios
+                          </label>
+                          <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
+                            <input type="checkbox" value="lucro" ${permissoesAtuais.includes('lucro') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Lucro
+                          </label>
+                          <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
+                            <input type="checkbox" value="pagamentos" ${permissoesAtuais.includes('pagamentos') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Pagamento
+                          </label>
+                        </div>
+                      </div>
+                    ` : `
+                      <p class="text-xs text-mutado italic">Administradores possuem acesso total irrestrito a todas as abas do sistema.</p>
+                    `}
+                  </div>
+                ` : `
+                  <div class="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-mutado">
+                    <span class="font-bold text-texto">Permissões ativas:</span>
+                    ${u.perfil === 'editor' ? '<span class="bg-emerald-500/20 text-emerald-500 px-2 py-0.5 rounded text-[10px] font-bold">Acesso Total (Editor)</span>' : (permissoesAtuais.length === 0 ? '<span class="text-mutado">Nenhuma aba permitida</span>' : permissoesAtuais.map(p => `<span class="bg-panelAlt text-texto border border-linha px-2 py-0.5 rounded text-[10px] font-bold uppercase">${p}</span>`).join(''))}
+                  </div>
+                `}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    async function salvarNovoUsuario(e) {
+      e.preventDefault();
+      const usuarioLogado = obterUsuarioLogado();
+      if (!usuarioLogado || usuarioLogado.perfil !== 'editor') {
+        alert("Apenas administradores podem cadastrar novos usuários.");
+        return;
+      }
+
+      const userLogin = document.getElementById('novoUserLogin').value.trim();
+      const nomeVal = document.getElementById('novoUserNome').value.trim();
+      const senhaVal = document.getElementById('novoUserSenha').value.trim();
+      const perfilVal = document.getElementById('novoUserPerfil').value;
+
+      if (estado.usuarios.some(u => u.usuario === userLogin)) {
+        alert("Este nome de usuário já existe.");
+        return;
+      }
+
+      const novoUsr = {
+        id: `usr-${Date.now()}`,
+        usuario: userLogin,
+        nome: nomeVal,
+        senha: senhaVal,
+        perfil: perfilVal,
+        permissoesLeitor: perfilVal === 'editor' ? [] : ['dashboard', 'volumemes', 'relatorios', 'lucro']
+      };
+
       estado.usuarios.push(novoUsr);
       await salvarNaNuvemELocal('usuario', novoUsr);
       renderizarAba();
-      alert("Usuário criado!");
     }
 
-    async function deletarUsuario(id) {
-      if (!verificarSeTemPermissaoEdicao()) return;
-      if (confirm("Excluir este usuário?")) {
-        estado.usuarios = estado.usuarios.filter(u => u.id !== id);
-        await deletarDaNuvemELocal('usuario', id);
+    function habilitarEdicaoUsuario(id) {
+      const u = estado.usuarios.find(item => item.id === id);
+      if (u) {
+        u.editandoPermissoes = true;
         renderizarAba();
       }
     }
 
-    function atualizarDescontoPercentual(val) {
-      estado.descontoPercentual = Math.max(0, Math.min(100, parseFloat(val) || 0));
-      salvarDadosNoLocalStorage();
+    function cancelarEdicaoUsuario(id) {
+      const u = estado.usuarios.find(item => item.id === id);
+      if (u) {
+        u.editandoPermissoes = false;
+        renderizarAba();
+      }
     }
 
-    function copiarChavePix(chave, btn) {
-      navigator.clipboard.writeText(chave).then(() => {
-        const original = btn.innerHTML;
-        btn.innerHTML = "✅ Copiado!";
-        setTimeout(() => btn.innerHTML = original, 2000);
-      });
+    async function salvarEdicaoUsuario(id) {
+      const u = estado.usuarios.find(item => item.id === id);
+      if (!u) return;
+
+      const inputSenha = document.getElementById(`input-senha-${id}`);
+      if (inputSenha) {
+        u.senha = inputSenha.value.trim();
+      }
+
+      if (u.perfil !== 'editor') {
+        const checkboxes = document.querySelectorAll(`.perm-check-${id}:checked`);
+        const novasPermissoes = [];
+        checkboxes.forEach(cb => novasPermissoes.push(cb.value));
+        u.permissoesLeitor = novasPermissoes;
+      }
+
+      u.editandoPermissoes = false;
+      await salvarNaNuvemELocal('usuario', u);
+      alert("Alterações salvas com sucesso!");
+      renderizarAba();
+    }
+
+    async function deletarUsuario(id) {
+      const usuarioLogado = obterUsuarioLogado();
+      if (!usuarioLogado || usuarioLogado.perfil !== 'editor') {
+        alert("Apenas administradores podem excluir usuários.");
+        return;
+      }
+
+      if (confirm("Deseja excluir este usuário?")) {
+        estado.usuarios = estado.usuarios.filter(u => u.id !== id);
+        await deletarDaNuvemELocal('usuario', id);
+        renderizarAba();
+      }
     }
   </script>
 </body>
