@@ -1598,7 +1598,7 @@
     }
 
     function adicionarLinhaSelecao(dados, listaId) {
-      const lista = document.getElementById(listaId || 'listaSelecoes');
+      const lista = document.getElementById(typeof listaId === 'string' && listaId ? listaId : 'listaSelecoes');
       if (!lista) return;
       const d = dados || {};
       const linha = document.createElement('div');
@@ -1906,7 +1906,7 @@
         if (linhas.length === 0) {
           if (st) st.textContent = `⚠️ Não identifiquei as pernas (li ${nLinhasTexto} linhas da foto). Se a foto está nítida, atualize a página (Ctrl+Shift+R) e tente de novo — ou preencha manualmente.`;
         } else {
-          linhas.forEach(adicionarLinhaSelecao);
+          linhas.forEach(l => adicionarLinhaSelecao(l));
           const extra = parsed.oddTotal ? ` (odd total do bilhete: ${parsed.oddTotal})` : '';
           if (st) st.textContent = `✅ ${linhas.length} ${linhas.length === 1 ? 'linha identificada' : 'linhas identificadas'}${extra} — confira e ajuste se preciso.`;
         }
