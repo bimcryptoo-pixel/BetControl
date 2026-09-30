@@ -1605,39 +1605,62 @@
     }
 
     // ---- OCR do bilhete (sugestão automática das seleções) ----
+    // Suporta dois layouts: (A) jogo, mercado, seleção+odd / (B) seleção+odd, mercado, jogo (ex: Bet Zap).
+    // A odd é sempre o ÚLTIMO número da linha; linhas de total (Tripla/Dupla/Simples) são ignoradas.
     function parseTextoBilhete(texto) {
       const linhas = (texto || '').split('\n').map(l => l.trim()).filter(l => l.length > 0);
       const resultado = [];
-      const reOdd = /(\d{1,2}[.,]\d{2,3})/;
       const reJogo = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- ']{2,}?)\s+[xX×]\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- ']{2,})/;
-      const kwMercado = ['handicap', 'escanteio', 'corner', 'over', 'under', 'mais de', 'menos de', 'ambas', 'btts', '1x2', 'resultado', 'gols', 'games', 'sets', 'total', 'dupla', 'chance'];
-      let atual = null;
-      const empurrar = () => { if (atual && (atual.jogo || atual.selecao)) resultado.push(atual); atual = null; };
-      for (const linha of linhas) {
-        if (/^(aposta|bilhete|comprovante|cupom|total|stake|valor|data)/i.test(linha) && linha.length < 25) continue;
-        const mJogo = linha.match(reJogo);
-        if (mJogo && !/^\d/.test(linha)) {
-          empurrar();
-          atual = { jogo: linha.trim(), mercado: '', selecao: '', odd: '' };
-          continue;
+      const reOddGlobal = /(\d{1,2}[.,]\d{2,3})/g;
+      const reTotal = /^(tripla|dupla|simples|m[uú]ltipla|acumulada|acumulador)\b/i;
+      const ehCabecalho = l => /^(aposta|bilhete|comprovante|cupom|total|stake|valor|data)\b/i.test(l) && l.length < 25;
+      const ehLinhaTotal = l => reTotal.test(l.replace(/^[×xX]\s*/, '').trim());
+
+      const extrairOdd = (linha) => {
+        let m, ultimo = null;
+        reOddGlobal.lastIndex = 0;
+        while ((m = reOddGlobal.exec(linha)) !== null) ultimo = m;
+        if (!ultimo) return null;
+        return { odd: ultimo[1].replace(',', '.'), indice: ultimo.index };
+      };
+
+      const idxJogos = [];
+      linhas.forEach((linha, i) => {
+        if (ehCabecalho(linha)) return;
+        if (linha.match(reJogo) && !/^\d/.test(linha)) idxJogos.push(i);
+      });
+
+      idxJogos.forEach((gi, k) => {
+        const jogo = linhas[gi].trim();
+        const inicio = k === 0 ? 0 : idxJogos[k - 1] + 1;
+        const fimBloco = k + 1 < idxJogos.length ? idxJogos[k + 1] : linhas.length;
+        let selecao = '', odd = '', mercado = '';
+
+        // procura a linha da odd: primeiro para trás (layout B), depois para frente (layout A)
+        let linhaOdd = -1, paraFrente = false;
+        for (let i = gi - 1; i >= inicio && i >= gi - 3; i--) {
+          if (ehCabecalho(linhas[i]) || ehLinhaTotal(linhas[i])) continue;
+          if (extrairOdd(linhas[i])) { linhaOdd = i; break; }
         }
-        const low = linha.toLowerCase();
-        if (atual && !atual.mercado && kwMercado.some(k => low.includes(k))) {
-          atual.mercado = linha.trim();
-          continue;
+        if (linhaOdd === -1) {
+          for (let i = gi + 1; i < fimBloco && i <= gi + 3; i++) {
+            if (ehCabecalho(linhas[i]) || ehLinhaTotal(linhas[i])) continue;
+            if (extrairOdd(linhas[i])) { linhaOdd = i; paraFrente = true; break; }
+          }
         }
-        const mOdd = linha.match(reOdd);
-        if (mOdd && atual && !atual.odd) {
-          atual.odd = mOdd[1].replace(',', '.');
-          const antes = linha.slice(0, mOdd.index).replace(/^[×xX]\s*/, '').trim();
-          if (antes && antes.length > 1 && !atual.selecao) atual.selecao = antes;
-          continue;
+        if (linhaOdd !== -1) {
+          const info = extrairOdd(linhas[linhaOdd]);
+          odd = info.odd;
+          selecao = linhas[linhaOdd].slice(0, info.indice).replace(/^[×xX]\s*/, '').trim();
+          const a = paraFrente ? gi + 1 : linhaOdd + 1;
+          const b = paraFrente ? linhaOdd : gi;
+          for (let i = a; i < b; i++) {
+            const t = linhas[i].trim();
+            if (t && !ehCabecalho(t) && !extrairOdd(t) && !ehLinhaTotal(t)) { mercado = t; break; }
+          }
         }
-        if (atual && !atual.selecao && /[+\-]\s?\d/.test(linha) && linha.length < 40) {
-          atual.selecao = linha.trim();
-        }
-      }
-      empurrar();
+        if (jogo || selecao) resultado.push({ jogo: jogo, mercado: mercado, selecao: selecao, odd: odd });
+      });
       return resultado;
     }
 
