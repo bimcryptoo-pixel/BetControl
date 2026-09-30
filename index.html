@@ -1678,7 +1678,136 @@
     // ---- OCR do bilhete (sugestão automática das seleções) ----
     // Suporta dois layouts: (A) jogo, mercado, seleção+odd / (B) seleção+odd, mercado, jogo (ex: Bet Zap).
     // A odd é sempre o ÚLTIMO número da linha; linhas de total (Tripla/Dupla/Simples) são ignoradas.
+    // Parser de bilhete (v2, 30/09/2026): ancora nas ODDS, não nos jogos.
+    // Cobre: odd grudada na seleção ("sel 1.83"), odd solta na linha de baixo,
+    // armadilha do handicap ("mais de 18.5" + odd "1.83" separada) e linha de
+    // total ("Tripla 6.78") que vira a odd total do bilhete. Se não achar nada,
+    // cai no método antigo (ancorado no jogo) como fallback.
     function parseTextoBilhete(texto) {
+      const linhas = (texto || '').split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const reDec = /(\d{1,3}[.,]\d{2,3})/g;
+      const reTotal = /^(tripla|dupla|simples|m[uú]ltipla|acumulada|acumulador)\b/i;
+      const reJogo = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- ']{2,}?)\s+[xX×]\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- ']{2,})/;
+      const ehCabecalho = l => /^(aposta|bilhete|comprovante|cupom|stake|valor|data)\b/i.test(l) && l.length < 25;
+      const limpaInicio = l => l.replace(/^[×xX<|\-–—\s]+/, '').trim();
+      const ehLinhaTotal = l => reTotal.test(limpaInicio(l));
+      const tiraAposta = l => l.replace(/\|\s*Aposta\s*\|?/gi, ' ').replace(/\s+/g, ' ').trim();
+
+      const decimais = (linha) => {
+        const out = []; let m; reDec.lastIndex = 0;
+        while ((m = reDec.exec(linha)) !== null) out.push({ num: m[1].replace(',', '.'), index: m.index });
+        return out;
+      };
+      const ehOddSozinha = (l) => {
+        if (reTotal.test(limpaInicio(l))) return false;
+        const t = tiraAposta(l);
+        if (!/\d[.,]\d/.test(t)) return false;
+        const semLetras = t.replace(/[A-Za-zÀ-ÿ]/g, '').trim();
+        return /^[\d.,\s|]+$/.test(semLetras) && /\d/.test(semLetras);
+      };
+
+      const n = linhas.length;
+      const consumida = new Array(n).fill(false);
+      const resultado = [];
+
+      // odd total do bilhete: "Tripla 6.78" (ou "Tripla" + odd sozinha na próxima linha)
+      let oddTotalBilhete = '';
+      for (let i = 0; i < n; i++) {
+        if (!ehLinhaTotal(linhas[i])) continue;
+        const decs = decimais(linhas[i]);
+        if (decs.length) { oddTotalBilhete = decs[decs.length - 1].num; consumida[i] = true; break; }
+        let j = i + 1;
+        while (j < n && ehCabecalho(linhas[j])) j++;
+        if (j < n && ehOddSozinha(linhas[j])) {
+          const d2 = decimais(linhas[j]);
+          if (d2.length) { oddTotalBilhete = d2[d2.length - 1].num; consumida[i] = true; consumida[j] = true; break; }
+        }
+        consumida[i] = true; break;
+      }
+
+      const proxLivre = (i) => { let j = i; while (j < n && (consumida[j] || ehCabecalho(linhas[j]))) j++; return j < n ? j : -1; };
+      const antLivre = (i) => { let j = i; while (j >= 0 && (consumida[j] || ehCabecalho(linhas[j]) || ehLinhaTotal(linhas[j]))) j--; return j >= 0 ? j : -1; };
+      const ehJogo = (l) => reJogo.test(l) && !/^\d/.test(l.trim());
+
+      // pernas ancoradas na odd
+      for (let i = 0; i < n; i++) {
+        if (consumida[i] || ehCabecalho(linhas[i]) || ehLinhaTotal(linhas[i])) continue;
+        const linha = linhas[i];
+        const decs = decimais(linha);
+        if (!decs.length) continue;
+        const last = decs[decs.length - 1];
+        const antes = limpaInicio(tiraAposta(linha.slice(0, last.index)));
+        let odd = '', selecao = '', idxSel = i, oddNaLinha = true;
+
+        if (antes.replace(/[\d.,\s]/g, '').length >= 2) {
+          const j = proxLivre(i + 1);
+          if (j !== -1 && ehOddSozinha(linhas[j])) {
+            // armadilha do "mais de 18.5": a odd real está sozinha na próxima linha
+            const d2 = decimais(linhas[j]);
+            odd = d2[d2.length - 1].num;
+            selecao = limpaInicio(tiraAposta(linha));
+            consumida[j] = true;
+          } else {
+            odd = last.num;
+            selecao = antes;
+          }
+        } else {
+          // odd "solta": pertence à seleção da linha anterior
+          const p = antLivre(i - 1);
+          if (p === -1) continue;
+          odd = last.num;
+          oddNaLinha = false;
+          selecao = limpaInicio(tiraAposta(linhas[p]));
+          idxSel = p;
+          consumida[p] = true;
+        }
+        consumida[i] = true;
+        if (!selecao || !odd) continue;
+
+        // jogo: odd na linha da seleção → busca pra frente; odd solta → busca pra trás primeiro.
+        // jogos já usados por outra perna não são reaproveitados.
+        let jogo = '', idxJogo = -1;
+        const achaJogoFrente = () => {
+          for (let k = idxSel + 1; k <= idxSel + 3 && k < n; k++) {
+            if (consumida[k] || ehLinhaTotal(linhas[k])) continue;
+            if (ehJogo(linhas[k])) return k;
+          }
+          return -1;
+        };
+        const achaJogoTras = () => {
+          for (let k = idxSel - 1; k >= idxSel - 3 && k >= 0; k--) {
+            if (consumida[k] || ehLinhaTotal(linhas[k])) continue;
+            if (ehJogo(linhas[k])) return k;
+          }
+          return -1;
+        };
+        if (oddNaLinha) idxJogo = achaJogoFrente();
+        else { idxJogo = achaJogoTras(); if (idxJogo === -1) idxJogo = achaJogoFrente(); }
+        if (idxJogo !== -1) { jogo = linhas[idxJogo].trim(); consumida[idxJogo] = true; }
+
+        // mercado: primeira linha relevante entre a seleção e o jogo
+        let mercado = '';
+        const fimM = idxJogo !== -1 ? idxJogo : idxSel + 3;
+        if (idxJogo !== -1 && idxJogo < idxSel) {
+          for (let k = idxJogo + 1; k < idxSel && k < n; k++) {
+            if (consumida[k] || ehLinhaTotal(linhas[k]) || ehCabecalho(linhas[k])) continue;
+            const t = tiraAposta(linhas[k]).trim();
+            if (t && !ehOddSozinha(linhas[k])) { mercado = t; break; }
+          }
+        } else {
+          for (let k = idxSel + 1; k < fimM && k < n; k++) {
+            if (consumida[k] || ehLinhaTotal(linhas[k]) || ehCabecalho(linhas[k])) continue;
+            const t = tiraAposta(linhas[k]).trim();
+            if (t && !ehOddSozinha(linhas[k])) { mercado = t; break; }
+          }
+        }
+        resultado.push({ jogo: jogo, mercado: mercado, selecao: selecao, odd: odd });
+      }
+      if (resultado.length === 0) return parseTextoBilheteLegado(texto);
+      return { linhas: resultado, oddTotal: oddTotalBilhete };
+    }
+
+    function parseTextoBilheteLegado(texto) {
       const linhas = (texto || '').split('\n').map(l => l.trim()).filter(l => l.length > 0);
       const resultado = [];
       const reJogo = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- ']{2,}?)\s+[xX×]\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- ']{2,})/;
