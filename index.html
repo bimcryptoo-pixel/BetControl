@@ -1702,6 +1702,16 @@
     // ---- OCR do bilhete (sugestão automática das seleções) ----
     // Suporta dois layouts: (A) jogo, mercado, seleção+odd / (B) seleção+odd, mercado, jogo (ex: Bet Zap).
     // A odd é sempre o ÚLTIMO número da linha; linhas de total (Tripla/Dupla/Simples) são ignoradas.
+
+    // Remove artefatos típicos do OCR no fim/início do texto: traços soltos ("Partida ——"),
+    // fragmentos curtos com "?" ("Opções Ec?"), "?" perdido, bullets etc.
+    function limparTextoOCR(s) {
+      let t = String(s || '').replace(/\s+/g, ' ').trim();
+      t = t.replace(/^[●•\-–—_~?!;\s]+/, '');          // sujeira no início
+      t = t.replace(/(\s+[A-Za-zÀ-ÿ]{1,3})?\?$/, '');  // "Opções Ec?" / "Opções?" -> "Opções"
+      t = t.replace(/[\s\-–—_~:;]+$/, '');             // "Partida ——" -> "Partida"
+      return t.trim();
+    }
     // Parser de bilhete (v2, 30/09/2026): ancora nas ODDS, não nos jogos.
     // Cobre: odd grudada na seleção ("sel 1.83"), odd solta na linha de baixo,
     // armadilha do handicap ("mais de 18.5" + odd "1.83" separada) e linha de
@@ -1915,6 +1925,12 @@
         const { data } = await Tesseract.recognize(arquivo, 'por');
         const parsed = parseTextoBilhete(data.text || '');
         const linhas = (parsed && parsed.linhas) || [];
+        // limpa artefatos do OCR nos textos antes de exibir para conferência
+        linhas.forEach(l => {
+          l.jogo = limparTextoOCR(l.jogo);
+          l.mercado = limparTextoOCR(l.mercado);
+          l.selecao = limparTextoOCR(l.selecao);
+        });
         const nLinhasTexto = (data.text || '').split('\n').filter(l => l.trim()).length;
         const inputOddTotal = document.getElementById('apostaOddTotal');
         if (inputOddTotal && parsed.oddTotal) inputOddTotal.value = parsed.oddTotal;
