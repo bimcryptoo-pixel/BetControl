@@ -1517,14 +1517,14 @@
         : '-';
 
       const linhas = sels.map(s => `
-        <div class="bg-panelAlt border border-linha rounded-lg p-3">
+        <div class="bg-panelAlt border border-linha rounded-lg p-4">
           <div class="flex items-start justify-between gap-2 mb-1">
-            <div class="font-semibold text-texto text-xs">${s.selecao} <span class="text-emerald-500">@ ${Number(s.odd).toLocaleString('pt-BR', { minimumFractionDigits: 3 })}</span></div>
+            <div class="font-semibold text-texto text-sm">${s.selecao} <span class="text-emerald-500">@ ${Number(s.odd).toLocaleString('pt-BR', { minimumFractionDigits: 3 })}</span></div>
             ${badgeStatusSelecao(s.status)}
           </div>
-          <div class="text-[11px] text-mutado">${s.jogo}</div>
-          ${s.mercado ? `<div class="text-[11px] text-mutado">${s.mercado}</div>` : ''}
-          ${s.detalhe ? `<div class="text-[11px] mt-1 text-texto opacity-80">📊 ${s.detalhe}</div>` : ''}
+          <div class="text-xs text-mutado">${s.jogo}</div>
+          ${s.mercado ? `<div class="text-xs text-mutado">${s.mercado}</div>` : ''}
+          ${s.detalhe ? `<div class="text-xs mt-1 text-texto opacity-80">📊 ${s.detalhe}</div>` : ''}
           ${verificarSeTemPermissaoEdicao() ? `<div class="flex gap-1 mt-2 items-center">
             <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'green')" title="Marcar GREEN" class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold hover:bg-emerald-500 hover:text-white transition">🟢</button>
             <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'red')" title="Marcar RED" class="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold hover:bg-red-500 hover:text-white transition">🔴</button>
@@ -1543,25 +1543,25 @@
       overlay.className = 'fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 overflow-y-auto';
       overlay.onclick = (e) => { if (e.target === overlay) fecharPainelBilhete(); };
       overlay.innerHTML = `
-        <div class="relative bg-panel border border-linha rounded-2xl max-w-2xl w-full my-8 p-5 md:p-6 shadow-2xl" onclick="event.stopPropagation()">
+        <div class="relative bg-panel border border-linha rounded-2xl max-w-4xl w-full my-8 p-5 md:p-8 shadow-2xl" onclick="event.stopPropagation()">
           <button onclick="fecharPainelBilhete()" class="absolute top-3 right-4 text-mutado text-2xl font-bold hover:text-red-400">✕</button>
           <div class="mb-4">
-            <h3 class="text-base font-bold" style="color: var(--color-text);">🎫 Bilhete</h3>
+            <h3 class="text-lg font-bold" style="color: var(--color-text);">🎫 Bilhete</h3>
             <div class="mt-2">${badgeGeral}</div>
           </div>
           ${a.anexo_url ? `
             <div class="text-center mb-4">
-              <img src="${a.anexo_url}" alt="Bilhete anexado" class="max-h-64 w-auto mx-auto rounded-lg shadow-lg cursor-zoom-in" onclick="abrirAnexo('${a.anexo_url}')">
-              <div class="text-[11px] text-mutado mt-1">clique na imagem para ampliar</div>
+              <img src="${a.anexo_url}" alt="Bilhete anexado" class="max-h-80 w-auto mx-auto rounded-lg shadow-lg cursor-zoom-in" onclick="abrirAnexo('${a.anexo_url}')">
+              <div class="text-xs text-mutado mt-1">clique na imagem para ampliar</div>
             </div>` : ''}
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 text-center">
-            <div class="bg-panelAlt border border-linha rounded-lg p-2"><div class="text-[10px] text-mutado">Stake</div><div class="text-xs font-bold text-texto">R$ ${Number(a.stake).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div></div>
-            <div class="bg-panelAlt border border-linha rounded-lg p-2"><div class="text-[10px] text-mutado">Odd total</div><div class="text-xs font-bold text-texto">${oddTotalTxt}</div></div>
-            <div class="bg-panelAlt border border-linha rounded-lg p-2"><div class="text-[10px] text-mutado">Retorno</div><div class="text-xs font-bold text-texto">${retornoTxt}</div></div>
-            <div class="bg-panelAlt border border-linha rounded-lg p-2"><div class="text-[10px] text-mutado">Casa</div><div class="text-xs font-bold text-texto">${casa ? casa.nome : 'N/A'}</div></div>
+            <div class="bg-panelAlt border border-linha rounded-lg p-2.5"><div class="text-xs text-mutado">Stake</div><div class="text-sm font-bold text-texto">R$ ${Number(a.stake).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div></div>
+            <div class="bg-panelAlt border border-linha rounded-lg p-2.5"><div class="text-xs text-mutado">Odd total</div><div class="text-sm font-bold text-texto">${oddTotalTxt}</div></div>
+            <div class="bg-panelAlt border border-linha rounded-lg p-2.5"><div class="text-xs text-mutado">Retorno</div><div class="text-sm font-bold text-texto">${retornoTxt}</div></div>
+            <div class="bg-panelAlt border border-linha rounded-lg p-2.5"><div class="text-xs text-mutado">Casa</div><div class="text-sm font-bold text-texto">${casa ? casa.nome : 'N/A'}</div></div>
           </div>
           ${sels.length ? `<div class="space-y-2 mb-4">${linhas}</div>` : '<p class="text-xs text-mutado mb-4">Nenhuma seleção registrada para esta aposta.</p>'}
-          <div class="border-t border-linha pt-3 text-[11px] text-mutado space-y-1">
+          <div class="border-t border-linha pt-3 text-xs text-mutado space-y-1">
             <div>📝 Registrada em ${formatarDataBR(a.data)} ${operador ? `· ${operador.nome}` : ''}</div>
             <div>${a.finalizada || geral === 'green' || geral === 'red' ? '✅' : '⏳'} Liquidada: ${liquidadaTxt}</div>
           </div>
