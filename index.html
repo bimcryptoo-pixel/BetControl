@@ -1433,6 +1433,54 @@
       if (el) el.remove();
     }
 
+    // Correção manual do status de uma perna (só perfil editor).
+    // Recalcula o retorno da aposta com as MESMAS regras da liquidação automática:
+    // simples GREEN = stake×odd | múltipla com qualquer RED = 0 | VOID conta como 1 | tudo VOID devolve a stake.
+    async function corrigirSelecaoManual(apostaId, selecaoId, novoStatus) {
+      if (!verificarSeTemPermissaoEdicao()) return;
+      const aposta = (estado.apostas || []).find(x => x.id === apostaId);
+      const sel = (estado.selecoes || []).find(x => x.id === selecaoId);
+      if (!aposta || !sel) return;
+      const rotulos = { green: 'GREEN', red: 'RED', void: 'VOID', pendente: 'PENDENTE' };
+      if (!confirm(`Marcar "${sel.selecao}" como ${rotulos[novoStatus]}?\nO retorno da aposta será recalculado.`)) return;
+      sel.status = novoStatus;
+      const agora = new Date();
+      const carimbo = agora.toLocaleString('pt-BR');
+      sel.detalhe = (sel.detalhe ? sel.detalhe + ' · ' : '') + `Correção manual (${rotulos[novoStatus]} em ${carimbo})`;
+      await salvarNaNuvemELocal('selecao', sel);
+      const sels = obterSelecoesAposta(apostaId);
+      const stake = Number(aposta.stake) || 0;
+      const temPendente = sels.some(s => s.status === 'pendente');
+      const temRed = sels.some(s => s.status === 'red');
+      if (temPendente || sels.length === 0) {
+        aposta.retorno = null;
+        aposta.finalizada = false;
+        aposta.liquidada_em = null;
+      } else if (sels.length === 1) {
+        const s = sels[0];
+        if (s.status === 'green') aposta.retorno = +(stake * Number(s.odd)).toFixed(2);
+        else if (s.status === 'red') aposta.retorno = 0;
+        else aposta.retorno = +stake.toFixed(2);
+        aposta.finalizada = true;
+        aposta.liquidada_em = agora.toISOString();
+      } else {
+        if (temRed) {
+          aposta.retorno = 0;
+        } else if (sels.every(s => s.status === 'void')) {
+          aposta.retorno = +stake.toFixed(2);
+        } else {
+          const oddBilhete = (aposta.oddTotal !== null && aposta.oddTotal !== undefined && aposta.oddTotal !== '') ? Number(aposta.oddTotal) : null;
+          const odd = oddBilhete !== null ? oddBilhete : calcularOddTotal(sels);
+          aposta.retorno = +(stake * odd).toFixed(2);
+        }
+        aposta.finalizada = true;
+        aposta.liquidada_em = agora.toISOString();
+      }
+      await salvarNaNuvemELocal('aposta', aposta);
+      abrirPainelBilhete(apostaId);
+      if (typeof renderizarAba === 'function') renderizarAba();
+    }
+
     function badgeStatusSelecao(status) {
       if (status === 'green') return '<span class="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded text-[10px] font-bold">🟢 GREEN</span>';
       if (status === 'red') return '<span class="bg-red-500/20 text-red-600 dark:text-red-400 px-2 py-0.5 rounded text-[10px] font-bold">🔴 RED</span>';
@@ -1477,6 +1525,13 @@
           <div class="text-[11px] text-mutado">${s.jogo}</div>
           ${s.mercado ? `<div class="text-[11px] text-mutado">${s.mercado}</div>` : ''}
           ${s.detalhe ? `<div class="text-[11px] mt-1 text-texto opacity-80">📊 ${s.detalhe}</div>` : ''}
+          ${verificarSeTemPermissaoEdicao() ? `<div class="flex gap-1 mt-2 items-center">
+            <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'green')" title="Marcar GREEN" class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold hover:bg-emerald-500 hover:text-white transition">🟢</button>
+            <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'red')" title="Marcar RED" class="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold hover:bg-red-500 hover:text-white transition">🔴</button>
+            <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'void')" title="Marcar VOID" class="text-[10px] px-2 py-0.5 rounded bg-gray-500/20 text-gray-300 font-bold hover:bg-gray-500 hover:text-white transition">➖</button>
+            <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'pendente')" title="Voltar para PENDENTE" class="text-[10px] px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-bold hover:bg-yellow-500 hover:text-black transition">⏳</button>
+            <span class="text-[10px] text-mutado ml-1">correção manual</span>
+          </div>` : ''}
         </div>`).join('');
 
       const liquidadaTxt = a.liquidada_em
