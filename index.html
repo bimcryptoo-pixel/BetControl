@@ -426,7 +426,8 @@
             data: a.data, 
             stake: Number(a.stake), 
             retorno: a.retorno !== null ? Number(a.retorno) : null, 
-            finalizada: a.finalizada 
+            finalizada: a.finalizada,
+            anexo_url: a.anexo_url || null
           }));
         }
         if (usrs && usrs.length > 0) {
@@ -454,7 +455,8 @@
             data: dadosObjeto.data,
             stake: dadosObjeto.stake,
             retorno: dadosObjeto.retorno,
-            finalizada: dadosObjeto.finalizada
+            finalizada: dadosObjeto.finalizada,
+            anexo_url: dadosObjeto.anexo_url || null
           });
         } else if (tipo === 'operador') {
           await supabaseClient.from('operadores').upsert({ id: dadosObjeto.id, nome: dadosObjeto.nome, documento: dadosObjeto.documento || '', telefone: dadosObjeto.telefone || '', cep1: dadosObjeto.cep1 || '', cep2: dadosObjeto.cep2 || '', cep3: dadosObjeto.cep3 || '', digitos: dadosObjeto.digitos || '' });
@@ -769,7 +771,8 @@
             data: aposta.data,
             stake: aposta.stake,
             retorno: aposta.retorno,
-            finalizada: aposta.finalizada
+            finalizada: aposta.finalizada,
+            anexo_url: aposta.anexo_url || null
           });
         }
         if (verificarSeTemPermissaoEdicao()) {
@@ -888,6 +891,14 @@
                   + Criar Aposta
                 </button>
               </div>
+              <div class="sm:col-span-2 md:col-span-6">
+                <label class="block text-xs text-mutado mb-1">📎 Anexar bilhete (foto do comprovante — opcional)</label>
+                <div data-drop-anexo="apostaAnexo" class="border border-dashed border-linha rounded-lg p-3 text-center cursor-pointer hover:border-emerald-500 transition">
+                  <input type="file" id="apostaAnexo" accept="image/*" class="hidden">
+                  <p class="text-xs text-mutado pointer-events-none">📷 Clique aqui, arraste a foto ou cole com Ctrl+V</p>
+                  <p data-preview-anexo class="text-xs text-emerald-500 font-bold mt-1 pointer-events-none"></p>
+                </div>
+              </div>
             </form>
           </div>
         ` : `
@@ -955,7 +966,7 @@
 
                   return `
                     <tr class="${bgClass} hover:opacity-80 transition-opacity">
-                      <td class="p-3 text-texto">${formatarDataBR(a.data)}</td>
+                      <td class="p-3 text-texto">${formatarDataBR(a.data)}${a.anexo_url ? ` <button onclick="abrirAnexo('${a.anexo_url}')" title="Ver bilhete anexado" class="hover:scale-125 transition inline-block">📎</button>` : ''}</td>
                       <td class="p-3 font-semibold text-texto">${operador ? operador.nome : 'N/A'}</td>
                       <td class="p-3">
                         ${podeEditar && a.editando ? `
@@ -983,8 +994,18 @@
                         ${podeEditar ? `
                           <div class="flex items-center justify-end gap-1.5">
                             ${a.editando ? `
-                              <button onclick="salvarEdicaoAposta('${a.id}')" class="px-2.5 py-1 bg-emerald-600 text-white text-xs rounded font-bold">Salvar</button>
-                              <button onclick="cancelarEdicao('${a.id}')" class="px-2 py-1 bg-gray-600 text-gray-200 text-xs rounded">X</button>
+                              <div class="flex flex-col items-end gap-1.5">
+                                <div class="flex items-center gap-1.5">
+                                  <button onclick="salvarEdicaoAposta('${a.id}')" class="px-2.5 py-1 bg-emerald-600 text-white text-xs rounded font-bold">Salvar</button>
+                                  <button onclick="cancelarEdicao('${a.id}')" class="px-2 py-1 bg-gray-600 text-gray-200 text-xs rounded">X</button>
+                                </div>
+                                <div data-drop-anexo="input-anexo-${a.id}" title="Clique, arraste a foto ou cole com Ctrl+V" class="border border-dashed border-linha rounded p-1.5 text-center cursor-pointer hover:border-emerald-500 transition max-w-[190px]">
+                                  <input type="file" id="input-anexo-${a.id}" accept="image/*" class="hidden">
+                                  <p class="text-[10px] text-mutado pointer-events-none">📎 clique / arraste / cole</p>
+                                  <p data-preview-anexo class="text-[10px] text-emerald-500 font-bold pointer-events-none"></p>
+                                </div>
+                                ${a.anexo_url ? `<div class="flex items-center gap-2"><button onclick="abrirAnexo('${a.anexo_url}')" class="text-[10px] hover:scale-110 transition" title="Ver anexo atual">📎 ver atual</button><button onclick="removerAnexoAposta('${a.id}')" class="text-[10px] text-red-500 underline">remover</button></div>` : ''}
+                              </div>
                             ` : (a.finalizada ? `
                               <button onclick="habilitarEdicao('${a.id}')" class="px-2.5 py-1 bg-blue-600/20 text-blue-500 border border-blue-500/40 hover:bg-blue-600 hover:text-white text-xs rounded font-bold transition">EDITAR</button>
                             ` : `
@@ -1281,6 +1302,153 @@
       });
     }
 
+    // ================= ANEXOS (bilhetes) =================
+    function comprimirImagem(file) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          const maxDim = 1600;
+          let width = img.width, height = img.height;
+          if (Math.max(width, height) > maxDim) {
+            const escala = maxDim / Math.max(width, height);
+            width = Math.round(width * escala);
+            height = Math.round(height * escala);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          canvas.toBlob(b => b ? resolve(b) : reject(new Error('Falha ao comprimir imagem')), 'image/jpeg', 0.82);
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Arquivo de imagem inválido.')); };
+        img.src = url;
+      });
+    }
+
+    async function enviarAnexo(file) {
+      if (!file.type.startsWith('image/')) throw new Error('O anexo precisa ser uma imagem.');
+      const blob = await comprimirImagem(file);
+      const nome = `apostas/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+      const { error } = await supabaseClient.storage.from('anexos').upload(nome, blob, { contentType: 'image/jpeg' });
+      if (error) throw error;
+      const { data } = supabaseClient.storage.from('anexos').getPublicUrl(nome);
+      return data.publicUrl;
+    }
+
+    async function excluirArquivoAnexo(url) {
+      try {
+        const partes = (url || '').split('/anexos/');
+        if (partes.length < 2) return;
+        await supabaseClient.storage.from('anexos').remove([partes[1]]);
+      } catch (e) { console.warn('Falha ao excluir arquivo antigo do anexo:', e); }
+    }
+
+    function abrirAnexo(url) {
+      fecharAnexo();
+      const overlay = document.createElement('div');
+      overlay.id = 'lightboxAnexo';
+      overlay.className = 'fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out';
+      overlay.onclick = fecharAnexo;
+      overlay.innerHTML = `
+        <div class="relative max-w-4xl w-full text-center" onclick="event.stopPropagation()">
+          <button onclick="fecharAnexo()" class="absolute -top-10 right-0 text-white text-2xl font-bold px-2 hover:text-red-400">✕</button>
+          <img src="${url}" alt="Bilhete anexado" class="max-h-[85vh] w-auto mx-auto rounded-lg shadow-2xl">
+          <a href="${url}" target="_blank" rel="noopener" class="inline-block mt-3 text-xs text-emerald-400 underline">Abrir em nova aba</a>
+        </div>`;
+      document.body.appendChild(overlay);
+    }
+
+    function fecharAnexo() {
+      const el = document.getElementById('lightboxAnexo');
+      if (el) el.remove();
+    }
+
+    // ---- Zona de anexo: clique, arrastar/soltar e colar (Ctrl+V) ----
+    function mostrarPreviewAnexo(input, previewEl) {
+      const f = input.files && input.files[0];
+      previewEl.textContent = f ? `✅ ${f.name} (${Math.round(f.size / 1024)} KB)` : '';
+    }
+
+    function definirArquivoAnexo(input, file) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+      const zona = input.closest('[data-drop-anexo]');
+      const preview = zona && zona.querySelector('[data-preview-anexo]');
+      if (preview) mostrarPreviewAnexo(input, preview);
+    }
+
+    function limparDestaqueZonasAnexo() {
+      document.querySelectorAll('[data-drop-anexo]').forEach(z => z.classList.remove('border-emerald-500', 'bg-emerald-500/10'));
+    }
+
+    document.addEventListener('click', (e) => {
+      const zona = e.target.closest && e.target.closest('[data-drop-anexo]');
+      if (zona && !(e.target.closest && e.target.closest('button'))) {
+        const input = document.getElementById(zona.getAttribute('data-drop-anexo'));
+        if (input) input.click();
+      }
+    });
+
+    document.addEventListener('change', (e) => {
+      const t = e.target;
+      if (t && t.id && (t.id === 'apostaAnexo' || t.id.indexOf('input-anexo-') === 0)) {
+        const zona = t.closest('[data-drop-anexo]');
+        const preview = zona && zona.querySelector('[data-preview-anexo]');
+        if (preview) mostrarPreviewAnexo(t, preview);
+      }
+    });
+
+    document.addEventListener('dragover', (e) => {
+      const zona = e.target.closest && e.target.closest('[data-drop-anexo]');
+      if (zona) {
+        e.preventDefault();
+        limparDestaqueZonasAnexo();
+        zona.classList.add('border-emerald-500', 'bg-emerald-500/10');
+      }
+    });
+
+    document.addEventListener('dragleave', () => limparDestaqueZonasAnexo());
+
+    document.addEventListener('drop', (e) => {
+      const zona = e.target.closest && e.target.closest('[data-drop-anexo]');
+      limparDestaqueZonasAnexo();
+      if (!zona) return;
+      e.preventDefault();
+      const arquivos = e.dataTransfer && e.dataTransfer.files;
+      const img = arquivos && Array.from(arquivos).find(f => f.type.indexOf('image/') === 0);
+      const input = document.getElementById(zona.getAttribute('data-drop-anexo'));
+      if (input && img) definirArquivoAnexo(input, img);
+    });
+
+    document.addEventListener('paste', (e) => {
+      if (!estado || estado.abaAtiva !== 'dashboard') return;
+      const arquivos = e.clipboardData && e.clipboardData.files;
+      const img = arquivos && Array.from(arquivos).find(f => f.type.indexOf('image/') === 0);
+      if (!img) return;
+      const apostaEditando = (estado.apostas || []).find(a => a.editando);
+      const inputId = apostaEditando ? `input-anexo-${apostaEditando.id}` : 'apostaAnexo';
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      e.preventDefault();
+      definirArquivoAnexo(input, img);
+    });
+
+    async function removerAnexoAposta(apostaId) {
+      if (!verificarSeTemPermissaoEdicao()) return;
+      if (!confirm("Remover o anexo desta aposta?")) return;
+      const aposta = estado.apostas.find(a => a.id === apostaId);
+      if (aposta && aposta.anexo_url) {
+        await excluirArquivoAnexo(aposta.anexo_url);
+        aposta.anexo_url = null;
+        aposta.editando = false;
+        await salvarNaNuvemELocal('aposta', aposta);
+        renderizarAba();
+      }
+    }
+
     async function adicionarAposta(event) {
       event.preventDefault();
       if (!verificarSeTemPermissaoEdicao()) return;
@@ -1296,6 +1464,19 @@
       }
 
       estado.dataFormulario = dataAposta;
+
+      let anexoUrl = null;
+      const arquivoAnexo = document.getElementById('apostaAnexo') && document.getElementById('apostaAnexo').files[0];
+      if (arquivoAnexo) {
+        try {
+          anexoUrl = await enviarAnexo(arquivoAnexo);
+        } catch (e) {
+          console.error(e);
+          alert("⚠️ Não foi possível enviar a imagem do bilhete. Tente novamente.");
+          return;
+        }
+      }
+
       for (let i = 0; i < qtd; i++) {
         const novaAposta = {
           id: `aposta-${Date.now()}-${i}`,
@@ -1304,12 +1485,20 @@
           data: dataAposta,
           stake,
           retorno: null,
-          finalizada: false
+          finalizada: false,
+          anexo_url: anexoUrl
         };
         estado.apostas.push(novaAposta);
         await salvarNaNuvemELocal('aposta', novaAposta);
       }
 
+      const inputAnexo = document.getElementById('apostaAnexo');
+      if (inputAnexo) {
+        inputAnexo.value = '';
+        const zona = inputAnexo.closest('[data-drop-anexo]');
+        const pv = zona && zona.querySelector('[data-preview-anexo]');
+        if (pv) pv.textContent = '';
+      }
       renderizarAba();
     }
 
@@ -1346,6 +1535,17 @@
         } else if (inputRetorno && inputRetorno.value === '') {
           aposta.retorno = null;
           aposta.finalizada = false;
+        }
+        const inputAnexo = document.getElementById(`input-anexo-${apostaId}`);
+        if (inputAnexo && inputAnexo.files && inputAnexo.files[0]) {
+          try {
+            const novaUrl = await enviarAnexo(inputAnexo.files[0]);
+            if (aposta.anexo_url) await excluirArquivoAnexo(aposta.anexo_url);
+            aposta.anexo_url = novaUrl;
+          } catch (e) {
+            console.error(e);
+            alert("⚠️ Não foi possível enviar a nova imagem. As outras alterações foram salvas.");
+          }
         }
         aposta.editando = false;
         await salvarNaNuvemELocal('aposta', aposta);
@@ -1385,6 +1585,8 @@
     async function deletarAposta(apostaId) {
       if (!verificarSeTemPermissaoEdicao()) return;
       if (confirm("Excluir esta aposta?")) {
+        const aposta = estado.apostas.find(a => a.id === apostaId);
+        if (aposta && aposta.anexo_url) await excluirArquivoAnexo(aposta.anexo_url);
         estado.apostas = estado.apostas.filter(a => a.id !== apostaId);
         await deletarDaNuvemELocal('aposta', apostaId);
         renderizarAba();
