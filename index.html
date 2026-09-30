@@ -433,7 +433,8 @@
             retorno: a.retorno !== null ? Number(a.retorno) : null, 
             finalizada: a.finalizada,
             anexo_url: a.anexo_url || null,
-            liquidada_em: a.liquidada_em || null
+            liquidada_em: a.liquidada_em || null,
+            oddTotal: (a.odd_total !== null && a.odd_total !== undefined) ? Number(a.odd_total) : null
           }));
         }
         if (sels) {
@@ -475,7 +476,8 @@
             retorno: dadosObjeto.retorno,
             finalizada: dadosObjeto.finalizada,
             anexo_url: dadosObjeto.anexo_url || null,
-            liquidada_em: dadosObjeto.liquidada_em || null
+            liquidada_em: dadosObjeto.liquidada_em || null,
+            odd_total: dadosObjeto.oddTotal || null
           });
         } else if (tipo === 'selecao') {
           await supabaseClient.from('selecoes').upsert({
@@ -933,7 +935,8 @@
               <div class="sm:col-span-2 md:col-span-6">
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                   <label class="text-xs text-mutado">🎯 Seleções do bilhete <span class="opacity-70">(linhas da aposta — opcional, alimenta a correção automática)</span></label>
-                  <div class="flex gap-2">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <input type="number" step="0.01" min="1" id="apostaOddTotal" placeholder="Odd total do bilhete (ex: 6.78)" title="Odd total que aparece no bilhete — é ela que vale no financeiro" class="px-2.5 py-1.5 bg-input border border-linha rounded text-texto text-xs outline-none w-52">
                     <button type="button" id="btnLerBilhete" onclick="lerBilheteOCR()" class="px-2.5 py-1.5 bg-violet-600/20 text-violet-500 border border-violet-500/40 hover:bg-violet-600 hover:text-white text-xs rounded font-bold transition">🤖 Ler do bilhete</button>
                     <button type="button" onclick="adicionarLinhaSelecao()" class="px-2.5 py-1.5 bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 hover:bg-emerald-600 hover:text-white text-xs rounded font-bold transition">＋ Adicionar linha</button>
                   </div>
@@ -1051,6 +1054,10 @@
                                 ${a.anexo_url ? `<div class="flex items-center gap-2"><button onclick="abrirAnexo('${a.anexo_url}')" class="text-[10px] hover:scale-110 transition" title="Ver anexo atual">📎 ver atual</button><button onclick="removerAnexoAposta('${a.id}')" class="text-[10px] text-red-500 underline">remover</button></div>` : ''}
                                 <div class="w-full text-left max-w-[280px]">
                                   <div class="text-[10px] text-mutado font-bold mb-1">🎯 Seleções do bilhete</div>
+                                  <div class="flex items-center gap-1 mb-1">
+                                    <span class="text-[10px] text-mutado">Odd total do bilhete:</span>
+                                    <input type="number" step="0.01" min="1" id="input-odd-total-${a.id}" value="${a.oddTotal !== null && a.oddTotal !== undefined ? a.oddTotal : ''}" placeholder="Ex: 6.78" title="Odd total que aparece no bilhete — é ela que vale no financeiro" class="w-24 px-1.5 py-1 bg-input border border-linha rounded text-texto text-[10px] outline-none">
+                                  </div>
                                   <div class="space-y-1">
                                     ${obterSelecoesAposta(a.id).map(s => `
                                       <div class="flex items-center justify-between gap-1 bg-panelAlt border border-linha rounded px-1.5 py-1" data-edit-sel="${s.id}">
@@ -1441,7 +1448,14 @@
       const geral = statusGeralSelecoes(sels);
       const operador = estado.operadores.find(o => o.id === (a.operadorId || a.clienteId));
       const casa = estado.casas.find(cs => cs.id === a.casaId);
-      const oddTotal = calcularOddTotal(sels);
+      // a odd total do BILHETE manda no financeiro — só usa o produto das linhas se ela não foi registrada
+      const oddTotalBilhete = (a.oddTotal !== null && a.oddTotal !== undefined && a.oddTotal !== '') ? Number(a.oddTotal) : null;
+      const oddTotal = oddTotalBilhete !== null ? oddTotalBilhete : calcularOddTotal(sels);
+      const oddTotalTxt = sels.length
+        ? (oddTotalBilhete !== null
+            ? oddTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : oddTotal.toLocaleString('pt-BR', { minimumFractionDigits: 3 }))
+        : '-';
 
       let badgeGeral;
       if (geral === 'green') badgeGeral = '<span class="bg-emerald-500 text-white px-4 py-1.5 rounded-full text-sm font-bold">🟢 GREEN</span>';
@@ -1487,7 +1501,7 @@
             </div>` : ''}
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 text-center">
             <div class="bg-panelAlt border border-linha rounded-lg p-2"><div class="text-[10px] text-mutado">Stake</div><div class="text-xs font-bold text-texto">R$ ${Number(a.stake).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div></div>
-            <div class="bg-panelAlt border border-linha rounded-lg p-2"><div class="text-[10px] text-mutado">Odd total</div><div class="text-xs font-bold text-texto">${sels.length ? oddTotal.toLocaleString('pt-BR', { minimumFractionDigits: 3 }) : '-'}</div></div>
+            <div class="bg-panelAlt border border-linha rounded-lg p-2"><div class="text-[10px] text-mutado">Odd total</div><div class="text-xs font-bold text-texto">${oddTotalTxt}</div></div>
             <div class="bg-panelAlt border border-linha rounded-lg p-2"><div class="text-[10px] text-mutado">Retorno</div><div class="text-xs font-bold text-texto">${retornoTxt}</div></div>
             <div class="bg-panelAlt border border-linha rounded-lg p-2"><div class="text-[10px] text-mutado">Casa</div><div class="text-xs font-bold text-texto">${casa ? casa.nome : 'N/A'}</div></div>
           </div>
@@ -1570,6 +1584,8 @@
       if (lista) lista.innerHTML = '';
       const st = document.getElementById('ocrStatus');
       if (st) st.textContent = '';
+      const ot = document.getElementById('apostaOddTotal');
+      if (ot) ot.value = '';
     }
 
     async function salvarSelecoesAposta(apostaId, lista) {
@@ -1661,7 +1677,15 @@
         }
         if (jogo || selecao) resultado.push({ jogo: jogo, mercado: mercado, selecao: selecao, odd: odd });
       });
-      return resultado;
+      // odd total do bilhete: linha "Tripla/Dupla/Simples/Múltipla <odd>" — manda no financeiro, não pode divergir
+      let oddTotalBilhete = '';
+      for (const linha of linhas) {
+        if (ehLinhaTotal(linha)) {
+          const info = extrairOdd(linha);
+          if (info) { oddTotalBilhete = info.odd; break; }
+        }
+      }
+      return { linhas: resultado, oddTotal: oddTotalBilhete };
     }
 
     async function lerBilheteOCR() {
@@ -1682,11 +1706,15 @@
         if (st) st.textContent = '⏳ Lendo o bilhete, aguarde...';
         const { data } = await Tesseract.recognize(arquivo, 'por');
         const parsed = parseTextoBilhete(data.text || '');
-        if (parsed.length === 0) {
+        const linhas = (parsed && parsed.linhas) || [];
+        const inputOddTotal = document.getElementById('apostaOddTotal');
+        if (inputOddTotal && parsed.oddTotal) inputOddTotal.value = parsed.oddTotal;
+        if (linhas.length === 0) {
           if (st) st.textContent = '⚠️ Não consegui identificar as linhas. Preencha manualmente.';
         } else {
-          parsed.forEach(adicionarLinhaSelecao);
-          if (st) st.textContent = `✅ ${parsed.length} ${parsed.length === 1 ? 'linha identificada' : 'linhas identificadas'} — confira e ajuste se preciso.`;
+          linhas.forEach(adicionarLinhaSelecao);
+          const extra = parsed.oddTotal ? ` (odd total do bilhete: ${parsed.oddTotal})` : '';
+          if (st) st.textContent = `✅ ${linhas.length} ${linhas.length === 1 ? 'linha identificada' : 'linhas identificadas'}${extra} — confira e ajuste se preciso.`;
         }
       } catch (e) {
         console.error('OCR:', e);
@@ -1788,6 +1816,8 @@
       const stake = parseFloat(document.getElementById('apostaStake').value);
       const dataAposta = document.getElementById('apostaData').value;
       const qtd = parseInt(document.getElementById('apostaQtd').value) || 1;
+      const oddTotalInput = document.getElementById('apostaOddTotal');
+      const oddTotalForm = oddTotalInput && oddTotalInput.value !== '' ? parseFloat(oddTotalInput.value) : null;
 
       if (!casaId) {
         alert("Cadastre uma casa de apostas para este operador primeiro.");
@@ -1818,7 +1848,8 @@
           retorno: null,
           finalizada: false,
           anexo_url: anexoUrl,
-          liquidada_em: null
+          liquidada_em: null,
+          oddTotal: oddTotalForm
         };
         estado.apostas.push(novaAposta);
         await salvarNaNuvemELocal('aposta', novaAposta);
@@ -1866,6 +1897,8 @@
       if (aposta) {
         if (inputCasa) aposta.casaId = inputCasa.value;
         if (inputStake && inputStake.value !== '') aposta.stake = parseFloat(inputStake.value);
+        const inputOddTotal = document.getElementById(`input-odd-total-${apostaId}`);
+        if (inputOddTotal) aposta.oddTotal = inputOddTotal.value !== '' ? parseFloat(inputOddTotal.value) : null;
         if (inputRetorno && inputRetorno.value !== '') {
           aposta.retorno = parseFloat(inputRetorno.value);
           aposta.finalizada = true;
