@@ -645,7 +645,71 @@
     window.onload = async () => {
       aplicarTema();
       await carregarDadosDoServidorOuLocal();
+      ativarTempoReal();
     };
+
+    // ===== Atualização automática em tempo real (Supabase Realtime) =====
+    // Quando a varredura de liquidação (ou outro operador) altera apostas/seleções
+    // no banco, a página recarrega os dados sozinha — sem precisar de F5.
+    let timerTempoReal = null;
+
+    function ativarTempoReal() {
+      try {
+        supabaseClient.channel('betcontrol-mudancas')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'apostas' }, agendarRecarregamentoTempoReal)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'selecoes' }, agendarRecarregamentoTempoReal)
+          .subscribe();
+      } catch (e) { console.warn('Tempo real indisponível:', e); }
+    }
+
+    function podeRecarregarAgora() {
+      // painel do bilhete ou visualizador de anexo abertos
+      if (document.getElementById('painelBilhete') || document.getElementById('lightboxAnexo')) return false;
+      // edição inline de aposta na lista
+      if (estado.apostas && estado.apostas.some(a => a.editando)) return false;
+      // formulário de nova aposta com conteúdo ainda não salvo
+      const stake = document.getElementById('apostaStake');
+      if (stake && stake.value && Number(stake.value) > 0) return false;
+      const oddT = document.getElementById('apostaOddTotal');
+      if (oddT && oddT.value) return false;
+      if (document.querySelectorAll('#listaSelecoes [data-linha-selecao]').length > 0) return false;
+      const pv = document.querySelector('[data-preview-anexo]');
+      if (pv && pv.textContent.trim() !== '') return false;
+      // usuário digitando em qualquer campo
+      const el = document.activeElement;
+      if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return false;
+      return true;
+    }
+
+    function agendarRecarregamentoTempoReal() {
+      clearTimeout(timerTempoReal);
+      // debounce: a varredura faz vários PATCHes seguidos; espera 2s de silêncio
+      timerTempoReal = setTimeout(recarregarAposMudancaTempoReal, 2000);
+    }
+
+    async function recarregarAposMudancaTempoReal() {
+      if (!podeRecarregarAgora()) {
+        // não interrompe quem está digitando/editando: tenta de novo em 30s
+        timerTempoReal = setTimeout(recarregarAposMudancaTempoReal, 30000);
+        return;
+      }
+      await carregarDadosDoServidorOuLocal();
+      mostrarAvisoTempoReal('🔄 Dados atualizados automaticamente');
+    }
+
+    function mostrarAvisoTempoReal(texto) {
+      let el = document.getElementById('avisoTempoReal');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'avisoTempoReal';
+        el.className = 'fixed bottom-4 right-4 z-[200] bg-emerald-600 text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none';
+        document.body.appendChild(el);
+      }
+      el.textContent = texto;
+      el.classList.remove('opacity-0');
+      clearTimeout(el._t);
+      el._t = setTimeout(() => el.classList.add('opacity-0'), 4000);
+    }
 
     function restaurarFiltrosNaUI() {
       if (estado.filtros) {
