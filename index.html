@@ -852,12 +852,21 @@
     }
 
     // ================= 1. DASHBOARD =================
+    // timestamp de criação embutido no id ("aposta-<Date.now()>-<n>"); 0 se não houver
+    function tsCriacaoAposta(a) {
+      const m = String(a && a.id || '').match(/aposta-(\d{10,})/);
+      return m ? parseInt(m[1], 10) : 0;
+    }
+
     function renderizarDashboard(container) {
       const apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
       const podeEditar = verificarSeTemPermissaoEdicao();
 
       apostasFiltradas.sort((a, b) => {
-        return estado.ordemDashboard === 'asc' ? new Date(a.data) - new Date(b.data) : new Date(b.data) - new Date(a.data);
+        const porData = estado.ordemDashboard === 'asc' ? new Date(a.data) - new Date(b.data) : new Date(b.data) - new Date(a.data);
+        if (porData !== 0) return porData;
+        // mesma data: mantém a ordem de salvamento (última salva primeiro em "Recentes")
+        return estado.ordemDashboard === 'asc' ? tsCriacaoAposta(a) - tsCriacaoAposta(b) : tsCriacaoAposta(b) - tsCriacaoAposta(a);
       });
 
       let lucroTotal = 0;
@@ -1891,10 +1900,11 @@
         const { data } = await Tesseract.recognize(arquivo, 'por');
         const parsed = parseTextoBilhete(data.text || '');
         const linhas = (parsed && parsed.linhas) || [];
+        const nLinhasTexto = (data.text || '').split('\n').filter(l => l.trim()).length;
         const inputOddTotal = document.getElementById('apostaOddTotal');
         if (inputOddTotal && parsed.oddTotal) inputOddTotal.value = parsed.oddTotal;
         if (linhas.length === 0) {
-          if (st) st.textContent = '⚠️ Não consegui identificar as linhas. Preencha manualmente.';
+          if (st) st.textContent = `⚠️ Não identifiquei as pernas (li ${nLinhasTexto} linhas da foto). Se a foto está nítida, atualize a página (Ctrl+Shift+R) e tente de novo — ou preencha manualmente.`;
         } else {
           linhas.forEach(adicionarLinhaSelecao);
           const extra = parsed.oddTotal ? ` (odd total do bilhete: ${parsed.oddTotal})` : '';
@@ -2406,7 +2416,10 @@
       const operadorSelecionadoObj = operadorSelecionadoId ? estado.operadores.find(o => o.id === operadorSelecionadoId) : null;
 
       apostasFiltradas.sort((a, b) => {
-        return estado.ordemRelatorio === 'asc' ? new Date(a.data) - new Date(b.data) : new Date(b.data) - new Date(a.data);
+        const porData = estado.ordemRelatorio === 'asc' ? new Date(a.data) - new Date(b.data) : new Date(b.data) - new Date(a.data);
+        if (porData !== 0) return porData;
+        // mesma data: mantém a ordem de salvamento
+        return estado.ordemRelatorio === 'asc' ? tsCriacaoAposta(a) - tsCriacaoAposta(b) : tsCriacaoAposta(b) - tsCriacaoAposta(a);
       });
 
       let volumeTotal = 0, lucroTotal = 0, totalFinalizadas = 0, greens = 0, reds = 0;
