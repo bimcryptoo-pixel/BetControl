@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <link rel="icon" type="image/webp" href="logo.webp">
   <title>BetControl - Gestão Operacional</title>
   <script src="https://cdn.tailwindcss.com"></script>
   
@@ -33,13 +32,13 @@
   <style>
     /* TEMAS DE CORES */
     :root, [data-theme="dark"] {
-      --color-base: #0a0f0c;
-      --color-panel: #0f1a13;
-      --color-panel-alt: #142219;
-      --color-input: #17271c;
+      --color-base: #090a0f;
+      --color-panel: #131620;
+      --color-panel-alt: #181c28;
+      --color-input: #1a1f2e;
       --color-text: #ffffff;
       --color-text-muted: #9ca3af;
-      --color-border: rgba(212, 175, 55, 0.12);
+      --color-border: rgba(255, 255, 255, 0.1);
     }
     [data-theme="light"] {
       --color-base: #f3f4f6;
@@ -59,23 +58,6 @@
       --color-text-muted: #cbd5e1;
       --color-border: rgba(255, 255, 255, 0.15);
     }
-
-    /* ===== TEMA CASINO PREMIUM: dourado como cor de marca ===== */
-    /* Botões de ação (todos os bg-emerald-600/500 do app são botões de marca) */
-    .bg-emerald-600 { background-color: #c9a227 !important; color: #1a1405 !important; }
-    .bg-emerald-500 { background-color: #d4af37 !important; color: #1a1405 !important; }
-    .hover\:bg-emerald-500:hover { background-color: #e3c565 !important; color: #1a1405 !important; }
-    .file\:bg-emerald-600::file-selector-button { background-color: #c9a227 !important; color: #1a1405 !important; }
-    .hover\:file\:bg-emerald-500:hover::file-selector-button { background-color: #e3c565 !important; color: #1a1405 !important; }
-    .bg-emerald-600\/30 { background-color: rgb(201 162 39 / 0.28) !important; }
-    .bg-emerald-500\/10 { background-color: rgb(212 175 55 / 0.10) !important; }
-    /* Sombras douradas */
-    .shadow-emerald-900\/30 { --tw-shadow-color: rgb(201 162 39 / 0.35) !important; }
-    .shadow-emerald-900\/40 { --tw-shadow-color: rgb(201 162 39 / 0.45) !important; }
-    .shadow-emerald-500\/25 { --tw-shadow-color: rgb(212 175 55 / 0.30) !important; }
-    /* Foco/hover dourado em inputs e selects */
-    .focus\:border-emerald-500:focus { border-color: #d4af37 !important; }
-    .hover\:border-emerald-500:hover { border-color: #d4af37 !important; }
 
     body {
       background-color: var(--color-base);
@@ -140,12 +122,22 @@
   <!-- ================= TELA DE LOGIN ================= -->
   <div id="tela-login" class="fixed inset-0 z-50 bg-base flex items-center justify-center p-4">
     <div class="absolute -top-32 -left-32 w-72 h-72 md:w-96 md:h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-    <div class="absolute -bottom-32 -right-32 w-72 h-72 md:w-96 md:h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-32 -right-32 w-72 h-72 md:w-96 md:h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
     <div class="w-full max-w-md bg-panel border border-linha rounded-2xl p-6 md:p-8 shadow-2xl relative z-10 backdrop-blur-xl">
       <div class="flex flex-col items-center mb-6 md:mb-8">
-        <img src="logo.webp" alt="BetControl" class="w-52 md:w-64 h-auto mix-blend-screen" style="filter: drop-shadow(0 0 18px rgba(212,175,55,.35));">
+        <div class="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-2xl p-[2px] shadow-xl shadow-emerald-500/20 mb-3 md:mb-4 group">
+          <div class="w-full h-full bg-input rounded-[14px] flex items-center justify-center relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 opacity-70"></div>
+            <span class="font-black text-2xl md:text-3xl tracking-tighter bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent transform -skew-x-6 drop-shadow-md">
+              BC
+            </span>
+          </div>
+        </div>
 
+        <h1 class="text-xl md:text-2xl font-black tracking-tight text-texto">
+          Bet<span class="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">Control</span>
+        </h1>
         <p class="text-[10px] md:text-xs uppercase font-bold tracking-widest text-mutado mt-1">Gestão Operacional Segura</p>
       </div>
 
@@ -177,10 +169,21 @@
     <header class="sticky top-0 z-40 bg-base border-b border-linha px-4 md:px-8 py-3 md:py-4 flex flex-col md:flex-row items-center justify-between gap-3 no-print">
       <div class="flex items-center justify-between w-full md:w-auto">
         <div class="flex items-center gap-3">
-          <img src="logo.webp" alt="BetControl" class="h-12 md:h-14 w-auto mix-blend-screen cursor-pointer" style="filter: drop-shadow(0 0 12px rgba(212,175,55,.35));">
+          <div class="relative w-10 h-10 md:w-11 md:h-11 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-xl p-[1px] shadow-lg shadow-emerald-500/25 group cursor-pointer">
+            <div class="w-full h-full bg-input rounded-[11px] flex items-center justify-center relative overflow-hidden">
+              <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 opacity-50"></div>
+              <span class="font-black text-lg md:text-xl tracking-tighter bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent transform -skew-x-6 drop-shadow">
+                BC
+              </span>
+            </div>
+          </div>
 
           <div>
-            <p class="text-[9px] md:text-[10px] uppercase font-bold tracking-widest text-mutado">Gestão Operacional</p>
+            <div class="flex items-center text-xl md:text-2xl font-black tracking-tight font-sans">
+              <span class="text-texto drop-shadow">Bet</span>
+              <span class="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">Control</span>
+            </div>
+            <p class="text-[9px] md:text-[10px] uppercase font-bold tracking-widest text-mutado -mt-1">Gestão Operacional</p>
           </div>
         </div>
 
@@ -986,7 +989,7 @@
                               <button onclick="habilitarEdicao('${a.id}')" class="px-2.5 py-1 bg-blue-600/20 text-blue-500 border border-blue-500/40 hover:bg-blue-600 hover:text-white text-xs rounded font-bold transition">EDITAR</button>
                             ` : `
                               <button onclick="habilitarEdicao('${a.id}')" class="px-2.5 py-1 bg-blue-600/20 text-blue-500 border border-blue-500/40 hover:bg-blue-600 hover:text-white text-xs rounded font-bold transition">EDITAR</button>
-                              <button onclick="salvarRetornoAposta('${a.id}')" class="px-2.5 py-1 bg-emerald-600/30 text-[#7c5f14] dark:text-amber-300 text-xs rounded font-bold">FINALIZAR</button>
+                              <button onclick="salvarRetornoAposta('${a.id}')" class="px-2.5 py-1 bg-emerald-600/30 text-emerald-600 dark:text-emerald-400 text-xs rounded font-bold">FINALIZAR</button>
                               <button onclick="zerarApostaDirectly('${a.id}')" class="px-2.5 py-1 bg-red-600/20 text-red-500 text-xs rounded font-bold">ZERAR</button>
                             `)}
                             <button onclick="deletarAposta('${a.id}')" class="text-mutado hover:text-red-500 text-xs p-1">🗑️</button>
@@ -2311,7 +2314,7 @@
                 ` : `
                   <div class="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-mutado">
                     <span class="font-bold text-texto">Permissões ativas:</span>
-                    ${u.perfil === 'editor' ? '<span class="bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded text-[10px] font-bold">Acesso Total (Editor)</span>' : (permissoesAtuais.length === 0 ? '<span class="text-mutado">Nenhuma aba permitida</span>' : permissoesAtuais.map(p => `<span class="bg-panelAlt text-texto border border-linha px-2 py-0.5 rounded text-[10px] font-bold uppercase">${p}</span>`).join(''))}
+                    ${u.perfil === 'editor' ? '<span class="bg-emerald-500/20 text-emerald-500 px-2 py-0.5 rounded text-[10px] font-bold">Acesso Total (Editor)</span>' : (permissoesAtuais.length === 0 ? '<span class="text-mutado">Nenhuma aba permitida</span>' : permissoesAtuais.map(p => `<span class="bg-panelAlt text-texto border border-linha px-2 py-0.5 rounded text-[10px] font-bold uppercase">${p}</span>`).join(''))}
                   </div>
                 `}
               </div>
