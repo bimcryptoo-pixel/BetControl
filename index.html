@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="icon" type="image/webp" href="logo.webp">
   <title>BetControl - Gestão Operacional</title>
   <script src="https://cdn.tailwindcss.com"></script>
   
@@ -139,21 +140,14 @@
   <!-- ================= TELA DE LOGIN ================= -->
   <div id="tela-login" class="fixed inset-0 z-50 bg-base flex items-center justify-center p-4">
     <div class="absolute -top-32 -left-32 w-72 h-72 md:w-96 md:h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-    <div class="absolute -bottom-32 -right-32 w-72 h-72 md:w-96 md:h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-32 -right-32 w-72 h-72 md:w-96 md:h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
     <div class="w-full max-w-md bg-panel border border-linha rounded-2xl p-6 md:p-8 shadow-2xl relative z-10 backdrop-blur-xl">
       <div class="flex flex-col items-center mb-6 md:mb-8">
-        <div class="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-2xl p-[2px] shadow-xl shadow-emerald-500/20 mb-3 md:mb-4 group">
-          <div class="w-full h-full bg-input rounded-[14px] flex items-center justify-center relative overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 opacity-70"></div>
-            <span class="font-black text-2xl md:text-3xl tracking-tighter bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent transform -skew-x-6 drop-shadow-md">
-              BC
-            </span>
-          </div>
-        </div>
+        <img src="logo.webp" alt="BetControl" class="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover shadow-xl shadow-amber-500/20 mb-3 md:mb-4">
 
         <h1 class="text-xl md:text-2xl font-black tracking-tight text-texto">
-          Bet<span class="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">Control</span>
+          Bet<span class="bg-gradient-to-r from-amber-300 via-yellow-500 to-amber-600 bg-clip-text text-transparent">Control</span>
         </h1>
         <p class="text-[10px] md:text-xs uppercase font-bold tracking-widest text-mutado mt-1">Gestão Operacional Segura</p>
       </div>
@@ -186,14 +180,7 @@
     <header class="sticky top-0 z-40 bg-base border-b border-linha px-4 md:px-8 py-3 md:py-4 flex flex-col md:flex-row items-center justify-between gap-3 no-print">
       <div class="flex items-center justify-between w-full md:w-auto">
         <div class="flex items-center gap-3">
-          <div class="relative w-10 h-10 md:w-11 md:h-11 bg-gradient-to-br from-amber-300 via-yellow-600 to-amber-700 rounded-xl p-[1px] shadow-lg shadow-amber-500/25 group cursor-pointer">
-            <div class="w-full h-full bg-input rounded-[11px] flex items-center justify-center relative overflow-hidden">
-              <div class="absolute inset-0 bg-gradient-to-br from-amber-400/25 to-yellow-600/10 opacity-50"></div>
-              <span class="font-black text-lg md:text-xl tracking-tighter bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent transform -skew-x-6 drop-shadow">
-                BC
-              </span>
-            </div>
-          </div>
+          <img src="logo.webp" alt="BetControl" class="w-10 h-10 md:w-11 md:h-11 rounded-xl object-cover shadow-lg shadow-amber-500/25 cursor-pointer">
 
           <div>
             <div class="flex items-center text-xl md:text-2xl font-black tracking-tight font-sans">
