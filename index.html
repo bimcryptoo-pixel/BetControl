@@ -938,11 +938,12 @@
                   <th class="p-3 border-b border-linha">Stake</th>
                   <th class="p-3 border-b border-linha">Valor de Retorno (R$)</th>
                   <th class="p-3 border-b border-linha">Status</th>
+                  <th class="p-3 border-b border-linha">Bilhete</th>
                   <th class="p-3 text-right no-print border-b border-linha">Ação</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-linha">
-                ${apostasFiltradas.length === 0 ? '<tr><td colspan="7" class="p-4 text-center text-mutado">Nenhuma aposta encontrada.</td></tr>' : ''}
+                ${apostasFiltradas.length === 0 ? '<tr><td colspan="8" class="p-4 text-center text-mutado">Nenhuma aposta encontrada.</td></tr>' : ''}
                 ${apostasFiltradas.map((a, index) => {
                   const opId = a.operadorId || a.clienteId;
                   const operador = estado.operadores.find(o => o.id === opId);
@@ -966,7 +967,7 @@
 
                   return `
                     <tr class="${bgClass} hover:opacity-80 transition-opacity">
-                      <td class="p-3 text-texto">${formatarDataBR(a.data)}${a.anexo_url ? ` <button onclick="abrirAnexo('${a.anexo_url}')" title="Ver bilhete anexado" class="hover:scale-125 transition inline-block">📎</button>` : ''}</td>
+                      <td class="p-3 text-texto">${formatarDataBR(a.data)}</td>
                       <td class="p-3 font-semibold text-texto">${operador ? operador.nome : 'N/A'}</td>
                       <td class="p-3">
                         ${podeEditar && a.editando ? `
@@ -990,6 +991,7 @@
                         ) : (a.retorno !== null ? `R$ ${a.retorno.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-')}
                       </td>
                       <td class="p-3">${statusTag}</td>
+                      <td class="p-3 text-center">${a.anexo_url ? `<button onclick="abrirAnexo('${a.anexo_url}')" title="Abrir bilhete" class="text-lg hover:scale-125 transition inline-block">📎</button>` : '<span class="text-mutado text-xs">-</span>'}</td>
                       <td class="p-3 text-right no-print">
                         ${podeEditar ? `
                           <div class="flex items-center justify-end gap-1.5">
