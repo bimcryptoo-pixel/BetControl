@@ -1512,6 +1512,9 @@
     // Correção manual do status de uma perna (só perfil editor).
     // Recalcula o retorno da aposta com as MESMAS regras da liquidação automática:
     // simples GREEN = stake×odd | múltipla com qualquer RED = 0 | VOID conta como 1 | tudo VOID devolve a stake.
+    // REGRA (usuário, 30/09/2026): múltipla com 1 perna RED já está perdida — liquida NA HORA
+    // (retorno 0, finalizada), sem esperar as demais pernas; as pendentes seguem pendentes
+    // e se resolvem nas varreduras seguintes apenas para registro.
     async function corrigirSelecaoManual(apostaId, selecaoId, novoStatus) {
       if (!verificarSeTemPermissaoEdicao()) return;
       const aposta = (estado.apostas || []).find(x => x.id === apostaId);
@@ -1528,7 +1531,13 @@
       const stake = Number(aposta.stake) || 0;
       const temPendente = sels.some(s => s.status === 'pendente');
       const temRed = sels.some(s => s.status === 'red');
-      if (temPendente || sels.length === 0) {
+      const ehMultipla = sels.length > 1;
+      if (ehMultipla && temRed) {
+        // Múltipla com perna RED já está perdida: liquida na hora, sem esperar as demais.
+        aposta.retorno = 0;
+        aposta.finalizada = true;
+        aposta.liquidada_em = agora.toISOString();
+      } else if (temPendente || sels.length === 0) {
         aposta.retorno = null;
         aposta.finalizada = false;
         aposta.liquidada_em = null;
