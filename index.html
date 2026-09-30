@@ -934,7 +934,10 @@
                 </button>
               </div>
               <div class="sm:col-span-2 md:col-span-6">
-                <label class="block text-xs text-mutado mb-1">📎 Anexar bilhete (foto do comprovante — opcional)</label>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block text-xs text-mutado">📎 Anexar bilhete (foto do comprovante — opcional)</label>
+                  <button type="button" onclick="limparAnexoBilhete()" title="Remove a foto anexada e limpa as linhas lidas" class="text-[11px] text-red-400 hover:text-red-300 underline font-bold">🧹 Limpar</button>
+                </div>
                 <div data-drop-anexo="apostaAnexo" class="border border-dashed border-linha rounded-lg p-3 text-center cursor-pointer hover:border-emerald-500 transition">
                   <input type="file" id="apostaAnexo" accept="image/*" class="hidden">
                   <p class="text-xs text-mutado pointer-events-none">📷 Clique aqui, arraste a foto ou cole com Ctrl+V</p>
@@ -1650,6 +1653,18 @@
       if (st) st.textContent = '';
       const ot = document.getElementById('apostaOddTotal');
       if (ot) ot.value = '';
+    }
+
+    // Remove a foto anexada e limpa as linhas/odd lidas — garante área de anexo vazia
+    function limparAnexoBilhete() {
+      const input = document.getElementById('apostaAnexo');
+      if (input) {
+        input.value = '';
+        const zona = input.closest('[data-drop-anexo]');
+        const preview = zona && zona.querySelector('[data-preview-anexo]');
+        if (preview) preview.textContent = '';
+      }
+      limparSelecoesForm();
     }
 
     async function salvarSelecoesAposta(apostaId, lista) {
