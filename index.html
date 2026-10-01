@@ -1432,8 +1432,24 @@
           const textColor = isDark ? '#9ca3af' : '#4b5563';
           const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
 
-          window.graficoVolumeInstancia = new Chart(ctx, {
-            type: 'line',
+          // Gradiente vertical ancorado na linha do zero do eixo y1:
+          // corAcima em tudo que está acima do zero, corAbaixo em tudo que
+          // está abaixo — a troca acontece exatamente sobre a linha do zero.
+          function gradienteBicolor(chart, corAcima, corAbaixo) {
+            const area = chart.chartArea;
+            if (!area) return corAcima;
+            const yZero = chart.scales.y1.getPixelForValue(0);
+            let t = (yZero - area.top) / (area.bottom - area.top);
+            t = Math.min(1, Math.max(0, t));
+            const g = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+            g.addColorStop(0, corAcima);
+            g.addColorStop(t, corAcima);
+            g.addColorStop(t, corAbaixo);
+            g.addColorStop(1, corAbaixo);
+            return g;
+          }
+
+          window.graficoVolumeInstancia = new Chart(ctx, {            type: 'line',
             data: {
               labels: labelsGrafico,
               datasets: [
@@ -1451,25 +1467,12 @@
                 {
                   label: 'Lucro Líquido Acumulado',
                   data: dataLucroAcumulado,
-                  // Bicolor por pixel: verde acima da linha 0, vermelha abaixo.
-                  // O gradiente é ancorado no zero do eixo y1, então a troca de
-                  // cor acontece exatamente sobre a linha do zero.
-                  borderColor: (bctx) => {
-                    const chart = bctx.chart;
-                    const area = chart.chartArea;
-                    if (!area) return '#10b981';
-                    const yZero = chart.scales.y1.getPixelForValue(0);
-                    let t = (yZero - area.top) / (area.bottom - area.top);
-                    t = Math.min(1, Math.max(0, t));
-                    const g = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
-                    g.addColorStop(0, '#10b981');
-                    g.addColorStop(t, '#10b981');
-                    g.addColorStop(t, '#ef4444');
-                    g.addColorStop(1, '#ef4444');
-                    return g;
-                  },
+                  // Linha bicolor: verde acima da linha 0, vermelha abaixo.
+                  borderColor: (bctx) => gradienteBicolor(bctx.chart, '#10b981', '#ef4444'),
+                  // Sombra na área até a linha do zero, na cor da linha.
+                  fill: 'origin',
+                  backgroundColor: (bctx) => gradienteBicolor(bctx.chart, 'rgba(16, 185, 129, 0.15)', 'rgba(239, 68, 68, 0.15)'),
                   borderWidth: 2,
-                  fill: false,
                   tension: 0.3,
                   yAxisID: 'y1',
                   pointBackgroundColor: (pctx) => (pctx.parsed.y >= 0 ? '#10b981' : '#ef4444'),
