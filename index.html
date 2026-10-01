@@ -1358,7 +1358,7 @@
           </div>
         </div>
 
-        <!-- GRÁFICO DE EVOLUÇÃO (LUCRO BICOLOR) -->
+        <!-- GRÁFICO DE EVOLUÇÃO (SÓ LUCRO, BICOLOR + EIXO LATERAL DE VOLUME) -->
         ${datasCronologicas.length > 0 ? `
         <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6 no-print">
           <h3 class="text-sm font-bold text-texto uppercase tracking-wider mb-4">📉 Gráfico de Evolução (Acumulado)</h3>
@@ -1438,35 +1438,43 @@
               labels: labelsGrafico,
               datasets: [
                 {
+                  // Série invisível: sem linha no gráfico; serve só para manter
+                  // a escala do eixo lateral de volume (indicador lateral).
                   label: 'Volume Acumulado',
                   data: dataVolumeAcumulado,
-                  borderColor: '#3b82f6', // blue-500
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                  borderWidth: 2,
-                  fill: true,
-                  tension: 0.3,
-                  yAxisID: 'y'
+                  yAxisID: 'y',
+                  borderWidth: 0,
+                  pointRadius: 0,
+                  pointHitRadius: 0,
+                  fill: false
                 },
                 {
                   label: 'Lucro Líquido Acumulado',
                   data: dataLucroAcumulado,
-                  borderColor: '#10b981', // cor base (legenda); segmentos sobrescritos abaixo
+                  // Bicolor por pixel: verde acima da linha 0, vermelha abaixo.
+                  // O gradiente é ancorado no zero do eixo y1, então a troca de
+                  // cor acontece exatamente sobre a linha do zero.
+                  borderColor: (bctx) => {
+                    const chart = bctx.chart;
+                    const area = chart.chartArea;
+                    if (!area) return '#10b981';
+                    const yZero = chart.scales.y1.getPixelForValue(0);
+                    let t = (yZero - area.top) / (area.bottom - area.top);
+                    t = Math.min(1, Math.max(0, t));
+                    const g = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+                    g.addColorStop(0, '#10b981');
+                    g.addColorStop(t, '#10b981');
+                    g.addColorStop(t, '#ef4444');
+                    g.addColorStop(1, '#ef4444');
+                    return g;
+                  },
                   borderWidth: 2,
                   fill: false,
                   tension: 0.3,
                   yAxisID: 'y1',
-                  // linha bicolor: verde na zona positiva, vermelha na zona negativa
-                  segment: {
-                    borderColor: (ctx) => {
-                      const v0 = ctx.p0.parsed.y, v1 = ctx.p1.parsed.y;
-                      if (v0 >= 0 && v1 >= 0) return '#10b981';
-                      if (v0 < 0 && v1 < 0) return '#ef4444';
-                      return v1 >= 0 ? '#10b981' : '#ef4444';
-                    }
-                  },
-                  pointBackgroundColor: (ctx) => (ctx.parsed.y >= 0 ? '#10b981' : '#ef4444'),
-                  pointBorderColor: (ctx) => (ctx.parsed.y >= 0 ? '#10b981' : '#ef4444'),
-                  pointRadius: 3.5
+                  pointBackgroundColor: (pctx) => (pctx.parsed.y >= 0 ? '#10b981' : '#ef4444'),
+                  pointBorderColor: (pctx) => (pctx.parsed.y >= 0 ? '#10b981' : '#ef4444'),
+                  pointRadius: 3
                 }
               ]
             },
@@ -1476,7 +1484,12 @@
               interaction: { mode: 'index', intersect: false },
               plugins: {
                 legend: { 
-                  labels: { color: textColor, font: { family: 'ui-sans-serif, system-ui, sans-serif', size: 11, weight: 'bold' } } 
+                  labels: { 
+                    color: textColor, 
+                    font: { family: 'ui-sans-serif, system-ui, sans-serif', size: 11, weight: 'bold' },
+                    // a série de volume é invisível (só ancora o eixo lateral): não aparece na legenda
+                    filter: (item) => item.text !== 'Volume Acumulado'
+                  } 
                 },
                 tooltip: {
                   backgroundColor: isDark ? '#1f2937' : '#ffffff',
