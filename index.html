@@ -1573,6 +1573,13 @@
       return '<span class="bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-2 py-0.5 rounded text-[10px] font-bold">⏳ PENDENTE</span>';
     }
 
+    // Perna pendente de aposta JÁ finalizada = só histórico (não trava nada) — 01/10/2026
+    function badgeLegBilhete(aposta, s) {
+      if (aposta && aposta.finalizada && s.status === 'pendente')
+        return '<span class="bg-slate-500/20 text-slate-400 px-2 py-0.5 rounded text-[10px] font-bold">📜 HISTÓRICO</span>';
+      return badgeStatusSelecao(s.status);
+    }
+
     function abrirPainelBilhete(apostaId) {
       fecharPainelBilhete();
       const a = (estado.apostas || []).find(x => x.id === apostaId);
@@ -1605,7 +1612,7 @@
         <div class="bg-panelAlt border border-linha rounded-lg p-4">
           <div class="flex items-start justify-between gap-2 mb-1">
             <div class="font-semibold text-texto text-sm">${s.selecao} <span class="text-emerald-500">@ ${Number(s.odd).toLocaleString('pt-BR', { minimumFractionDigits: 3 })}</span></div>
-            ${badgeStatusSelecao(s.status)}
+            ${badgeLegBilhete(a, s)}
           </div>
           <div class="text-xs text-mutado">${s.jogo}</div>
           ${s.mercado ? `<div class="text-xs text-mutado">${s.mercado}</div>` : ''}
@@ -1645,6 +1652,7 @@
             <div class="bg-panelAlt border border-linha rounded-lg p-2.5"><div class="text-xs text-mutado">Casa</div><div class="text-sm font-bold text-texto">${casa ? casa.nome : 'N/A'}</div></div>
           </div>
           ${sels.length ? `<div class="space-y-2 mb-4">${linhas}</div>` : '<p class="text-xs text-mutado mb-4">Nenhuma seleção registrada para esta aposta.</p>'}
+          ${a.finalizada && sels.some(s => s.status === 'pendente') ? '<p class="text-[11px] text-slate-400 mb-4">📜 Pernas marcadas como HISTÓRICO pertencem a um bilhete já finalizado e são resolvidas apenas para registro.</p>' : ''}
           <div class="border-t border-linha pt-3 text-xs text-mutado space-y-1">
             <div>📝 Registrada em ${formatarDataBR(a.data)} ${operador ? `· ${operador.nome}` : ''}</div>
             <div>${a.finalizada || geral === 'green' || geral === 'red' ? '✅' : '⏳'} Liquidada: ${liquidadaTxt}</div>
@@ -1700,6 +1708,45 @@
           <button type="button" onclick="this.closest('[data-linha-selecao]').remove()" title="Remover linha" class="px-2 py-1.5 text-red-500 hover:text-red-400 text-sm">✕</button>
         </div>`;
       lista.appendChild(linha);
+      linha.querySelectorAll('input').forEach(inp => inp.addEventListener('input', () => marcarLinhaIncompleta(linha)));
+      marcarLinhaIncompleta(linha);
+    }
+
+    // Destaca linhas de seleção com jogo vazio (erro comum do OCR) — 01/10/2026
+    function marcarLinhaIncompleta(linha) {
+      if (!linha) return;
+      const jogo = (linha.querySelector('[data-campo="jogo"]') || {}).value || '';
+      const selecao = (linha.querySelector('[data-campo="selecao"]') || {}).value || '';
+      const odd = (linha.querySelector('[data-campo="odd"]') || {}).value || '';
+      const incompleta = !jogo.trim() && (!!selecao.trim() || !!odd.trim());
+      linha.classList.toggle('border-red-500', incompleta);
+      linha.classList.toggle('bg-red-500/5', incompleta);
+      let aviso = linha.querySelector('[data-aviso-jogo]');
+      if (incompleta && !aviso) {
+        aviso = document.createElement('div');
+        aviso.setAttribute('data-aviso-jogo', '');
+        aviso.className = 'col-span-12 text-[10px] text-red-400 font-bold';
+        aviso.textContent = '⚠️ Preencha o jogo desta seleção (o OCR não conseguiu ler).';
+        linha.appendChild(aviso);
+      } else if (!incompleta && aviso) {
+        aviso.remove();
+      }
+    }
+
+    // Aviso de bilhete duplicado — NÃO bloqueia (duplicadas podem ser intencionais) — 01/10/2026
+    function existeBilheteDuplicado(data, stake, oddTotal, selecoes) {
+      const norm = s => String(s || '').trim().toLowerCase();
+      const chaveSel = selecoes.map(s => [norm(s.jogo), norm(s.mercado), norm(s.selecao), Number(s.odd) || 1].join('|')).sort().join(';;');
+      if (!chaveSel) return false;
+      return (estado.apostas || []).some(a => {
+        if (a.data !== data) return false;
+        if (Number(a.stake) !== Number(stake)) return false;
+        const otA = (a.oddTotal !== null && a.oddTotal !== undefined && a.oddTotal !== '') ? Number(a.oddTotal) : null;
+        const otB = (oddTotal !== null && oddTotal !== undefined && oddTotal !== '') ? Number(oddTotal) : null;
+        if (otA !== otB) return false;
+        const selsA = obterSelecoesAposta(a.id).map(s => [norm(s.jogo), norm(s.mercado), norm(s.selecao), Number(s.odd) || 1].join('|')).sort().join(';;');
+        return selsA === chaveSel;
+      });
     }
 
     function coletarSelecoesForm(listaId) {
@@ -2162,6 +2209,24 @@
 
       estado.dataFormulario = dataAposta;
 
+      // Validações (01/10/2026): jogo obrigatório por seleção; aviso se sem seleções; aviso de duplicada
+      const temLinhaSemJogo = Array.from(document.querySelectorAll('#listaSelecoes [data-linha-selecao]')).some(l => {
+        const jogo = (l.querySelector('[data-campo="jogo"]') || {}).value || '';
+        const selecao = (l.querySelector('[data-campo="selecao"]') || {}).value || '';
+        const odd = (l.querySelector('[data-campo="odd"]') || {}).value || '';
+        return !jogo.trim() && (!!selecao.trim() || !!odd.trim());
+      });
+      if (temLinhaSemJogo) {
+        alert("⚠️ Há seleções sem o campo JOGO preenchido (marcadas em vermelho). Preencha o jogo antes de salvar — a liquidação automática precisa dele.");
+        return;
+      }
+      const selecoesForm = coletarSelecoesForm();
+      if (selecoesForm.length === 0) {
+        if (!confirm("Salvar esta aposta SEM seleções? Ela não será liquidada automaticamente e ficará como manual.")) return;
+      } else if (existeBilheteDuplicado(dataAposta, stake, oddTotalForm, selecoesForm)) {
+        if (!confirm("⚠️ Já existe um bilhete idêntico lançado nesta data (mesmo stake e seleções). Duplicadas podem ser intencionais — salvar mesmo assim?")) return;
+      }
+
       let anexoUrl = null;
       const arquivoAnexo = document.getElementById('apostaAnexo') && document.getElementById('apostaAnexo').files[0];
       if (arquivoAnexo) {
@@ -2189,7 +2254,6 @@
         };
         estado.apostas.push(novaAposta);
         await salvarNaNuvemELocal('aposta', novaAposta);
-        const selecoesForm = coletarSelecoesForm();
         if (selecoesForm.length > 0) {
           await salvarSelecoesAposta(novaAposta.id, selecoesForm);
         }
