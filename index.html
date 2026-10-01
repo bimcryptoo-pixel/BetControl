@@ -77,10 +77,21 @@
       opacity: 1;
     }
 
+    /* ============ IMPRESSÃO / PDF — padrão visual BetControl (compacto) ============ */
     @media print {
       @page {
         size: A4 portrait;
-        margin: 6mm;
+        margin: 8mm 7mm 12mm 7mm;
+        @bottom-right {
+          content: "Página " counter(page) " de " counter(pages);
+          font-size: 7pt;
+          color: #9ca3af;
+        }
+      }
+      /* garante que as cores do tema saiam no papel */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
       header, aside, .no-print, #tela-login {
         display: none !important;
@@ -91,29 +102,96 @@
         overflow: visible !important;
         margin: 0 !important;
         padding: 0 !important;
-        background-color: #ffffff !important;
-        color: #000000 !important;
-        font-size: 8.5pt !important;
-      }
-      .print-card, div, table {
-        background-color: #ffffff !important;
-        border-color: #e5e7eb !important;
-        color: #000000 !important;
-      }
-      th {
-        background-color: #f3f4f6 !important;
-        color: #000000 !important;
+        background: #090a0f !important;
+        color: #ffffff !important;
         font-size: 8pt !important;
-        padding: 4px 6px !important;
-        border: 1px solid #d1d5db !important;
+      }
+      /* cabeçalho do relatório — visível só no impresso */
+      .print-header {
+        display: block !important;
+        margin-bottom: 8px !important;
+        padding: 8px 12px !important;
+        background: linear-gradient(135deg, #064e3b 0%, #0f766e 55%, #0e7490 100%) !important;
+        border-radius: 10px !important;
+        color: #ffffff !important;
+      }
+      .print-header .print-brand {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+      }
+      .print-header .print-logo {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 30px !important;
+        height: 30px !important;
+        border-radius: 8px !important;
+        background: rgba(255,255,255,.16) !important;
+        border: 1px solid rgba(255,255,255,.4) !important;
+        font-weight: 900 !important;
+        font-size: 12pt !important;
+        color: #ffffff !important;
+      }
+      .print-header .print-title {
+        font-weight: 900 !important;
+        font-size: 11pt !important;
+        color: #ffffff !important;
+        line-height: 1.2 !important;
+      }
+      .print-header .print-sub {
+        font-size: 7.5pt !important;
+        color: #d1fae5 !important;
+      }
+      /* KPIs compactos: 6 cartões em uma única linha */
+      .kpi-grid {
+        display: grid !important;
+        grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+        gap: 6px !important;
+        margin-bottom: 8px !important;
+      }
+      .kpi-grid > div {
+        padding: 6px 8px !important;
+        border-radius: 8px !important;
+      }
+      .kpi-grid p { font-size: 6.5pt !important; margin-bottom: 2px !important; }
+      .kpi-grid h3 { font-size: 10.5pt !important; line-height: 1.15 !important; }
+      /* seções compactas */
+      .print-card {
+        margin-bottom: 8px !important;
+        padding: 8px 10px !important;
+        border-radius: 8px !important;
+        background: #131620 !important;
+        border: 1px solid rgba(255,255,255,.1) !important;
+      }
+      .print-card > h3 {
+        font-size: 8.5pt !important;
+        margin-bottom: 6px !important;
+      }
+      /* tabelas organizadas na folha */
+      .overflow-x-auto { overflow: visible !important; }
+      table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 7.5pt !important;
+        background: transparent !important;
+      }
+      thead { display: table-header-group !important; }
+      tfoot { display: table-footer-group !important; }
+      tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+      th {
+        font-size: 7pt !important;
+        padding: 4px 5px !important;
+        text-transform: uppercase !important;
+        letter-spacing: .04em !important;
+        color: #ffffff !important;
+        background: #181c28 !important;
+        border-bottom: 2px solid #10b981 !important;
       }
       td {
-        border-bottom: 1px solid #e5e7eb !important;
-        border-left: 1px solid #e5e7eb !important;
-        border-right: 1px solid #e5e7eb !important;
-        font-size: 8pt !important;
-        padding: 4px 6px !important;
-        color: #000000 !important;
+        font-size: 7.5pt !important;
+        padding: 3px 5px !important;
+        border-bottom: 1px solid rgba(255,255,255,.08) !important;
       }
     }
   </style>
@@ -2628,7 +2706,7 @@
         return estado.ordemRelatorio === 'asc' ? tsCriacaoAposta(a) - tsCriacaoAposta(b) : tsCriacaoAposta(b) - tsCriacaoAposta(a);
       });
 
-      let volumeTotal = 0, lucroTotal = 0, totalFinalizadas = 0, greens = 0, reds = 0;
+      let volumeTotal = 0, lucroTotal = 0, retornoTotal = 0, totalFinalizadas = 0, greens = 0, reds = 0;
       const resumoPorCasa = {};
 
       apostasFiltradas.forEach(a => {
@@ -2662,6 +2740,7 @@
           totalFinalizadas++;
           const lucroAposta = a.retorno - a.stake;
           lucroTotal += lucroAposta;
+          retornoTotal += a.retorno;
           resumoPorCasa[chaveAgrupamento].lucroLiquido += lucroAposta;
 
           if (a.retorno > a.stake) greens++;
@@ -2677,10 +2756,13 @@
 
       container.innerHTML = `
         <div class="hidden print-header">
-          <div class="flex items-center gap-3">
-            <span class="font-black text-xs text-texto">BetControl - Relatório Analítico Sintético</span>
+          <div class="print-brand">
+            <span class="print-logo">BC</span>
+            <div>
+              <div class="print-title">BetControl · Relatório Analítico Sintético</div>
+              <div class="print-sub">${operadorSelecionadoObj ? `Operador: ${operadorSelecionadoObj.nome.toUpperCase()} · ` : 'Visão global · '}Emitido em ${new Date().toLocaleString('pt-BR')} · ${apostasFiltradas.length} aposta(s) no período filtrado</div>
+            </div>
           </div>
-          <div class="text-right text-[8px] text-mutado">Emitido em: ${new Date().toLocaleDateString('pt-BR')}</div>
         </div>
 
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
@@ -2708,7 +2790,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+        <div class="kpi-grid grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
           <div class="print-card bg-panel border border-linha rounded-xl p-3 shadow-md">
             <p class="text-[9px] text-mutado mb-0.5 uppercase tracking-wider font-bold">Nº Apostas</p>
             <h3 class="text-sm md:text-xl font-black text-texto">${apostasFiltradas.length}</h3>
@@ -2766,6 +2848,14 @@
                   `;
                 }).join('')}
               </tbody>
+              <tfoot>
+                <tr class="bg-panelAlt">
+                  <td class="p-2 md:p-3 font-black text-texto uppercase">Total</td>${operadorSelecionadoId ? '<td></td>' : ''}
+                  <td class="p-2 md:p-3 font-black text-texto">${apostasFiltradas.length}</td>
+                  <td class="p-2 md:p-3 font-black text-blue-500">R$ ${volumeTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                  <td class="p-2 md:p-3 font-black ${lucroTotal > 0 ? 'text-emerald-500' : lucroTotal < 0 ? 'text-red-500' : 'text-texto'}">${lucroTotal > 0 ? `+R$ ${lucroTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : lucroTotal < 0 ? `-R$ ${Math.abs(lucroTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 'R$ 0,00'}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
@@ -2808,6 +2898,14 @@
                   `;
                 }).join('')}
               </tbody>
+              <tfoot>
+                <tr class="bg-panelAlt">
+                  <td colspan="3" class="p-1.5 md:p-2 font-black text-texto uppercase text-right">Total</td>
+                  <td class="p-1.5 md:p-2 font-black text-blue-500">R$ ${volumeTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                  <td class="p-1.5 md:p-2 font-black text-texto">R$ ${retornoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                  <td class="p-1.5 md:p-2 font-black ${lucroTotal > 0 ? 'text-emerald-500' : lucroTotal < 0 ? 'text-red-500' : 'text-texto'}">${lucroTotal > 0 ? `+R$ ${lucroTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : lucroTotal < 0 ? `-R$ ${Math.abs(lucroTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 'R$ 0,00'}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
