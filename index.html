@@ -292,13 +292,37 @@
       <div class="flex flex-wrap items-center justify-end gap-2 md:gap-3 w-full md:w-auto">
         <div class="flex items-center gap-2 bg-panel p-1.5 rounded-lg border border-linha shadow-inner overflow-x-auto max-w-full">
           <div class="relative">
+            <label class="block text-[8px] md:text-[9px] text-texto uppercase font-bold px-1">Mês</label>
+            <select id="filtroMes" onchange="aplicarFiltroMesAno()" class="bg-input text-texto text-[11px] md:text-xs px-2 py-1 rounded border border-linha outline-none cursor-pointer">
+              <option value="">Todos</option>
+              <option value="01">Jan</option>
+              <option value="02">Fev</option>
+              <option value="03">Mar</option>
+              <option value="04">Abr</option>
+              <option value="05">Mai</option>
+              <option value="06">Jun</option>
+              <option value="07">Jul</option>
+              <option value="08">Ago</option>
+              <option value="09">Set</option>
+              <option value="10">Out</option>
+              <option value="11">Nov</option>
+              <option value="12">Dez</option>
+            </select>
+          </div>
+          <div class="relative">
+            <label class="block text-[8px] md:text-[9px] text-texto uppercase font-bold px-1">Ano</label>
+            <select id="filtroAno" onchange="aplicarFiltroMesAno()" class="bg-input text-texto text-[11px] md:text-xs px-2 py-1 rounded border border-linha outline-none cursor-pointer">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div class="relative">
             <label class="block text-[8px] md:text-[9px] text-texto uppercase font-bold px-1">De</label>
-            <input type="date" id="filtroDataInicio" onchange="atualizarFiltrosGlobais()" onclick="this.showPicker && this.showPicker()" class="bg-input text-texto text-[11px] md:text-xs px-2 py-1 rounded border border-linha outline-none cursor-pointer">
+            <input type="date" id="filtroDataInicio" onchange="aoMudarDataManual()" onclick="this.showPicker && this.showPicker()" class="bg-input text-texto text-[11px] md:text-xs px-2 py-1 rounded border border-linha outline-none cursor-pointer">
           </div>
           <span class="text-mutado text-xs self-end mb-1">até</span>
           <div class="relative">
             <label class="block text-[8px] md:text-[9px] text-texto uppercase font-bold px-1">Até</label>
-            <input type="date" id="filtroDataFim" onchange="atualizarFiltrosGlobais()" onclick="this.showPicker && this.showPicker()" class="bg-input text-texto text-[11px] md:text-xs px-2 py-1 rounded border border-linha outline-none cursor-pointer">
+            <input type="date" id="filtroDataFim" onchange="aoMudarDataManual()" onclick="this.showPicker && this.showPicker()" class="bg-input text-texto text-[11px] md:text-xs px-2 py-1 rounded border border-linha outline-none cursor-pointer">
           </div>
           <button onclick="limparFiltroDatas()" class="text-[11px] text-mutado hover:text-texto px-2 py-1 bg-input hover:brightness-110 rounded border border-linha transition self-end">Limpar</button>
         </div>
@@ -387,7 +411,7 @@
       ordemVolumeMes: 'desc',
       ordemLucroMes: 'desc',
       filtroPendentes: false,
-      filtros: { dataInicio: '', dataFim: '', operadorId: '', casaId: '' },
+      filtros: { dataInicio: '', dataFim: '', operadorId: '', casaId: '', mes: '', ano: '' },
       usuarios: [
         { id: 'usr-1', usuario: 'admin', senha: '123456', perfil: 'editor', nome: 'Administrador Mestre', permissoesLeitor: [] },
         { id: 'usr-2', usuario: 'operador', senha: '123456', perfil: 'leitura', nome: 'Operador Padrão', permissoesLeitor: ['dashboard', 'volumemes', 'relatorios', 'lucro'] }
@@ -459,7 +483,7 @@
           const parsed = JSON.parse(dadosSalvos);
           if (!parsed.tema) parsed.tema = 'dark';
           if (!parsed.dataFormulario) parsed.dataFormulario = new Date().toISOString().split('T')[0];
-          if (!parsed.filtros) parsed.filtros = { dataInicio: '', dataFim: '', operadorId: '', casaId: '' };
+          if (!parsed.filtros) parsed.filtros = { dataInicio: '', dataFim: '', operadorId: '', casaId: '', mes: '', ano: '' };
           if (parsed.filtros.casaId === undefined) parsed.filtros.casaId = '';
           if (!parsed.descontosOperadores) parsed.descontosOperadores = {};
           if (!parsed.ordemRelatorio) parsed.ordemRelatorio = 'desc';
@@ -688,9 +712,10 @@
         telaLogin.classList.add('hidden');
         appContainer.classList.remove('hidden');
         appContainer.classList.add('flex');
-        restaurarFiltrosNaUI();
         atualizarSelectOperadores();
         atualizarSelectCasasGlobais();
+        atualizarSelectAnos();
+        restaurarFiltrosNaUI();
         renderizarAba();
       } else {
         appContainer.classList.remove('flex');
@@ -808,8 +833,12 @@
       if (estado.filtros) {
         const di = document.getElementById('filtroDataInicio');
         const df = document.getElementById('filtroDataFim');
+        const fm = document.getElementById('filtroMes');
+        const fa = document.getElementById('filtroAno');
         if (di) di.value = estado.filtros.dataInicio || '';
         if (df) df.value = estado.filtros.dataFim || '';
+        if (fm) fm.value = estado.filtros.mes || '';
+        if (fa && estado.filtros.ano) fa.value = estado.filtros.ano;
       }
     }
 
@@ -818,10 +847,59 @@
         dataInicio: document.getElementById('filtroDataInicio').value,
         dataFim: document.getElementById('filtroDataFim').value,
         operadorId: document.getElementById('selectOperador').value,
-        casaId: document.getElementById('selectCasaGlobal').value
+        casaId: document.getElementById('selectCasaGlobal').value,
+        mes: document.getElementById('filtroMes') ? document.getElementById('filtroMes').value : '',
+        ano: document.getElementById('filtroAno') ? document.getElementById('filtroAno').value : ''
       };
       salvarDadosNoLocalStorage();
       renderizarAba();
+    }
+
+    // Filtro independente por MÊS/ANO: preenche o intervalo DE/ATÉ com o mês (ou ano) cheio,
+    // então vale automaticamente para todo o sistema (dashboard, relatórios, lucro, PDF).
+    function aplicarFiltroMesAno() {
+      const mes = document.getElementById('filtroMes').value;
+      let ano = document.getElementById('filtroAno').value;
+      const di = document.getElementById('filtroDataInicio');
+      const df = document.getElementById('filtroDataFim');
+      if (!mes && !ano) {
+        di.value = '';
+        df.value = '';
+      } else {
+        if (!ano) ano = String(new Date().getFullYear()); // só mês escolhido → usa o ano atual
+        if (mes) {
+          const ultimoDia = new Date(parseInt(ano, 10), parseInt(mes, 10), 0).getDate();
+          di.value = `${ano}-${mes}-01`;
+          df.value = `${ano}-${mes}-${String(ultimoDia).padStart(2, '0')}`;
+        } else {
+          di.value = `${ano}-01-01`;
+          df.value = `${ano}-12-31`;
+        }
+      }
+      atualizarFiltrosGlobais();
+    }
+
+    // Quando o usuário ajusta DE/ATÉ manualmente, o atalho mês/ano deixa de valer
+    function aoMudarDataManual() {
+      const fm = document.getElementById('filtroMes');
+      const fa = document.getElementById('filtroAno');
+      if (fm) fm.value = '';
+      if (fa) fa.value = '';
+      atualizarFiltrosGlobais();
+    }
+
+    // Anos disponíveis vindos das apostas cadastradas (+ ano atual)
+    function atualizarSelectAnos() {
+      const sel = document.getElementById('filtroAno');
+      if (!sel) return;
+      const anos = new Set([String(new Date().getFullYear())]);
+      (estado.apostas || []).forEach(a => {
+        if (a.data && /^\d{4}/.test(a.data)) anos.add(a.data.slice(0, 4));
+      });
+      const ordenados = [...anos].sort().reverse();
+      const atual = sel.value || (estado.filtros && estado.filtros.ano) || '';
+      sel.innerHTML = '<option value="">Todos</option>' + ordenados.map(a => `<option value="${a}">${a}</option>`).join('');
+      if (atual && ordenados.includes(atual)) sel.value = atual;
     }
 
     function filtrarLucroPorCasa(casaId) {
@@ -902,6 +980,10 @@
     function limparFiltroDatas() {
       document.getElementById('filtroDataInicio').value = '';
       document.getElementById('filtroDataFim').value = '';
+      const fm = document.getElementById('filtroMes');
+      const fa = document.getElementById('filtroAno');
+      if (fm) fm.value = '';
+      if (fa) fa.value = '';
       atualizarFiltrosGlobais();
     }
 
