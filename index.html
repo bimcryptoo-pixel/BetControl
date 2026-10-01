@@ -883,10 +883,8 @@
       const select = document.getElementById('selectCasaGlobal');
       if (!select) return;
       
-      const operadorFiltro = estado.filtros ? estado.filtros.operadorId : '';
-      const casasDisponíveis = operadorFiltro 
-        ? estado.casas.filter(c => (c.operadorId || c.clienteId) === operadorFiltro)
-        : estado.casas;
+      // Casas são globais (unificadas) — não filtrar por operador
+      const casasDisponíveis = estado.casas;
 
       select.innerHTML = '<option value="">Todas as Casas</option>';
       casasDisponíveis.forEach(c => {
@@ -1195,7 +1193,7 @@
                       <td class="p-3">
                         ${podeEditar && a.editando ? `
                           <select id="input-casa-${a.id}" class="w-full px-2 py-1 bg-input border border-linha rounded text-texto text-xs outline-none">
-                            ${estado.casas.filter(c => (c.operadorId || c.clienteId) === opId).map(c => `<option value="${c.id}" ${c.id === a.casaId ? 'selected' : ''}>${c.nome}</option>`).join('')}
+                            ${estado.casas.map(c => `<option value="${c.id}" ${c.id === a.casaId ? 'selected' : ''}>${c.nome}</option>`).join('')}
                           </select>
                         ` : (casa ? renderizarFlagCasa(casa.nome) : 'N/A')}
                       </td>
@@ -1560,12 +1558,12 @@
     }
 
     function atualizarCasasFormAposta() {
-      const operadorId = document.getElementById('apostaOperador').value;
       const selectCasa = document.getElementById('apostaCasa');
       if (!selectCasa) return;
       selectCasa.innerHTML = '';
 
-      const casasDoOperador = estado.casas.filter(c => (c.operadorId || c.clienteId) === operadorId);
+      // Casas são globais (unificadas) — lista completa para qualquer operador
+      const casasDoOperador = estado.casas;
       if (casasDoOperador.length === 0) {
         selectCasa.innerHTML = '<option value="">Nenhuma casa cadastrada</option>';
         return;
@@ -2647,10 +2645,9 @@
 
     async function deletarOperador(id) {
       if (!verificarSeTemPermissaoEdicao()) return;
-      if (confirm("Excluir operador e dados associados?")) {
+      if (confirm("Excluir operador e dados associados? (as casas de apostas são globais e serão mantidas)")) {
         estado.operadores = estado.operadores.filter(o => o.id !== id);
         estado.apostas = estado.apostas.filter(a => (a.operadorId || a.clienteId) !== id);
-        estado.casas = estado.casas.filter(cs => (cs.operadorId || cs.clienteId) !== id);
         delete estado.descontosOperadores[id];
         await deletarDaNuvemELocal('operador', id);
         atualizarSelectOperadores();
@@ -2661,10 +2658,6 @@
 
     // ================= 3. CASAS DE APOSTAS =================
     function renderizarCasas(container) {
-      const operadorFiltro = estado.filtros.operadorId;
-      const operadoresFiltrados = operadorFiltro 
-        ? estado.operadores.filter(o => o.id === operadorFiltro) 
-        : estado.operadores;
       const podeEditar = verificarSeTemPermissaoEdicao();
 
       container.innerHTML = `
@@ -2675,13 +2668,7 @@
         ${podeEditar ? `
           <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6 no-print">
             <h3 class="text-sm font-bold mb-3 text-texto">🏛️ Cadastrar Nova Casa</h3>
-            <form onsubmit="adicionarCasa(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <select id="casaOperadorId" required class="w-full px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none">
-                  <option value="">Selecione Operador...</option>
-                  ${estado.operadores.map(o => `<option value="${o.id}">${o.nome}</option>`).join('')}
-                </select>
-              </div>
+            <form onsubmit="adicionarCasa(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <input type="text" id="casaNome" required placeholder="Nome da Casa (Ex: HM Bets)" class="w-full px-3 py-2 bg-input border border-linha rounded text-texto text-xs outline-none">
               </div>
@@ -2694,37 +2681,29 @@
           </div>
         ` : ''}
 
-        <div class="space-y-6">
-          ${operadoresFiltrados.length === 0 ? '<div class="text-center text-mutado py-4">Nenhum operador encontrado.</div>' : ''}
-          ${operadoresFiltrados.map(op => {
-            const casasDoOperador = estado.casas.filter(c => (c.operadorId || c.clienteId) === op.id);
-            return `
-              <div class="bg-panel border border-linha rounded-xl p-4 md:p-5">
-                <div class="flex items-center justify-between mb-4 pb-2 border-b border-linha">
-                  <h3 class="text-sm md:text-md font-bold text-emerald-500 flex items-center gap-2">
-                    👤 ${op.nome}
-                  </h3>
-                  <span class="text-xs bg-panelAlt px-2.5 py-1 rounded text-mutado font-semibold border border-linha">
-                    ${casasDoOperador.length} casa(s)
-                  </span>
-                </div>
+        <div class="bg-panel border border-linha rounded-xl p-4 md:p-5">
+          <div class="flex items-center justify-between mb-4 pb-2 border-b border-linha">
+            <h3 class="text-sm md:text-md font-bold text-emerald-500 flex items-center gap-2">
+              🏛️ Casas Cadastradas
+            </h3>
+            <span class="text-xs bg-panelAlt px-2.5 py-1 rounded text-mutado font-semibold border border-linha">
+              ${estado.casas.length} casa(s)
+            </span>
+          </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  ${casasDoOperador.length === 0 ? '<div class="col-span-full text-xs text-mutado italic py-2">Nenhuma casa cadastrada para este operador.</div>' : ''}
-                  ${casasDoOperador.map(casa => `
-                    <div class="bg-panelAlt border border-linha rounded-lg p-3.5 flex flex-col justify-between">
-                      <div class="flex justify-between items-center mb-3">
-                        ${renderizarFlagCasa(casa.nome)}
-                      </div>
-                      ${podeEditar ? `
-                        <button onclick="deletarCasa('${casa.id}')" class="w-full py-1 bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white rounded text-xs font-bold transition no-print">Excluir</button>
-                      ` : ''}
-                    </div>
-                  `).join('')}
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            ${estado.casas.length === 0 ? '<div class="col-span-full text-xs text-mutado italic py-2">Nenhuma casa cadastrada.</div>' : ''}
+            ${estado.casas.map(casa => `
+              <div class="bg-panelAlt border border-linha rounded-lg p-3.5 flex flex-col justify-between">
+                <div class="flex justify-between items-center mb-3">
+                  ${renderizarFlagCasa(casa.nome)}
                 </div>
+                ${podeEditar ? `
+                  <button onclick="deletarCasa('${casa.id}')" class="w-full py-1 bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white rounded text-xs font-bold transition no-print">Excluir</button>
+                ` : ''}
               </div>
-            `;
-          }).join('')}
+            `).join('')}
+          </div>
         </div>
       `;
     }
@@ -2732,10 +2711,18 @@
     async function adicionarCasa(e) {
       e.preventDefault();
       if (!verificarSeTemPermissaoEdicao()) return;
+      const nomeCasa = document.getElementById('casaNome').value.trim();
+      // Trava anti-duplicada: mesma casa com caixa/espaço diferente não pode ser recadastrada
+      const normalizado = nomeCasa.toLowerCase().replace(/\s+/g, ' ').trim();
+      const jaExiste = estado.casas.some(c => (c.nome || '').toLowerCase().replace(/\s+/g, ' ').trim() === normalizado);
+      if (jaExiste) {
+        alert(`A casa "${nomeCasa}" já está cadastrada. Use o cadastro existente.`);
+        return;
+      }
       const novaCasa = {
         id: `casa-${Date.now()}`,
-        operadorId: document.getElementById('casaOperadorId').value,
-        nome: document.getElementById('casaNome').value.trim()
+        operadorId: null,
+        nome: nomeCasa
       };
       estado.casas.push(novaCasa);
       await salvarNaNuvemELocal('casa', novaCasa);
@@ -3014,11 +3001,8 @@
       });
       const casasOrdenadas = Object.keys(lucroPorCasa).sort((a, b) => lucroPorCasa[b].lucro - lucroPorCasa[a].lucro);
 
-      // Casas disponíveis para o filtro do módulo (respeita operador filtrado / perfil leitor)
-      const operadorFiltroLucro = estado.filtros ? estado.filtros.operadorId : '';
-      const casasDisponiveisLucro = operadorFiltroLucro
-        ? estado.casas.filter(c => (c.operadorId || c.clienteId) === operadorFiltroLucro)
-        : estado.casas;
+      // Casas disponíveis para o filtro do módulo (globais, unificadas)
+      const casasDisponiveisLucro = estado.casas;
       const casaFiltroLucro = estado.filtros ? estado.filtros.casaId : '';
       const nomeCasaFiltro = casaFiltroLucro ? (estado.casas.find(c => c.id === casaFiltroLucro) || {}).nome || '' : '';
 
