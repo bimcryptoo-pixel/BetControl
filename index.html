@@ -193,6 +193,11 @@
         padding: 3px 5px !important;
         border-bottom: 1px solid rgba(255,255,255,.08) !important;
       }
+      /* tabela por casa: dados centralizados nas colunas */
+      .tabela-casas th, .tabela-casas td { text-align: center !important; }
+      /* tabela de apostas: compactação máxima para caber em menos páginas */
+      .tabela-apostas th { font-size: 6.5pt !important; padding: 3px 4px !important; }
+      .tabela-apostas td { font-size: 7pt !important; padding: 2px 4px !important; line-height: 1.15 !important; }
     }
   </style>
 </head>
@@ -2822,7 +2827,7 @@
             🏛️ Detalhamento Analítico de Apostas por Casa ${operadorSelecionadoObj ? `(Operador: ${operadorSelecionadoObj.nome})` : ''}
           </h3>
           <div class="overflow-x-auto rounded-lg border border-linha">
-            <table class="w-full text-left text-xs text-mutado">
+            <table class="tabela-casas w-full text-left text-xs text-mutado">
               <thead class="bg-panelAlt text-texto uppercase text-[8.5px] md:text-xs">
                 <tr>
                   <th class="p-2 md:p-3 border-b border-linha">Casa de Aposta</th>
@@ -2863,7 +2868,7 @@
         <div class="print-card bg-panel border border-linha rounded-xl p-3 md:p-6 mb-6">
           <h3 class="text-xs md:text-sm font-bold mb-2.5 text-texto uppercase tracking-wider">📋 Detalhamento Analítico das Apostas</h3>
           <div class="overflow-x-auto rounded-lg border border-linha">
-            <table class="w-full text-left text-xs text-mutado">
+            <table class="tabela-apostas w-full text-left text-xs text-mutado">
               <thead class="bg-panelAlt text-texto uppercase text-[8.5px] md:text-xs">
                 <tr>
                   <th class="p-1.5 md:p-2 border-b border-linha">Data</th>
