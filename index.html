@@ -1358,7 +1358,7 @@
           </div>
         </div>
 
-        <!-- GRÁFICO DE EVOLUÇÃO (LINHAS ACUMULADAS) -->
+        <!-- GRÁFICO DE EVOLUÇÃO (VOLUME EM COLUNAS + LUCRO BICOLOR) -->
         ${datasCronologicas.length > 0 ? `
         <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6 no-print">
           <h3 class="text-sm font-bold text-texto uppercase tracking-wider mb-4">📉 Gráfico de Evolução (Acumulado)</h3>
@@ -1440,22 +1440,36 @@
                 {
                   label: 'Volume Acumulado',
                   data: dataVolumeAcumulado,
-                  borderColor: '#3b82f6', // blue-500
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                  borderWidth: 2,
-                  fill: true,
-                  tension: 0.3,
-                  yAxisID: 'y'
+                  type: 'bar',
+                  backgroundColor: 'rgba(59, 130, 246, 0.35)',
+                  borderColor: 'rgba(59, 130, 246, 0.9)',
+                  borderWidth: 1,
+                  borderRadius: 3,
+                  yAxisID: 'y',
+                  order: 2
                 },
                 {
                   label: 'Lucro Líquido Acumulado',
                   data: dataLucroAcumulado,
-                  borderColor: '#10b981', // emerald-500
-                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                  borderWidth: 2,
-                  fill: true,
+                  type: 'line',
+                  borderColor: '#10b981', // cor base (legenda); segmentos sobrescritos abaixo
+                  borderWidth: 2.5,
+                  fill: false,
                   tension: 0.3,
-                  yAxisID: 'y1'
+                  yAxisID: 'y1',
+                  order: 1,
+                  // linha bicolor: verde no positivo, vermelha no negativo
+                  segment: {
+                    borderColor: (ctx) => {
+                      const v0 = ctx.p0.parsed.y, v1 = ctx.p1.parsed.y;
+                      if (v0 >= 0 && v1 >= 0) return '#10b981';
+                      if (v0 < 0 && v1 < 0) return '#ef4444';
+                      return v1 >= 0 ? '#10b981' : '#ef4444';
+                    }
+                  },
+                  pointBackgroundColor: (ctx) => (ctx.parsed.y >= 0 ? '#10b981' : '#ef4444'),
+                  pointBorderColor: (ctx) => (ctx.parsed.y >= 0 ? '#10b981' : '#ef4444'),
+                  pointRadius: 3.5
                 }
               ]
             },
