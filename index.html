@@ -109,8 +109,8 @@
       /* cabeçalho do relatório — visível só no impresso */
       .print-header {
         display: block !important;
-        margin-bottom: 8px !important;
-        padding: 8px 12px !important;
+        margin-bottom: 6px !important;
+        padding: 6px 10px !important;
         background: linear-gradient(135deg, #064e3b 0%, #0f766e 55%, #0e7490 100%) !important;
         border-radius: 10px !important;
         color: #ffffff !important;
@@ -124,49 +124,49 @@
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        width: 30px !important;
-        height: 30px !important;
-        border-radius: 8px !important;
+        width: 26px !important;
+        height: 26px !important;
+        border-radius: 7px !important;
         background: rgba(255,255,255,.16) !important;
         border: 1px solid rgba(255,255,255,.4) !important;
         font-weight: 900 !important;
-        font-size: 12pt !important;
+        font-size: 10pt !important;
         color: #ffffff !important;
       }
       .print-header .print-title {
         font-weight: 900 !important;
-        font-size: 11pt !important;
+        font-size: 10pt !important;
         color: #ffffff !important;
         line-height: 1.2 !important;
       }
       .print-header .print-sub {
-        font-size: 7.5pt !important;
+        font-size: 7pt !important;
         color: #d1fae5 !important;
       }
       /* KPIs compactos: 6 cartões em uma única linha */
       .kpi-grid {
         display: grid !important;
         grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
-        gap: 6px !important;
-        margin-bottom: 8px !important;
+        gap: 5px !important;
+        margin-bottom: 6px !important;
       }
       .kpi-grid > div {
-        padding: 6px 8px !important;
-        border-radius: 8px !important;
+        padding: 5px 6px !important;
+        border-radius: 7px !important;
       }
-      .kpi-grid p { font-size: 6.5pt !important; margin-bottom: 2px !important; }
-      .kpi-grid h3 { font-size: 10.5pt !important; line-height: 1.15 !important; }
+      .kpi-grid p { font-size: 6pt !important; margin-bottom: 1px !important; }
+      .kpi-grid h3 { font-size: 9pt !important; line-height: 1.15 !important; }
       /* seções compactas */
       .print-card {
-        margin-bottom: 8px !important;
-        padding: 8px 10px !important;
-        border-radius: 8px !important;
+        margin-bottom: 6px !important;
+        padding: 6px 8px !important;
+        border-radius: 7px !important;
         background: #131620 !important;
         border: 1px solid rgba(255,255,255,.1) !important;
       }
       .print-card > h3 {
-        font-size: 8.5pt !important;
-        margin-bottom: 6px !important;
+        font-size: 8pt !important;
+        margin-bottom: 4px !important;
       }
       /* tabelas organizadas na folha */
       .overflow-x-auto { overflow: visible !important; }
@@ -195,16 +195,18 @@
       }
       /* tabela por casa: dados centralizados nas colunas */
       .tabela-casas th, .tabela-casas td { text-align: center !important; }
+      .tabela-casas th { font-size: 6pt !important; padding: 2px 3px !important; }
+      .tabela-casas td { font-size: 6.5pt !important; padding: 2px 4px !important; line-height: 1.15 !important; }
       /* tabela de apostas: compactação máxima para caber em menos páginas */
-      .tabela-apostas th { font-size: 6.5pt !important; padding: 3px 4px !important; }
-      .tabela-apostas td { font-size: 7pt !important; padding: 2px 4px !important; line-height: 1.15 !important; }
+      .tabela-apostas th { font-size: 6pt !important; padding: 2px 3px !important; }
+      .tabela-apostas td { font-size: 6pt !important; padding: 1px 3px !important; line-height: 1.1 !important; }
       /* selo da casa compacto na impressão — o selo grande esticava a altura da linha */
       .flag-casa {
-        font-size: 6.5pt !important;
-        padding: 0 4px !important;
-        line-height: 1.6 !important;
+        font-size: 6pt !important;
+        padding: 0 3px !important;
+        line-height: 1.5 !important;
         box-shadow: none !important;
-        border-radius: 4px !important;
+        border-radius: 3px !important;
       }
     }
   </style>
