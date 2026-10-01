@@ -467,6 +467,8 @@
         estilo = "background-color: #800080; color: #ffffff;";
       } else if (/^GG\s*BETS$/i.test(nomeLimpo)) {
         estilo = "background-color: #ffffff; color: #000000;";
+      } else if (/^ZAP\s*BET$/i.test(nomeLimpo)) {
+        estilo = "background-color: #1f2937; color: #22c55e;";
       }
 
       return `<span class="flag-casa px-2.5 py-1 rounded-md text-[11px] md:text-xs font-black inline-flex items-center shadow-sm uppercase" style="${estilo}">${nomeLimpo}</span>`;
