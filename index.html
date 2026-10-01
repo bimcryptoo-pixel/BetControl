@@ -198,6 +198,14 @@
       /* tabela de apostas: compactação máxima para caber em menos páginas */
       .tabela-apostas th { font-size: 6.5pt !important; padding: 3px 4px !important; }
       .tabela-apostas td { font-size: 7pt !important; padding: 2px 4px !important; line-height: 1.15 !important; }
+      /* selo da casa compacto na impressão — o selo grande esticava a altura da linha */
+      .flag-casa {
+        font-size: 6.5pt !important;
+        padding: 0 4px !important;
+        line-height: 1.6 !important;
+        box-shadow: none !important;
+        border-radius: 4px !important;
+      }
     }
   </style>
 </head>
@@ -435,7 +443,7 @@
         estilo = "background-color: #ffffff; color: #000000;";
       }
 
-      return `<span class="px-2.5 py-1 rounded-md text-[11px] md:text-xs font-black inline-flex items-center shadow-sm uppercase" style="${estilo}">${nomeLimpo}</span>`;
+      return `<span class="flag-casa px-2.5 py-1 rounded-md text-[11px] md:text-xs font-black inline-flex items-center shadow-sm uppercase" style="${estilo}">${nomeLimpo}</span>`;
     }
 
     function salvarDadosNoLocalStorage() {
