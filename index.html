@@ -378,6 +378,9 @@
         <button id="nav-lucro" onclick="mudarAba('lucro')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
           💰 Lucro
         </button>
+        <button id="nav-comissao" onclick="mudarAba('comissao')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
+          🤝 Comissão
+        </button>
         <button id="nav-pagamentos" onclick="mudarAba('pagamentos')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
           💳 Pagamento
         </button>
@@ -702,7 +705,7 @@
           atualizarVisibilidadeMenuLateral(usr);
 
           if (!verificarPermissaoAba(estado.abaAtiva)) {
-            const abasPossiveis = ['dashboard', 'volumemes', 'operadores', 'casas', 'relatorios', 'lucro', 'pagamentos', 'backup', 'usuarios'];
+            const abasPossiveis = ['dashboard', 'volumemes', 'operadores', 'casas', 'relatorios', 'lucro', 'comissao', 'pagamentos', 'backup', 'usuarios'];
             const primeiraPermitida = abasPossiveis.find(a => verificarPermissaoAba(a));
             if (primeiraPermitida) {
               estado.abaAtiva = primeiraPermitida;
@@ -734,6 +737,7 @@
         'casas': 'nav-casas',
         'relatorios': 'nav-relatorios',
         'lucro': 'nav-lucro',
+        'comissao': 'nav-comissao',
         'pagamentos': 'nav-pagamentos',
         'backup': 'nav-backup',
         'usuarios': 'nav-usuarios'
@@ -1094,6 +1098,7 @@
       else if (estado.abaAtiva === 'casas') renderizarCasas(main);
       else if (estado.abaAtiva === 'relatorios') renderizarRelatorios(main);
       else if (estado.abaAtiva === 'lucro') renderizarLucro(main);
+      else if (estado.abaAtiva === 'comissao') renderizarComissao(main);
       else if (estado.abaAtiva === 'pagamentos') renderizarPagamentos(main);
       else if (estado.abaAtiva === 'backup') renderizarBackup(main);
       else if (estado.abaAtiva === 'usuarios') renderizarUsuarios(main);
@@ -3412,6 +3417,143 @@
       `;
     }
 
+    // ================= 5b. MÓDULO COMISSÃO BANCA =================
+    // (02/10/2026, a pedido do usuário) Comissão calculada SOMENTE sobre o
+    // prejuízo da casa no período selecionado: se lucro/prejuízo < 0, cada
+    // comissionado recebe |prejuízo| × % da sua casa.
+    const COMISSOES_BANCA = {
+      'HM BETS':  [['Renan', 2.5], ['Fabio', 5], ['Lucas', 2.5]],
+      'BET CERTA': [['Fabio', 7.5], ['Lucas', 2.5]],
+      'X BETS':   [['Fabio', 7.5], ['Lucas', 2.5]],
+      'BET ZAP':  [['Fabio', 7.5], ['Lucas', 2.5]],
+      'GG BETS':  [['Fabio', 7.5], ['Lucas', 2.5]],
+      'ZAP BET':  [['Renan', 2.5], ['Fabio', 5], ['Lucas', 2.5]]
+    };
+
+    function renderizarComissao(container) {
+      const apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
+
+      const lucroPorCasa = {};
+      apostasFiltradas.forEach(a => {
+        if (a.finalizada && a.retorno !== null) {
+          const casaObj = estado.casas.find(c => c.id === a.casaId);
+          const nomeCasa = normalizarNomeCasa(casaObj ? casaObj.nome : 'Outras / N/A');
+          if (!lucroPorCasa[nomeCasa]) lucroPorCasa[nomeCasa] = { lucro: 0, volume: 0, totalApostas: 0 };
+          lucroPorCasa[nomeCasa].lucro += (a.retorno - a.stake);
+          lucroPorCasa[nomeCasa].volume += a.stake;
+          lucroPorCasa[nomeCasa].totalApostas++;
+        }
+      });
+      const casasOrdenadas = Object.keys(lucroPorCasa).sort((a, b) => lucroPorCasa[b].lucro - lucroPorCasa[a].lucro);
+
+      // Monta as linhas de comissão: só casas com prejuízo E com regra cadastrada
+      const blocos = []; // [{ casa, base, linhas: [{nome, pct, valor}], subtotal }]
+      let totalGeral = 0;
+      casasOrdenadas.forEach(casaNome => {
+        const dados = lucroPorCasa[casaNome];
+        const conf = COMISSOES_BANCA[casaNome];
+        if (dados.lucro < 0 && conf && conf.length) {
+          const base = Math.abs(dados.lucro);
+          const linhas = conf.map(([nome, pct]) => {
+            const valor = +(base * pct / 100).toFixed(2);
+            totalGeral += valor;
+            return { nome, pct, valor };
+          });
+          const subtotal = +linhas.reduce((s, l) => s + l.valor, 0).toFixed(2);
+          blocos.push({ casa: casaNome, base, linhas, subtotal });
+        }
+      });
+
+      const fmtR$ = v => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+      const fmtPct = p => `${p.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`;
+
+      container.innerHTML = `
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
+          <div>
+            <h2 class="text-xl md:text-2xl font-bold text-texto" style="color: var(--color-text);">🤝 Comissão Banca</h2>
+            <p class="text-xs text-mutado">Comissão calculada somente sobre o <b class="text-red-500">prejuízo</b> da casa no período selecionado nos filtros.</p>
+          </div>
+          <button onclick="window.print()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition">
+            🖨️ Imprimir / Salvar PDF
+          </button>
+        </div>
+
+        <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6">
+          <h3 class="text-sm md:text-md font-bold mb-4 text-texto uppercase tracking-wider">🏛️ Relatório por Casas de Apostas</h3>
+          <div class="overflow-x-auto rounded-lg border border-linha">
+            <table class="w-full text-left text-xs text-mutado">
+              <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+                <tr>
+                  <th class="p-3 border-b border-linha">Casa</th>
+                  <th class="p-3 border-b border-linha">Apostas</th>
+                  <th class="p-3 border-b border-linha">Volume</th>
+                  <th class="p-3 border-b border-linha">Lucro / Prejuízo</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-linha">
+                ${casasOrdenadas.length === 0 ? '<tr><td colspan="4" class="p-4 text-center text-mutado">Nenhum dado financeiro finalizado.</td></tr>' : ''}
+                ${casasOrdenadas.map((casaNome, index) => {
+                  const dados = lucroPorCasa[casaNome];
+                  const corLucro = dados.lucro > 0 ? 'text-emerald-500 font-bold' : dados.lucro < 0 ? 'text-red-500 font-bold' : 'text-texto font-bold';
+                  return `
+                    <tr class="${index % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
+                      <td class="p-3 text-texto">${renderizarFlagCasa(casaNome)}</td>
+                      <td class="p-3 text-texto">${dados.totalApostas}</td>
+                      <td class="p-3 text-texto">${fmtR$(dados.volume)}</td>
+                      <td class="p-3 ${corLucro}">${fmtR$(dados.lucro)}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
+          <h3 class="text-sm md:text-md font-bold mb-1 text-texto uppercase tracking-wider">🤝 Comissionados por Casa</h3>
+          <p class="text-[11px] text-mutado mb-4">Base = prejuízo da casa no período × % de cada comissionado. Casas com lucro não geram comissão.</p>
+          <div class="overflow-x-auto rounded-lg border border-linha">
+            <table class="w-full text-left text-xs text-mutado">
+              <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+                <tr>
+                  <th class="p-3 border-b border-linha">Casa</th>
+                  <th class="p-3 border-b border-linha">Comissionado</th>
+                  <th class="p-3 border-b border-linha">%</th>
+                  <th class="p-3 border-b border-linha">Base (prejuízo)</th>
+                  <th class="p-3 border-b border-linha">Comissão</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-linha">
+                ${blocos.length === 0 ? '<tr><td colspan="5" class="p-4 text-center text-mutado">Nenhuma comissão no período (sem prejuízo nas casas com regra cadastrada).</td></tr>' : ''}
+                ${blocos.map((b, bi) => `
+                  ${b.linhas.map((l, li) => `
+                    <tr class="${(bi + li) % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
+                      <td class="p-3 text-texto">${li === 0 ? renderizarFlagCasa(b.casa) : ''}</td>
+                      <td class="p-3 font-bold text-texto">${l.nome}</td>
+                      <td class="p-3 text-texto">${fmtPct(l.pct)}</td>
+                      <td class="p-3 text-red-500 font-bold">${fmtR$(b.base)}</td>
+                      <td class="p-3 text-emerald-500 font-bold">${fmtR$(l.valor)}</td>
+                    </tr>
+                  `).join('')}
+                  <tr class="bg-panelAlt">
+                    <td colspan="4" class="p-2.5 text-right font-black text-texto uppercase text-[10px]">Subtotal ${b.casa}</td>
+                    <td class="p-2.5 font-black text-emerald-500">${fmtR$(b.subtotal)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+              ${blocos.length > 0 ? `
+              <tfoot>
+                <tr class="bg-panelAlt border-t-2 border-emerald-600">
+                  <td colspan="4" class="p-3 text-right font-black text-texto uppercase">Total geral</td>
+                  <td class="p-3 font-black text-emerald-500 text-sm">${fmtR$(totalGeral)}</td>
+                </tr>
+              </tfoot>` : ''}
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
     // ================= 6. ABA DE PAGAMENTO =================
     function renderizarPagamentos(container) {
       const usuarioLogado = obterUsuarioLogado();
@@ -3733,6 +3875,9 @@
                           </label>
                           <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
                             <input type="checkbox" value="lucro" ${permissoesAtuais.includes('lucro') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Lucro
+                          </label>
+                          <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
+                            <input type="checkbox" value="comissao" ${permissoesAtuais.includes('comissao') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Comissão
                           </label>
                           <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
                             <input type="checkbox" value="pagamentos" ${permissoesAtuais.includes('pagamentos') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Pagamento
