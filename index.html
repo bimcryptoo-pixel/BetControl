@@ -1241,6 +1241,7 @@
                   <th class="p-3 border-b border-linha">Operador</th>
                   <th class="p-3 border-b border-linha">Casa</th>
                   <th class="p-3 border-b border-linha">Stake</th>
+                  <th class="p-3 border-b border-linha">Odd</th>
                   <th class="p-3 border-b border-linha">Valor de Retorno (R$)</th>
                   <th class="p-3 border-b border-linha">Status</th>
                   <th class="p-3 border-b border-linha text-center">Bilhete</th>
@@ -1248,7 +1249,7 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-linha">
-                ${apostasFiltradas.length === 0 ? '<tr><td colspan="8" class="p-4 text-center text-mutado">Nenhuma aposta encontrada.</td></tr>' : ''}
+                ${apostasFiltradas.length === 0 ? '<tr><td colspan="9" class="p-4 text-center text-mutado">Nenhuma aposta encontrada.</td></tr>' : ''}
                 ${apostasFiltradas.map((a, index) => {
                   const opId = a.operadorId || a.clienteId;
                   const operador = estado.operadores.find(o => o.id === opId);
@@ -1285,6 +1286,9 @@
                         ${podeEditar && a.editando ? `
                           <input type="number" step="0.01" id="input-stake-${a.id}" value="${a.stake}" class="w-24 px-2 py-1 bg-input border border-linha rounded text-texto text-xs outline-none">
                         ` : `R$ ${a.stake.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`}
+                      </td>
+                      <td class="p-3 text-texto font-bold" title="Odd total lida do bilhete — é ela que vale no financeiro">
+                        ${(a.oddTotal !== null && a.oddTotal !== undefined && a.oddTotal !== '') ? Number(a.oddTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 3}) : '-'}
                       </td>
                       <td class="p-3 text-texto">
                         ${podeEditar ? (
