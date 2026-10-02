@@ -1800,10 +1800,46 @@
       return badgeStatusSelecao(s.status);
     }
 
-    function abrirPainelBilhete(apostaId) {
+    async function abrirPainelBilhete(apostaId) {
       fecharPainelBilhete();
-      const a = (estado.apostas || []).find(x => x.id === apostaId);
+      let a = (estado.apostas || []).find(x => x.id === apostaId);
       if (!a) return;
+      // 02/10/2026 — o painel SEMPRE recarrega a aposta e as pernas direto do servidor
+      // ao abrir: nunca confia só na cópia local do aparelho (evita exibir perna faltando ou dado desatualizado)
+      try {
+        const { data: apDb } = await supabaseClient.from('apostas').select('*').eq('id', apostaId).maybeSingle();
+        if (apDb) {
+          a = {
+            id: apDb.id,
+            operadorId: apDb.operador_id,
+            casaId: apDb.casa_id,
+            data: apDb.data,
+            stake: Number(apDb.stake),
+            retorno: apDb.retorno !== null ? Number(apDb.retorno) : null,
+            finalizada: apDb.finalizada,
+            anexo_url: apDb.anexo_url || null,
+            liquidada_em: apDb.liquidada_em || null,
+            oddTotal: (apDb.odd_total !== null && apDb.odd_total !== undefined) ? Number(apDb.odd_total) : null
+          };
+          const ia = (estado.apostas || []).findIndex(x => x.id === apostaId);
+          if (ia >= 0) estado.apostas[ia] = a;
+        }
+        const { data: selsDb } = await supabaseClient.from('selecoes').select('*').eq('aposta_id', apostaId);
+        if (selsDb) {
+          const mapeadas = selsDb.map(s => ({
+            id: s.id,
+            apostaId: s.aposta_id,
+            jogo: s.jogo,
+            mercado: s.mercado || '',
+            selecao: s.selecao,
+            odd: Number(s.odd) || 1,
+            status: s.status || 'pendente',
+            detalhe: s.detalhe || ''
+          }));
+          estado.selecoes = (estado.selecoes || []).filter(s => s.apostaId !== apostaId).concat(mapeadas);
+          salvarDadosNoLocalStorage();
+        }
+      } catch (e) { console.warn('Painel: usando cópia local (falha ao recarregar do servidor):', e); }
       const sels = obterSelecoesAposta(apostaId);
       const geral = statusGeralSelecoes(sels);
       const operador = estado.operadores.find(o => o.id === (a.operadorId || a.clienteId));
@@ -1842,6 +1878,7 @@
             <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'red')" title="Marcar RED" class="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold hover:bg-red-500 hover:text-white transition">🔴</button>
             <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'void')" title="Marcar VOID" class="text-[10px] px-2 py-0.5 rounded bg-gray-500/20 text-gray-300 font-bold hover:bg-gray-500 hover:text-white transition">➖</button>
             <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'pendente')" title="Voltar para PENDENTE" class="text-[10px] px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-bold hover:bg-yellow-500 hover:text-black transition">⏳</button>
+            <button onclick="excluirSelecaoPainel('${apostaId}', '${s.id}')" title="Apagar esta perna" class="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold hover:bg-red-500 hover:text-white transition">🗑️</button>
           </div>` : ''}
         </div>`).join('');
 
@@ -1857,7 +1894,7 @@
         <div class="relative bg-panel border border-linha rounded-2xl max-w-4xl w-full my-8 p-5 md:p-8 shadow-2xl" onclick="event.stopPropagation()">
           <button onclick="fecharPainelBilhete()" class="absolute top-3 right-4 text-mutado text-2xl font-bold hover:text-red-400">✕</button>
           <div class="mb-4">
-            <h3 class="text-lg font-bold" style="color: var(--color-text);">🎫 Bilhete</h3>
+            <h3 class="text-lg font-bold" style="color: var(--color-text);">🎫 Bilhete <span class="text-xs font-normal text-mutado">· ${sels.length} ${sels.length === 1 ? 'perna' : 'pernas'}</span></h3>
             <div class="mt-2">${badgeGeral}</div>
           </div>
           ${a.anexo_url ? `
@@ -1872,6 +1909,22 @@
             <div class="bg-panelAlt border border-linha rounded-lg p-2.5"><div class="text-xs text-mutado">Casa</div><div class="text-sm font-bold text-texto">${casa ? casa.nome : 'N/A'}</div></div>
           </div>
           ${sels.length ? `<div class="space-y-2 mb-4">${linhas}</div>` : '<p class="text-xs text-mutado mb-4">Nenhuma seleção registrada para esta aposta.</p>'}
+          ${verificarSeTemPermissaoEdicao() ? `
+          <div class="mt-1 border-t border-linha pt-3 mb-4">
+            <div class="flex flex-wrap gap-2 mb-2">
+              <button onclick="const f=document.getElementById('formNovaPernaPainel'); f.style.display = f.style.display === 'none' ? 'block' : 'none';" class="text-xs px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 font-bold hover:bg-emerald-500 hover:text-white transition">➕ Inserir perna</button>
+              ${a.anexo_url ? `<button onclick="relerBilhetePainel('${apostaId}', this)" class="text-xs px-3 py-1.5 rounded-lg bg-violet-500/20 text-violet-400 font-bold hover:bg-violet-500 hover:text-white transition">🔄 Ler bilhete novamente</button>` : ''}
+            </div>
+            <div id="ocrStatusPainel" class="text-xs text-mutado mb-2"></div>
+            <div id="formNovaPernaPainel" style="display:none">
+              <div id="listaSelecoesPainel" class="space-y-2 mb-2"></div>
+              <div class="flex gap-2">
+                <button onclick="adicionarLinhaSelecao(null, 'listaSelecoesPainel')" class="text-xs px-3 py-1.5 rounded-lg border border-linha text-mutado hover:text-texto">➕ Linha</button>
+                <button onclick="salvarPernasPainel('${apostaId}')" class="text-xs px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold">💾 Salvar pernas</button>
+              </div>
+              <p class="text-[10px] text-mutado mt-1">Confira as linhas antes de salvar para não duplicar pernas.</p>
+            </div>
+          </div>` : ''}
           ${a.finalizada && sels.some(s => s.status === 'pendente') ? '<p class="text-[11px] text-slate-400 mb-4">📜 Pernas marcadas como HISTÓRICO pertencem a um bilhete já finalizado e são resolvidas apenas para registro.</p>' : ''}
           <div class="border-t border-linha pt-3 text-xs text-mutado space-y-1">
             <div>📝 Registrada em ${formatarDataBR(a.data)} ${operador ? `· ${operador.nome}` : ''}</div>
@@ -2032,6 +2085,84 @@
       salvarDadosNoLocalStorage();
       const el = document.querySelector(`[data-edit-sel="${selId}"]`);
       if (el) el.remove();
+    }
+
+    // ---- Gerenciamento de pernas dentro do painel do bilhete — 02/10/2026 ----
+    // Apagar uma perna direto do painel (reabre o painel com dados frescos do servidor)
+    async function excluirSelecaoPainel(apostaId, selId) {
+      if (!verificarSeTemPermissaoEdicao()) return;
+      const sel = (estado.selecoes || []).find(x => x.id === selId);
+      if (!confirm(`Apagar a perna "${sel ? sel.selecao : ''}" deste bilhete?`)) return;
+      estado.selecoes = (estado.selecoes || []).filter(s => s.id !== selId);
+      await deletarDaNuvemELocal('selecao', selId);
+      salvarDadosNoLocalStorage();
+      abrirPainelBilhete(apostaId);
+      if (typeof renderizarAba === 'function') renderizarAba();
+    }
+
+    // Salvar as pernas digitadas/lidas no formulário do painel
+    async function salvarPernasPainel(apostaId) {
+      if (!verificarSeTemPermissaoEdicao()) return;
+      const st = document.getElementById('ocrStatusPainel');
+      const lista = coletarSelecoesForm('listaSelecoesPainel');
+      if (!lista.length) {
+        if (st) st.textContent = '⚠️ Preencha ao menos jogo ou seleção em uma linha.';
+        return;
+      }
+      await salvarSelecoesAposta(apostaId, lista);
+      abrirPainelBilhete(apostaId);
+      if (typeof renderizarAba === 'function') renderizarAba();
+    }
+
+    // Reler a foto do bilhete anexada e trazer as pernas para conferência no painel
+    async function relerBilhetePainel(apostaId, btn) {
+      if (!verificarSeTemPermissaoEdicao()) return;
+      const st = document.getElementById('ocrStatusPainel');
+      const a = (estado.apostas || []).find(x => x.id === apostaId);
+      if (!a || !a.anexo_url) {
+        if (st) st.textContent = '⚠️ Este bilhete não tem foto anexada.';
+        return;
+      }
+      if (typeof Tesseract === 'undefined') {
+        if (st) st.textContent = '⚠️ Leitor indisponível (sem conexão com a internet). Preencha manualmente.';
+        return;
+      }
+      try {
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Lendo...'; }
+        if (st) st.textContent = '⏳ Lendo o bilhete, aguarde...';
+        const resp = await fetch(a.anexo_url);
+        if (!resp.ok) throw new Error('falha ao baixar o anexo');
+        const blob = await resp.blob();
+        const arquivo = new File([blob], 'bilhete.jpg', { type: blob.type || 'image/jpeg' });
+        const fonteOCR = await prepararImagemOCR(arquivo);
+        let { data } = await Tesseract.recognize(fonteOCR, 'por');
+        let parsed = parseTextoBilhete(data.text || '');
+        const temOdd = (p) => p && p.linhas && p.linhas.some(l => l.odd);
+        if (!temOdd(parsed) && fonteOCR !== arquivo) {
+          const retry = await Tesseract.recognize(arquivo, 'por');
+          const parsed2 = parseTextoBilhete(retry.data.text || '');
+          if (temOdd(parsed2)) { data = retry.data; parsed = parsed2; }
+        }
+        const linhas = (parsed && parsed.linhas) || [];
+        linhas.forEach(l => {
+          l.jogo = limparTextoOCR(l.jogo);
+          l.mercado = limparTextoOCR(l.mercado);
+          l.selecao = limparTextoOCR(l.selecao);
+        });
+        const lista = document.getElementById('listaSelecoesPainel');
+        if (lista) lista.innerHTML = '';
+        linhas.forEach(l => adicionarLinhaSelecao(l, 'listaSelecoesPainel'));
+        const form = document.getElementById('formNovaPernaPainel');
+        if (form) form.style.display = 'block';
+        if (st) st.textContent = linhas.length
+          ? `✅ ${linhas.length} ${linhas.length === 1 ? 'linha lida' : 'linhas lidas'} — confira e clique em "Salvar pernas".`
+          : '⚠️ Não identifiquei as pernas na foto. Tente com a imagem ampliada ou preencha manualmente.';
+      } catch (e) {
+        console.error('Releitura OCR:', e);
+        if (st) st.textContent = '⚠️ Falha na releitura. Verifique a conexão e tente de novo.';
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '🔄 Ler bilhete novamente'; }
+      }
     }
 
     function adicionarLinhaSelecaoEdicao(apostaId) {
