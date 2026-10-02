@@ -3447,22 +3447,28 @@
       const casasOrdenadas = Object.keys(lucroPorCasa).sort((a, b) => lucroPorCasa[b].lucro - lucroPorCasa[a].lucro);
 
       // Monta as linhas de comissão: só casas com prejuízo E com regra cadastrada
+      const pessoasDisponiveis = [];
+      Object.values(COMISSOES_BANCA).forEach(conf => conf.forEach(([nome]) => {
+        if (!pessoasDisponiveis.includes(nome)) pessoasDisponiveis.push(nome);
+      }));
       const blocos = []; // [{ casa, base, linhas: [{nome, pct, valor}], subtotal }]
-      let totalGeral = 0;
       casasOrdenadas.forEach(casaNome => {
         const dados = lucroPorCasa[casaNome];
         const conf = COMISSOES_BANCA[casaNome];
         if (dados.lucro < 0 && conf && conf.length) {
           const base = Math.abs(dados.lucro);
-          const linhas = conf.map(([nome, pct]) => {
-            const valor = +(base * pct / 100).toFixed(2);
-            totalGeral += valor;
-            return { nome, pct, valor };
-          });
+          const linhas = conf.map(([nome, pct]) => ({ nome, pct, valor: +(base * pct / 100).toFixed(2) }));
           const subtotal = +linhas.reduce((s, l) => s + l.valor, 0).toFixed(2);
           blocos.push({ casa: casaNome, base, linhas, subtotal });
         }
       });
+      // Total de comissão por comissionado (soma de todas as casas no período)
+      const totaisPorPessoa = pessoasDisponiveis.map(nome => {
+        let t = 0;
+        blocos.forEach(b => b.linhas.forEach(l => { if (l.nome === nome) t += l.valor; }));
+        return { nome, total: +t.toFixed(2) };
+      });
+      const totalGeral = +blocos.reduce((s, b) => s + b.subtotal, 0).toFixed(2);
 
       const fmtR$ = v => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
       const fmtPct = p => `${p.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`;
@@ -3512,6 +3518,16 @@
         <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
           <h3 class="text-sm md:text-md font-bold mb-1 text-texto uppercase tracking-wider">🤝 Comissionados por Casa</h3>
           <p class="text-[11px] text-mutado mb-4">Base = prejuízo da casa no período × % de cada comissionado. Casas com lucro não geram comissão.</p>
+          ${totaisPorPessoa.length > 0 ? `
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            ${totaisPorPessoa.map(p => `
+              <div class="bg-panelAlt border border-linha rounded-xl p-4">
+                <p class="text-[10px] text-mutado uppercase font-bold mb-1">👤 ${p.nome}</p>
+                <p class="text-xl font-black text-emerald-500">${fmtR$(p.total)}</p>
+                <p class="text-[10px] text-mutado mt-1">Total de comissão no período</p>
+              </div>
+            `).join('')}
+          </div>` : ''}
           <div class="overflow-x-auto rounded-lg border border-linha">
             <table class="w-full text-left text-xs text-mutado">
               <thead class="bg-panelAlt text-texto uppercase text-[10px]">
