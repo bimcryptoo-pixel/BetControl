@@ -3487,8 +3487,8 @@
         <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6">
           <h3 class="text-sm md:text-md font-bold mb-4 text-texto uppercase tracking-wider">🏛️ Relatório por Casas de Apostas</h3>
           <div class="overflow-x-auto rounded-lg border border-linha">
-            <table class="w-full text-left text-xs text-mutado">
-              <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+            <table class="w-full text-left text-sm text-mutado">
+              <thead class="bg-panelAlt text-texto uppercase text-xs">
                 <tr>
                   <th class="p-3 border-b border-linha">Casa</th>
                   <th class="p-3 border-b border-linha">Apostas</th>
@@ -3517,20 +3517,20 @@
 
         <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
           <h3 class="text-sm md:text-md font-bold mb-1 text-texto uppercase tracking-wider">🤝 Comissionados por Casa</h3>
-          <p class="text-[11px] text-mutado mb-4">Base = prejuízo da casa no período × % de cada comissionado. Casas com lucro não geram comissão.</p>
+          <p class="text-xs text-mutado mb-4">Base = prejuízo da casa no período × % de cada comissionado. Casas com lucro não geram comissão.</p>
           ${totaisPorPessoa.length > 0 ? `
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             ${totaisPorPessoa.map(p => `
               <div class="bg-panelAlt border border-linha rounded-xl p-4">
-                <p class="text-[10px] text-mutado uppercase font-bold mb-1">👤 ${p.nome}</p>
-                <p class="text-xl font-black text-emerald-500">${fmtR$(p.total)}</p>
-                <p class="text-[10px] text-mutado mt-1">Total de comissão no período</p>
+                <p class="text-xs text-mutado uppercase font-bold mb-1">👤 ${p.nome}</p>
+                <p class="text-2xl font-black text-emerald-500">${fmtR$(p.total)}</p>
+                <p class="text-xs text-mutado mt-1">Total de comissão no período</p>
               </div>
             `).join('')}
           </div>` : ''}
           <div class="overflow-x-auto rounded-lg border border-linha">
-            <table class="w-full text-left text-xs text-mutado">
-              <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+            <table class="w-full text-left text-sm text-mutado">
+              <thead class="bg-panelAlt text-texto uppercase text-xs">
                 <tr>
                   <th class="p-3 border-b border-linha">Casa</th>
                   <th class="p-3 border-b border-linha">Comissionado</th>
@@ -3552,7 +3552,7 @@
                     </tr>
                   `).join('')}
                   <tr class="bg-panelAlt">
-                    <td colspan="4" class="p-2.5 text-right font-black text-texto uppercase text-[10px]">Subtotal ${b.casa}</td>
+                    <td colspan="4" class="p-2.5 text-right font-black text-texto uppercase text-xs">Subtotal ${b.casa}</td>
                     <td class="p-2.5 font-black text-emerald-500">${fmtR$(b.subtotal)}</td>
                   </tr>
                 `).join('')}
