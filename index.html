@@ -1992,8 +1992,9 @@
       const selecao = (linha.querySelector('[data-campo="selecao"]') || {}).value || '';
       const odd = (linha.querySelector('[data-campo="odd"]') || {}).value || '';
       const incompleta = !jogo.trim() && (!!selecao.trim() || !!odd.trim());
-      linha.classList.toggle('border-red-500', incompleta);
-      linha.classList.toggle('bg-red-500/5', incompleta);
+      const oddFaltando = !odd.trim() && !!selecao.trim(); // 02/10/2026: OCR trocou a odd por letras
+      linha.classList.toggle('border-red-500', incompleta || oddFaltando);
+      linha.classList.toggle('bg-red-500/5', incompleta || oddFaltando);
       let aviso = linha.querySelector('[data-aviso-jogo]');
       if (incompleta && !aviso) {
         aviso = document.createElement('div');
@@ -2003,6 +2004,16 @@
         linha.appendChild(aviso);
       } else if (!incompleta && aviso) {
         aviso.remove();
+      }
+      let avisoOdd = linha.querySelector('[data-aviso-odd]');
+      if (oddFaltando && !avisoOdd) {
+        avisoOdd = document.createElement('div');
+        avisoOdd.setAttribute('data-aviso-odd', '');
+        avisoOdd.className = 'col-span-12 text-[10px] text-red-400 font-bold';
+        avisoOdd.textContent = '⚠️ Odd não lida (o OCR trocou por letras) — confira na foto e digite.';
+        linha.appendChild(avisoOdd);
+      } else if (!oddFaltando && avisoOdd) {
+        avisoOdd.remove();
       }
     }
 
@@ -2187,15 +2198,21 @@
     // armadilha do handicap ("mais de 18.5" + odd "1.83" separada) e linha de
     // total ("Tripla 6.78") que vira a odd total do bilhete. Se não achar nada,
     // cai no método antigo (ancorado no jogo) como fallback.
+    // v2.1 (02/10/2026): perna cuja odd o OCR trocou por letras ("1.72"→"VIZ") não é
+    // mais descartada — entra com a odd vazia e aviso para conferir; "/" liberado
+    // nos nomes de time (duplas de tênis: "Lee/Ye x Lansere/Shubladze").
     function parseTextoBilhete(texto) {
       const linhas = (texto || '').split('\n').map(l => l.trim()).filter(l => l.length > 0);
       const reDec = /(\d{1,3}[.,]\d{2,3})/g;
       const reTotal = /^(tripla|dupla|simples|m[uú]ltipla|acumulada|acumulador)\b/i;
-      const reJogo = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- ']{2,}?)\s+[xX×]\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- ']{2,})/;
+      // 02/10/2026: "/" liberado nos nomes de time (duplas de tênis: "Lee/Ye x Lansere/Shubladze")
+      const reJogo = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- '/]{2,}?)\s+[xX×]\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- '/]{2,})/;
       const ehCabecalho = l => /^(aposta|bilhete|comprovante|cupom|stake|valor|data)\b/i.test(l) && l.length < 25;
       const limpaInicio = l => l.replace(/^[×xX<|\-–—\s]+/, '').trim();
       const ehLinhaTotal = l => reTotal.test(limpaInicio(l));
       const tiraAposta = l => l.replace(/\|\s*Aposta\s*\|?/gi, ' ').replace(/\s+/g, ' ').trim();
+      // 02/10/2026: linha que abre uma perna ("X ...") — mesmo sem odd legível a perna entra (nunca some)
+      const ehCabecaPerna = l => /^\s*[xX×]\s*[<|]?\s*[A-Za-zÀ-ÿ]/.test(l);
 
       const decimais = (linha) => {
         const out = []; let m; reDec.lastIndex = 0;
@@ -2233,41 +2250,8 @@
       const antLivre = (i) => { let j = i; while (j >= 0 && (consumida[j] || ehCabecalho(linhas[j]) || ehLinhaTotal(linhas[j]))) j--; return j >= 0 ? j : -1; };
       const ehJogo = (l) => reJogo.test(l) && !/^\d/.test(l.trim());
 
-      // pernas ancoradas na odd
-      for (let i = 0; i < n; i++) {
-        if (consumida[i] || ehCabecalho(linhas[i]) || ehLinhaTotal(linhas[i])) continue;
-        const linha = linhas[i];
-        const decs = decimais(linha);
-        if (!decs.length) continue;
-        const last = decs[decs.length - 1];
-        const antes = limpaInicio(tiraAposta(linha.slice(0, last.index)));
-        let odd = '', selecao = '', idxSel = i, oddNaLinha = true;
-
-        if (antes.replace(/[\d.,\s]/g, '').length >= 2) {
-          const j = proxLivre(i + 1);
-          if (j !== -1 && ehOddSozinha(linhas[j])) {
-            // armadilha do "mais de 18.5": a odd real está sozinha na próxima linha
-            const d2 = decimais(linhas[j]);
-            odd = d2[d2.length - 1].num;
-            selecao = limpaInicio(tiraAposta(linha));
-            consumida[j] = true;
-          } else {
-            odd = last.num;
-            selecao = antes;
-          }
-        } else {
-          // odd "solta": pertence à seleção da linha anterior
-          const p = antLivre(i - 1);
-          if (p === -1) continue;
-          odd = last.num;
-          oddNaLinha = false;
-          selecao = limpaInicio(tiraAposta(linhas[p]));
-          idxSel = p;
-          consumida[p] = true;
-        }
-        consumida[i] = true;
-        if (!selecao || !odd) continue;
-
+      // Extrai jogo + mercado de uma perna ancorada em idxSel (reuso: perna com e sem odd) — 02/10/2026
+      const extrairJogoMercado = (idxSel, oddNaLinha) => {
         // jogo: odd na linha da seleção → busca pra frente; odd solta → busca pra trás primeiro.
         // jogos já usados por outra perna não são reaproveitados.
         let jogo = '', idxJogo = -1;
@@ -2305,7 +2289,64 @@
             if (t && !ehOddSozinha(linhas[k])) { mercado = t; break; }
           }
         }
-        resultado.push({ jogo: jogo, mercado: mercado, selecao: selecao, odd: odd });
+        return { jogo, mercado };
+      };
+
+      // pernas ancoradas na odd
+      for (let i = 0; i < n; i++) {
+        if (consumida[i] || ehCabecalho(linhas[i]) || ehLinhaTotal(linhas[i])) continue;
+        const linha = linhas[i];
+        const decs = decimais(linha);
+        if (!decs.length) {
+          // 02/10/2026: perna cuja odd o OCR não leu (ex: "1.72" lido como "VIZ") —
+          // mantém a perna com a odd vazia e aviso para conferir; a perna nunca some.
+          if (ehCabecaPerna(linha)) {
+            let selecao = limpaInicio(tiraAposta(linha)).replace(/\s+[A-Z]{2,4}$/, '').trim();
+            let odd = '';
+            const j = proxLivre(i + 1);
+            if (j !== -1 && ehOddSozinha(linhas[j])) {
+              const d2 = decimais(linhas[j]);
+              if (d2.length) { odd = d2[d2.length - 1].num; consumida[j] = true; }
+            }
+            consumida[i] = true;
+            if (selecao) {
+              const jm = extrairJogoMercado(i, true);
+              resultado.push({ jogo: jm.jogo, mercado: jm.mercado, selecao: selecao, odd: odd });
+            }
+          }
+          continue;
+        }
+        const last = decs[decs.length - 1];
+        const antes = limpaInicio(tiraAposta(linha.slice(0, last.index)));
+        let odd = '', selecao = '', idxSel = i, oddNaLinha = true;
+
+        if (antes.replace(/[\d.,\s]/g, '').length >= 2) {
+          const j = proxLivre(i + 1);
+          if (j !== -1 && ehOddSozinha(linhas[j])) {
+            // armadilha do "mais de 18.5": a odd real está sozinha na próxima linha
+            const d2 = decimais(linhas[j]);
+            odd = d2[d2.length - 1].num;
+            selecao = limpaInicio(tiraAposta(linha));
+            consumida[j] = true;
+          } else {
+            odd = last.num;
+            selecao = antes;
+          }
+        } else {
+          // odd "solta": pertence à seleção da linha anterior
+          const p = antLivre(i - 1);
+          if (p === -1) continue;
+          odd = last.num;
+          oddNaLinha = false;
+          selecao = limpaInicio(tiraAposta(linhas[p]));
+          idxSel = p;
+          consumida[p] = true;
+        }
+        consumida[i] = true;
+        if (!selecao || !odd) continue;
+
+        const jm = extrairJogoMercado(idxSel, oddNaLinha);
+        resultado.push({ jogo: jm.jogo, mercado: jm.mercado, selecao: selecao, odd: odd });
       }
       if (resultado.length === 0) return parseTextoBilheteLegado(texto);
       return { linhas: resultado, oddTotal: oddTotalBilhete };
@@ -2314,7 +2355,8 @@
     function parseTextoBilheteLegado(texto) {
       const linhas = (texto || '').split('\n').map(l => l.trim()).filter(l => l.length > 0);
       const resultado = [];
-      const reJogo = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- ']{2,}?)\s+[xX×]\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- ']{2,})/;
+      // 02/10/2026: "/" liberado nos nomes de time (duplas de tênis)
+      const reJogo = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- '/]{2,}?)\s+[xX×]\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- '/]{2,})/;
       const reOddGlobal = /(\d{1,2}[.,]\d{2,3})/g;
       const reTotal = /^(tripla|dupla|simples|m[uú]ltipla|acumulada|acumulador)\b/i;
       const ehCabecalho = l => /^(aposta|bilhete|comprovante|cupom|total|stake|valor|data)\b/i.test(l) && l.length < 25;
