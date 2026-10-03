@@ -2224,9 +2224,9 @@
       const reDec = /(\d{1,3}[.,]\d{2,3})/g;
       const reTotal = /^(tripla|dupla|simples|m[uú]ltipla|acumulada|acumulador)\b/i;
       // 02/10/2026: "/" liberado nos nomes de time (duplas de tênis: "Lee/Ye x Lansere/Shubladze")
-      // 03/10/2026: "@" e "&" aceitos como separador de times (bilhetes NFL: "IND Colts @ WAS Commanders";
-      // o OCR lê o "@" como "&" — confirmado no Tesseract.js)
-      const reJogo = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- '/]{2,}?)\s+[@&xX×]\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- '/]{2,})/;
+      // 03/10/2026: "@", "&" e "O" aceitos como separador de times (bilhetes NFL: "IND Colts @ WAS Commanders";
+      // o OCR lê o "@" como "&" ou como a letra "O" — confirmado em teste real no navegador com Tesseract.js)
+      const reJogo = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- '/]{2,}?)\s+[@&xX×O]\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- '/]{2,})/;
       const ehCabecalho = l => /^(aposta|bilhete|comprovante|cupom|stake|valor|data)\b/i.test(l) && l.length < 25;
       const limpaInicio = l => l.replace(/^[×xX<|\-–—\s]+/, '').trim();
       const ehLinhaTotal = l => reTotal.test(limpaInicio(l));
@@ -2291,7 +2291,7 @@
         };
         if (oddNaLinha) idxJogo = achaJogoFrente();
         else { idxJogo = achaJogoTras(); if (idxJogo === -1) idxJogo = achaJogoFrente(); }
-        if (idxJogo !== -1) { jogo = linhas[idxJogo].trim().replace(/\s+[@&]\s+/g, ' x '); consumida[idxJogo] = true; }
+        if (idxJogo !== -1) { jogo = linhas[idxJogo].trim().replace(/\s+[@&O]\s+/g, ' x '); consumida[idxJogo] = true; }
 
         // mercado: primeira linha relevante entre a seleção e o jogo
         let mercado = '';
@@ -2376,8 +2376,8 @@
       const linhas = (texto || '').split('\n').map(l => l.trim()).filter(l => l.length > 0);
       const resultado = [];
       // 02/10/2026: "/" liberado nos nomes de time (duplas de tênis)
-      // 03/10/2026: "@" e "&" aceitos como separador de times (bilhetes NFL; o OCR lê "@" como "&")
-      const reJogo = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- '/]{2,}?)\s+[@&xX×]\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- '/]{2,})/;
+      // 03/10/2026: "@", "&" e "O" aceitos como separador de times (bilhetes NFL; o OCR lê "@" como "&" ou "O")
+      const reJogo = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- '/]{2,}?)\s+[@&xX×O]\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\- '/]{2,})/;
       const reOddGlobal = /(\d{1,2}[.,]\d{2,3})/g;
       const reTotal = /^(tripla|dupla|simples|m[uú]ltipla|acumulada|acumulador)\b/i;
       const ehCabecalho = l => /^(aposta|bilhete|comprovante|cupom|total|stake|valor|data)\b/i.test(l) && l.length < 25;
@@ -2398,7 +2398,7 @@
       });
 
       idxJogos.forEach((gi, k) => {
-        const jogo = linhas[gi].trim().replace(/\s+[@&]\s+/g, ' x ');
+        const jogo = linhas[gi].trim().replace(/\s+[@&O]\s+/g, ' x ');
         const inicio = k === 0 ? 0 : idxJogos[k - 1] + 1;
         const fimBloco = k + 1 < idxJogos.length ? idxJogos[k + 1] : linhas.length;
         let selecao = '', odd = '', mercado = '';
