@@ -1901,12 +1901,13 @@
 
       const overlay = document.createElement('div');
       overlay.id = 'painelBilhete';
-      overlay.className = 'fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 overflow-y-auto';
+      overlay.className = 'fixed inset-0 z-[100] bg-black/90 overflow-y-auto';
       overlay.onclick = (e) => { if (e.target === overlay) fecharPainelBilhete(); };
       overlay.innerHTML = `
-        <div class="relative bg-panel border border-linha rounded-2xl max-w-4xl w-full my-8 p-5 md:p-8 shadow-2xl" onclick="event.stopPropagation()">
-          <button onclick="fecharPainelBilhete()" class="absolute top-3 right-4 text-mutado text-2xl font-bold hover:text-red-400">✕</button>
-          <div class="mb-4">
+        <button onclick="fecharPainelBilhete()" aria-label="Fechar bilhete" class="fixed top-3 right-3 z-[120] w-11 h-11 rounded-full bg-red-600 text-white text-2xl font-bold shadow-xl active:scale-95">✕</button>
+        <div class="min-h-full flex p-3 md:p-4">
+        <div class="relative bg-panel border border-linha rounded-2xl max-w-4xl w-full m-auto p-5 md:p-8 shadow-2xl" onclick="event.stopPropagation()">
+          <div class="mb-4 pr-10">
             <h3 class="text-lg font-bold" style="color: var(--color-text);">🎫 Bilhete <span class="text-xs font-normal text-mutado">· ${sels.length} ${sels.length === 1 ? 'perna' : 'pernas'}</span></h3>
             <div class="mt-2">${badgeGeral}</div>
           </div>
@@ -1943,6 +1944,10 @@
             <div>📝 Registrada em ${formatarDataBR(a.data)} ${operador ? `· ${operador.nome}` : ''}</div>
             <div>${a.finalizada || geral === 'green' || geral === 'red' ? '✅' : '⏳'} Liquidada: ${liquidadaTxt}</div>
           </div>
+          <div class="mt-4 text-center">
+            <button onclick="fecharPainelBilhete()" class="px-8 py-2.5 rounded-xl bg-linha text-texto font-bold active:scale-95">✕ Fechar bilhete</button>
+          </div>
+        </div>
         </div>`;
       document.body.appendChild(overlay);
     }
