@@ -2208,6 +2208,7 @@
       let t = String(s || '').replace(/\s+/g, ' ').trim();
       t = t.replace(/^[●•\-–—_~?!;\s]+/, '');          // sujeira no início
       t = t.replace(/(\s+[A-Za-zÀ-ÿ]{1,3})?\?$/, '');  // "Opções Ec?" / "Opções?" -> "Opções"
+      t = t.replace(/\s+[a-zà-ÿ]$/, '');               // 03/10/2026: letra solta do OCR no fim ("Opções f" -> "Opções")
       t = t.replace(/[\s\-–—_~:;]+$/, '');             // "Partida ——" -> "Partida"
       return t.trim();
     }
@@ -2289,8 +2290,30 @@
           }
           return -1;
         };
+        // Fallback estrutural (03/10/2026): encontra o jogo pela posição quando o
+        // separador saiu ilegível do OCR. Linha de texto = sem odd decimal, sem
+        // cabeçalho, não consumida, com 5+ caracteres.
+        const achaJogoEstrutural = () => {
+          const textoOk = (k) => {
+            if (k < 0 || k >= n || consumida[k] || ehLinhaTotal(linhas[k]) || ehCabecalho(linhas[k])) return false;
+            const t = linhas[k].trim();
+            return t.length >= 5 && !/\d[.,]\d/.test(t);
+          };
+          const frente = [];
+          for (let k = idxSel + 1; k <= idxSel + 3 && k < n; k++) if (textoOk(k)) frente.push(k);
+          if (frente.length >= 2) return frente[1];
+          const tras = [];
+          for (let k = idxSel - 1; k >= idxSel - 3 && k >= 0; k--) if (textoOk(k)) tras.push(k);
+          if (tras.length >= 2) return tras[1];
+          return -1;
+        };
         if (oddNaLinha) idxJogo = achaJogoFrente();
         else { idxJogo = achaJogoTras(); if (idxJogo === -1) idxJogo = achaJogoFrente(); }
+        // Fallback estrutural (03/10/2026): o "@" do jogo às vezes sai do OCR como
+        // glifo que o regex não reconhece ("&", "O", ...). Nesse caso, usa a posição:
+        // no layout padrão do bilhete, após a seleção vêm mercado e jogo — a 2ª linha
+        // de texto após a seleção é o jogo (a 1ª costuma ser o mercado).
+        if (idxJogo === -1) idxJogo = achaJogoEstrutural();
         if (idxJogo !== -1) { jogo = linhas[idxJogo].trim().replace(/\s+[@&O]\s+/g, ' x '); consumida[idxJogo] = true; }
 
         // mercado: primeira linha relevante entre a seleção e o jogo
