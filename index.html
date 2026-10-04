@@ -2297,6 +2297,9 @@
           const textoOk = (k) => {
             if (k < 0 || k >= n || consumida[k] || ehLinhaTotal(linhas[k]) || ehCabecalho(linhas[k])) return false;
             const t = linhas[k].trim();
+            // 04/10/2026: "Opções" (ex.: "2 Opções" do mercado) nunca é nome de jogo —
+            // o fallback a confundia com o jogo quando o separador saía ilegível do OCR
+            if (/op[cç][oõ]es/i.test(t)) return false;
             return t.length >= 5 && !/\d[.,]\d/.test(t);
           };
           const frente = [];
@@ -2314,7 +2317,7 @@
         // no layout padrão do bilhete, após a seleção vêm mercado e jogo — a 2ª linha
         // de texto após a seleção é o jogo (a 1ª costuma ser o mercado).
         if (idxJogo === -1) idxJogo = achaJogoEstrutural();
-        if (idxJogo !== -1) { jogo = linhas[idxJogo].trim().replace(/\s+[@&O]\s+/g, ' x '); consumida[idxJogo] = true; }
+        if (idxJogo !== -1) { jogo = linhas[idxJogo].trim().replace(/[(\[]\s*[O0]\s+/g, ' x ').replace(/\s+[@&O]\s+/g, ' x '); consumida[idxJogo] = true; }
 
         // mercado: primeira linha relevante entre a seleção e o jogo
         let mercado = '';
