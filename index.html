@@ -3667,6 +3667,14 @@
       'ZAP BET':  [['Renan', 2.5], ['Fabio', 5], ['Lucas', 2.5]]
     };
 
+    // Filtro por comissionado (05/10/2026, a pedido do usuário): '' = todos;
+    // com nome selecionado, o módulo mostra só as linhas/cards/total dele.
+    let filtroComissionado = '';
+    function filtrarComissaoPorPessoa(nome) {
+      filtroComissionado = nome || '';
+      renderizarComissao(document.getElementById('conteudo-principal'));
+    }
+
     function renderizarComissao(container) {
       const apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
 
@@ -3706,6 +3714,21 @@
         return { nome, total: +t.toFixed(2) };
       });
       const totalGeral = +blocos.reduce((s, b) => s + b.subtotal, 0).toFixed(2);
+
+      // Aplica o filtro por comissionado (se houver): blocos, cards e total
+      const blocosExibir = filtroComissionado
+        ? blocos.map(b => {
+            const linhas = b.linhas.filter(l => l.nome === filtroComissionado);
+            if (!linhas.length) return null;
+            return { casa: b.casa, base: b.base, linhas, subtotal: +linhas.reduce((s, l) => s + l.valor, 0).toFixed(2) };
+          }).filter(Boolean)
+        : blocos;
+      const totaisExibir = filtroComissionado ? totaisPorPessoa.filter(p => p.nome === filtroComissionado) : totaisPorPessoa;
+      const totalExibir = +blocosExibir.reduce((s, b) => s + b.subtotal, 0).toFixed(2);
+      const rotuloTotal = filtroComissionado ? `Total ${filtroComissionado}` : 'Total geral';
+      const msgVazio = filtroComissionado
+        ? `Nenhuma comissão para ${filtroComissionado} no período.`
+        : 'Nenhuma comissão no período (sem prejuízo nas casas com regra cadastrada).';
 
       const fmtR$ = v => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
       const fmtPct = p => `${p.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`;
@@ -3753,11 +3776,19 @@
         </div>
 
         <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
-          <h3 class="text-sm md:text-md font-bold mb-1 text-texto uppercase tracking-wider">🤝 Comissionados por Casa</h3>
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-1">
+            <h3 class="text-sm md:text-md font-bold text-texto uppercase tracking-wider">🤝 Comissionados por Casa</h3>
+            <label class="text-xs text-mutado flex items-center gap-2 no-print">👤 Comissionado:
+              <select onchange="filtrarComissaoPorPessoa(this.value)" class="px-2.5 py-2 bg-panel border border-linha rounded-xl text-texto text-xs cursor-pointer hover:border-emerald-500 transition outline-none font-bold">
+                <option value="">Todos</option>
+                ${pessoasDisponiveis.map(n => `<option value="${n}" ${filtroComissionado === n ? 'selected' : ''}>${n}</option>`).join('')}
+              </select>
+            </label>
+          </div>
           <p class="text-xs text-mutado mb-4">Base = prejuízo da casa no período × % de cada comissionado. Casas com lucro não geram comissão.</p>
-          ${totaisPorPessoa.length > 0 ? `
+          ${totaisExibir.length > 0 ? `
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-            ${totaisPorPessoa.map(p => `
+            ${totaisExibir.map(p => `
               <div class="bg-panelAlt border border-linha rounded-xl p-4">
                 <p class="text-xs text-mutado uppercase font-bold mb-1">👤 ${p.nome}</p>
                 <p class="text-2xl font-black text-emerald-500">${fmtR$(p.total)}</p>
@@ -3777,8 +3808,8 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-linha">
-                ${blocos.length === 0 ? '<tr><td colspan="5" class="p-4 text-center text-mutado">Nenhuma comissão no período (sem prejuízo nas casas com regra cadastrada).</td></tr>' : ''}
-                ${blocos.map((b, bi) => `
+                ${blocosExibir.length === 0 ? `<tr><td colspan="5" class="p-4 text-center text-mutado">${msgVazio}</td></tr>` : ''}
+                ${blocosExibir.map((b, bi) => `
                   ${b.linhas.map((l, li) => `
                     <tr class="${(bi + li) % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
                       <td class="p-3 text-texto">${li === 0 ? renderizarFlagCasa(b.casa) : ''}</td>
@@ -3794,11 +3825,11 @@
                   </tr>
                 `).join('')}
               </tbody>
-              ${blocos.length > 0 ? `
+              ${blocosExibir.length > 0 ? `
               <tfoot>
                 <tr class="bg-panelAlt border-t-2 border-emerald-600">
-                  <td colspan="4" class="p-3 text-right font-black text-texto uppercase">Total geral</td>
-                  <td class="p-3 font-black text-emerald-500 text-sm">${fmtR$(totalGeral)}</td>
+                  <td colspan="4" class="p-3 text-right font-black text-texto uppercase">${rotuloTotal}</td>
+                  <td class="p-3 font-black text-emerald-500 text-sm">${fmtR$(totalExibir)}</td>
                 </tr>
               </tfoot>` : ''}
             </table>
