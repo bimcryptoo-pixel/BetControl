@@ -571,7 +571,8 @@
             selecao: s.selecao,
             odd: Number(s.odd) || 1,
             status: s.status || 'pendente',
-            detalhe: s.detalhe || ''
+            detalhe: s.detalhe || '',
+            inicioJogo: s.inicio_jogo || null
           }));
         }
         if (usrs && usrs.length > 0) {
@@ -1852,7 +1853,8 @@
             selecao: s.selecao,
             odd: Number(s.odd) || 1,
             status: s.status || 'pendente',
-            detalhe: s.detalhe || ''
+            detalhe: s.detalhe || '',
+            inicioJogo: s.inicio_jogo || null
           }));
           estado.selecoes = (estado.selecoes || []).filter(s => s.apostaId !== apostaId).concat(mapeadas);
           salvarDadosNoLocalStorage();
@@ -1891,6 +1893,7 @@
           <div class="text-xs text-mutado">${s.jogo}</div>
           ${s.mercado ? `<div class="text-xs text-mutado">${s.mercado}</div>` : ''}
           ${s.detalhe ? `<div class="text-xs mt-1 text-texto opacity-80">📊 ${s.detalhe}</div>` : ''}
+          ${textoCountdown(s.inicioJogo) ? `<div class="text-xs mt-1 text-sky-400 font-bold">${textoCountdown(s.inicioJogo)}</div>` : ''}
           ${verificarSeTemPermissaoEdicao() ? `<div class="flex gap-1 mt-2 items-center">
             <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'green')" title="Marcar GREEN" class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold hover:bg-emerald-500 hover:text-white transition">🟢</button>
             <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'red')" title="Marcar RED" class="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold hover:bg-red-500 hover:text-white transition">🔴</button>
@@ -2132,6 +2135,26 @@
       salvarDadosNoLocalStorage();
       abrirPainelBilhete(apostaId);
       if (typeof renderizarAba === 'function') renderizarAba();
+    }
+
+    // Contagem regressiva (05/10/2026): texto do tempo até o início do jogo
+    function textoCountdown(inicioIso) {
+      if (!inicioIso) return '';
+      try {
+        const ini = new Date(inicioIso);
+        if (isNaN(ini.getTime())) return '';
+        const agora = new Date();
+        const fmtData = ini.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        const diffMs = ini - agora;
+        if (diffMs <= 0) return `▶️ jogo iniciado (${fmtData})`;
+        const min = Math.floor(diffMs / 60000);
+        const dias = Math.floor(min / 1440), horas = Math.floor((min % 1440) / 60), mins = min % 60;
+        let txt;
+        if (dias > 0) txt = `em ${dias}d ${horas}h`;
+        else if (horas > 0) txt = `em ${horas}h ${mins}min`;
+        else txt = `em ${mins}min`;
+        return `⏳ começa ${txt} · ${fmtData}`;
+      } catch (e) { return ''; }
     }
 
     // Salvar as pernas digitadas/lidas no formulário do painel
