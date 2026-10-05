@@ -3862,8 +3862,11 @@
 
     // ================= 5b. ABA ACERTO CASAS (05/10/2026, a pedido do usuário) =================
     // Acerto financeiro com as casas de aposta: mostra por casa, no período dos
-    // filtros globais, quanto há A PAGAR (lucro da casa) ou A RECEBER (prejuízo
-    // da casa) e registra baixas internas (totais ou parciais) na tabela `acertos`.
+    // filtros globais, quanto há A RECEBER (lucro da operação) ou A PAGAR
+    // (prejuízo da operação) e registra baixas internas (totais ou parciais).
+    // CONVENÇÃO (corrigida 05/10/2026 a pedido do usuário): "lucro" no BetControl
+    // é o da operação (retorno - stake). Lucro > 0 = a casa deve ao usuário
+    // (RECEBER, verde); lucro < 0 = o usuário deve à casa (PAGAR, vermelho).
     function renderizarAcertos(container) {
       const podeEditar = verificarSeTemPermissaoEdicao();
       const apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
@@ -3905,8 +3908,8 @@
 
       const linhas = Object.values(porCasa)
         .map(c => {
-          const aPagar = c.lucro > 0 ? c.lucro : 0;
-          const aReceber = c.lucro < 0 ? Math.abs(c.lucro) : 0;
+          const aReceber = c.lucro > 0 ? c.lucro : 0;
+          const aPagar = c.lucro < 0 ? Math.abs(c.lucro) : 0;
           const devido = aPagar + aReceber;
           const baixado = +(baixadoPorCasa[c.casaId] || 0).toFixed(2);
           const saldo = +(devido - baixado).toFixed(2);
@@ -3930,7 +3933,7 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
           <div>
             <h2 class="text-xl md:text-2xl font-bold text-texto" style="color: var(--color-text);">🏦 Acerto com Casas</h2>
-            <p class="text-xs text-mutado">Período: <b class="text-texto">${rotuloPeriodo}</b> · Lucro da casa = <b class="text-red-400">você PAGA</b> · Prejuízo da casa = <b class="text-emerald-400">você RECEBE</b>.</p>
+            <p class="text-xs text-mutado">Período: <b class="text-texto">${rotuloPeriodo}</b> · <b class="text-emerald-400">Lucro</b> = você RECEBE da casa · <b class="text-red-400">Prejuízo</b> = você PAGA à casa.</p>
           </div>
           <button onclick="window.print()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition">
             🖨️ Imprimir / Salvar PDF
@@ -3979,7 +3982,7 @@
                   <tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
                     <td class="p-3 text-texto">${renderizarFlagCasa(l.nome)}</td>
                     <td class="p-3 text-texto">${l.n}</td>
-                    <td class="p-3 font-bold ${l.lucro > 0 ? 'text-red-400' : l.lucro < 0 ? 'text-emerald-400' : 'text-texto'}">${fmtR$(l.lucro)}</td>
+                    <td class="p-3 font-bold ${l.lucro > 0 ? 'text-emerald-400' : l.lucro < 0 ? 'text-red-400' : 'text-texto'}">${fmtR$(l.lucro)}</td>
                     <td class="p-3 font-bold ${l.aPagar > 0 ? 'text-red-400' : 'text-mutado'}">${l.aPagar > 0 ? fmtR$(l.aPagar) : '—'}</td>
                     <td class="p-3 font-bold ${l.aReceber > 0 ? 'text-emerald-400' : 'text-mutado'}">${l.aReceber > 0 ? fmtR$(l.aReceber) : '—'}</td>
                     <td class="p-3 text-texto">${fmtR$(l.baixado)}</td>
@@ -4057,7 +4060,7 @@
       });
       const devido = Math.abs(lucro);
       const saldo = +(devido - baixado).toFixed(2);
-      const tipo = lucro > 0 ? 'pagar' : 'receber';
+      const tipo = lucro > 0 ? 'receber' : 'pagar';
       const tipoTxt = tipo === 'pagar' ? '🔴 Pagamento à casa' : '🟢 Recebimento da casa';
       let perDe = de, perAte = ate;
       if (!perDe || !perAte) {
