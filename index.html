@@ -384,6 +384,9 @@
         <button id="nav-comissao" onclick="mudarAba('comissao')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
           🤝 Comissão
         </button>
+        <button id="nav-acertos" onclick="mudarAba('acertos')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
+          🏦 Acerto Casas
+        </button>
         <button id="nav-pagamentos" onclick="mudarAba('pagamentos')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
           💳 Pagamento
         </button>
@@ -425,7 +428,8 @@
       operadores: [],
       casas: [],
       apostas: [],
-      selecoes: []
+      selecoes: [],
+      acertos: []
     };
 
     let estado = carregarDadosDoLocalStorage();
@@ -500,6 +504,7 @@
           if (!parsed.ordemLucroMes) parsed.ordemLucroMes = 'desc';
           if (parsed.filtroPendentes === undefined) parsed.filtroPendentes = false;
           if (!parsed.selecoes) parsed.selecoes = [];
+          if (!parsed.acertos) parsed.acertos = [];
           if (!parsed.usuarios || parsed.usuarios.length === 0) {
             parsed.usuarios = [
               { id: 'usr-1', usuario: 'admin', senha: '123456', perfil: 'editor', nome: 'Administrador Mestre', permissoesLeitor: [] },
@@ -541,6 +546,8 @@
         const usrs = await buscarTodosPaginado('usuarios');
         let sels = [];
         try { sels = await buscarTodosPaginado('selecoes'); } catch (e) { console.warn('Tabela selecoes ainda não criada:', e); }
+        let acertosSrv = [];
+        try { acertosSrv = await buscarTodosPaginado('acertos'); } catch (e) { console.warn('Tabela acertos ainda não criada:', e); }
 
         if (ops) {
           estado.operadores = ops;
@@ -573,6 +580,19 @@
             status: s.status || 'pendente',
             detalhe: s.detalhe || '',
             inicioJogo: s.inicio_jogo || null
+          }));
+        }
+        if (acertosSrv) {
+          estado.acertos = acertosSrv.map(x => ({
+            id: x.id,
+            casaId: x.casa_id,
+            periodoDe: x.periodo_de,
+            periodoAte: x.periodo_ate,
+            tipo: x.tipo,
+            valor: Number(x.valor) || 0,
+            dataBaixa: x.data_baixa,
+            observacao: x.observacao || '',
+            createdAt: x.created_at || null
           }));
         }
         if (usrs && usrs.length > 0) {
@@ -709,7 +729,7 @@
           atualizarVisibilidadeMenuLateral(usr);
 
           if (!verificarPermissaoAba(estado.abaAtiva)) {
-            const abasPossiveis = ['dashboard', 'volumemes', 'operadores', 'casas', 'relatorios', 'lucro', 'analises', 'comissao', 'pagamentos', 'backup', 'usuarios'];
+            const abasPossiveis = ['dashboard', 'volumemes', 'operadores', 'casas', 'relatorios', 'lucro', 'analises', 'comissao', 'acertos', 'pagamentos', 'backup', 'usuarios'];
             const primeiraPermitida = abasPossiveis.find(a => verificarPermissaoAba(a));
             if (primeiraPermitida) {
               estado.abaAtiva = primeiraPermitida;
@@ -743,6 +763,7 @@
         'lucro': 'nav-lucro',
         'analises': 'nav-analises',
         'comissao': 'nav-comissao',
+        'acertos': 'nav-acertos',
         'pagamentos': 'nav-pagamentos',
         'backup': 'nav-backup',
         'usuarios': 'nav-usuarios'
@@ -1105,6 +1126,7 @@
       else if (estado.abaAtiva === 'lucro') renderizarLucro(main);
       else if (estado.abaAtiva === 'analises') renderizarAnalises(main);
       else if (estado.abaAtiva === 'comissao') renderizarComissao(main);
+      else if (estado.abaAtiva === 'acertos') renderizarAcertos(main);
       else if (estado.abaAtiva === 'pagamentos') renderizarPagamentos(main);
       else if (estado.abaAtiva === 'backup') renderizarBackup(main);
       else if (estado.abaAtiva === 'usuarios') renderizarUsuarios(main);
@@ -3838,6 +3860,303 @@
       `;
     }
 
+    // ================= 5b. ABA ACERTO CASAS (05/10/2026, a pedido do usuário) =================
+    // Acerto financeiro com as casas de aposta: mostra por casa, no período dos
+    // filtros globais, quanto há A PAGAR (lucro da casa) ou A RECEBER (prejuízo
+    // da casa) e registra baixas internas (totais ou parciais) na tabela `acertos`.
+    function renderizarAcertos(container) {
+      const podeEditar = verificarSeTemPermissaoEdicao();
+      const apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
+      const de = estado.filtros.dataInicio || '';
+      const ate = estado.filtros.dataFim || '';
+      const fmtR$ = v => `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const fmtData = d => d ? d.split('-').reverse().join('/') : '—';
+
+      // Lucro líquido por casa no período (só apostas finalizadas)
+      const porCasa = {};
+      apostasFiltradas.forEach(a => {
+        if (a.finalizada && a.retorno !== null) {
+          const cid = a.casaId || 'sem-casa';
+          const casaObj = estado.casas.find(c => c.id === a.casaId);
+          if (!porCasa[cid]) porCasa[cid] = { casaId: a.casaId, nome: casaObj ? casaObj.nome : 'Outras / N/A', lucro: 0, volume: 0, n: 0 };
+          porCasa[cid].lucro += (a.retorno - a.stake);
+          porCasa[cid].volume += a.stake;
+          porCasa[cid].n++;
+        }
+      });
+
+      // Período efetivo da baixa: filtros globais ou o intervalo real das apostas
+      let perDe = de, perAte = ate;
+      if (!perDe || !perAte) {
+        const datas = apostasFiltradas.filter(a => a.finalizada && a.data).map(a => a.data).sort();
+        if (!perDe && datas.length) perDe = datas[0];
+        if (!perAte && datas.length) perAte = datas[datas.length - 1];
+        if (!perDe) perDe = new Date().toISOString().split('T')[0];
+        if (!perAte) perAte = perDe;
+      }
+
+      // Baixas já registradas contidas no período selecionado
+      const baixadoPorCasa = {};
+      (estado.acertos || []).forEach(x => {
+        const dentro = (!de || x.periodoDe >= de) && (!ate || x.periodoAte <= ate);
+        if (!dentro || !x.casaId) return;
+        baixadoPorCasa[x.casaId] = (baixadoPorCasa[x.casaId] || 0) + x.valor;
+      });
+
+      const linhas = Object.values(porCasa)
+        .map(c => {
+          const aPagar = c.lucro > 0 ? c.lucro : 0;
+          const aReceber = c.lucro < 0 ? Math.abs(c.lucro) : 0;
+          const devido = aPagar + aReceber;
+          const baixado = +(baixadoPorCasa[c.casaId] || 0).toFixed(2);
+          const saldo = +(devido - baixado).toFixed(2);
+          const quitado = devido <= 0.005 || saldo <= 0.005;
+          return { ...c, aPagar: +aPagar.toFixed(2), aReceber: +aReceber.toFixed(2), baixado, saldo: Math.max(0, saldo), quitado, devido: +devido.toFixed(2) };
+        })
+        .sort((a, b) => b.devido - a.devido);
+
+      const totPagar = +linhas.reduce((s, l) => s + l.aPagar, 0).toFixed(2);
+      const totReceber = +linhas.reduce((s, l) => s + l.aReceber, 0).toFixed(2);
+      const totBaixado = +linhas.reduce((s, l) => s + l.baixado, 0).toFixed(2);
+      const totSaldo = +linhas.reduce((s, l) => s + l.saldo, 0).toFixed(2);
+
+      const historico = (estado.acertos || [])
+        .filter(x => (!de || x.periodoDe >= de) && (!ate || x.periodoAte <= ate))
+        .sort((a, b) => (b.dataBaixa || '').localeCompare(a.dataBaixa || '') || (b.createdAt || '').localeCompare(a.createdAt || ''));
+
+      const rotuloPeriodo = (de || ate) ? `${fmtData(de)} a ${fmtData(ate)}` : 'todo o período';
+
+      container.innerHTML = `
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
+          <div>
+            <h2 class="text-xl md:text-2xl font-bold text-texto" style="color: var(--color-text);">🏦 Acerto com Casas</h2>
+            <p class="text-xs text-mutado">Período: <b class="text-texto">${rotuloPeriodo}</b> · Lucro da casa = <b class="text-red-400">você PAGA</b> · Prejuízo da casa = <b class="text-emerald-400">você RECEBE</b>.</p>
+          </div>
+          <button onclick="window.print()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition">
+            🖨️ Imprimir / Salvar PDF
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div class="bg-panel border border-linha rounded-xl p-4">
+            <p class="text-[10px] uppercase text-mutado font-bold mb-1">🔴 A pagar</p>
+            <p class="text-xl font-black text-red-400">${fmtR$(totPagar)}</p>
+          </div>
+          <div class="bg-panel border border-linha rounded-xl p-4">
+            <p class="text-[10px] uppercase text-mutado font-bold mb-1">🟢 A receber</p>
+            <p class="text-xl font-black text-emerald-400">${fmtR$(totReceber)}</p>
+          </div>
+          <div class="bg-panel border border-linha rounded-xl p-4">
+            <p class="text-[10px] uppercase text-mutado font-bold mb-1">✅ Já baixado</p>
+            <p class="text-xl font-black text-texto">${fmtR$(totBaixado)}</p>
+          </div>
+          <div class="bg-panel border border-linha rounded-xl p-4">
+            <p class="text-[10px] uppercase text-mutado font-bold mb-1">⏳ Saldo em aberto</p>
+            <p class="text-xl font-black text-amber-400">${fmtR$(totSaldo)}</p>
+          </div>
+        </div>
+
+        <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6">
+          <h3 class="text-sm md:text-md font-bold mb-4 text-texto uppercase tracking-wider">🏛️ Saldo por Casa</h3>
+          <div class="overflow-x-auto rounded-lg border border-linha">
+            <table class="w-full text-left text-sm text-mutado">
+              <thead class="bg-panelAlt text-texto uppercase text-xs">
+                <tr>
+                  <th class="p-3 border-b border-linha">Casa</th>
+                  <th class="p-3 border-b border-linha">Apostas</th>
+                  <th class="p-3 border-b border-linha">Lucro/Prej.</th>
+                  <th class="p-3 border-b border-linha">A pagar</th>
+                  <th class="p-3 border-b border-linha">A receber</th>
+                  <th class="p-3 border-b border-linha">Baixado</th>
+                  <th class="p-3 border-b border-linha">Saldo</th>
+                  <th class="p-3 border-b border-linha">Status</th>
+                  ${podeEditar ? '<th class="p-3 border-b border-linha no-print">Ação</th>' : ''}
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-linha">
+                ${linhas.length === 0 ? `<tr><td colspan="${podeEditar ? 9 : 8}" class="p-4 text-center text-mutado">Nenhum dado financeiro finalizado no período.</td></tr>` : ''}
+                ${linhas.map((l, i) => `
+                  <tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
+                    <td class="p-3 text-texto">${renderizarFlagCasa(l.nome)}</td>
+                    <td class="p-3 text-texto">${l.n}</td>
+                    <td class="p-3 font-bold ${l.lucro > 0 ? 'text-red-400' : l.lucro < 0 ? 'text-emerald-400' : 'text-texto'}">${fmtR$(l.lucro)}</td>
+                    <td class="p-3 font-bold ${l.aPagar > 0 ? 'text-red-400' : 'text-mutado'}">${l.aPagar > 0 ? fmtR$(l.aPagar) : '—'}</td>
+                    <td class="p-3 font-bold ${l.aReceber > 0 ? 'text-emerald-400' : 'text-mutado'}">${l.aReceber > 0 ? fmtR$(l.aReceber) : '—'}</td>
+                    <td class="p-3 text-texto">${fmtR$(l.baixado)}</td>
+                    <td class="p-3 font-black ${l.saldo > 0.005 ? 'text-amber-400' : 'text-mutado'}">${fmtR$(l.saldo)}</td>
+                    <td class="p-3">${l.quitado ? '<span class="text-emerald-400 font-bold text-xs">✅ Quitado</span>' : '<span class="text-amber-400 font-bold text-xs">⏳ Em aberto</span>'}</td>
+                    ${podeEditar ? `<td class="p-3 no-print">${!l.quitado && l.casaId ? `<button onclick="abrirModalBaixa('${l.casaId}')" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition">💰 Dar baixa</button>` : '<span class="text-mutado text-xs">—</span>'}</td>` : ''}
+                  </tr>
+                `).join('')}
+              </tbody>
+              ${linhas.length > 0 ? `
+              <tfoot>
+                <tr class="bg-panelAlt border-t-2 border-emerald-600">
+                  <td colspan="3" class="p-3 text-right font-black text-texto uppercase text-xs">Total</td>
+                  <td class="p-3 font-black text-red-400">${fmtR$(totPagar)}</td>
+                  <td class="p-3 font-black text-emerald-400">${fmtR$(totReceber)}</td>
+                  <td class="p-3 font-black text-texto">${fmtR$(totBaixado)}</td>
+                  <td class="p-3 font-black text-amber-400">${fmtR$(totSaldo)}</td>
+                  <td colspan="${podeEditar ? 2 : 1}"></td>
+                </tr>
+              </tfoot>` : ''}
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
+          <h3 class="text-sm md:text-md font-bold mb-4 text-texto uppercase tracking-wider">🧾 Histórico de Baixas</h3>
+          <div class="overflow-x-auto rounded-lg border border-linha">
+            <table class="w-full text-left text-sm text-mutado">
+              <thead class="bg-panelAlt text-texto uppercase text-xs">
+                <tr>
+                  <th class="p-3 border-b border-linha">Data</th>
+                  <th class="p-3 border-b border-linha">Casa</th>
+                  <th class="p-3 border-b border-linha">Período</th>
+                  <th class="p-3 border-b border-linha">Tipo</th>
+                  <th class="p-3 border-b border-linha">Valor</th>
+                  <th class="p-3 border-b border-linha">Observação</th>
+                  ${podeEditar ? '<th class="p-3 border-b border-linha no-print">Ação</th>' : ''}
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-linha">
+                ${historico.length === 0 ? `<tr><td colspan="${podeEditar ? 7 : 6}" class="p-4 text-center text-mutado">Nenhuma baixa registrada no período.</td></tr>` : ''}
+                ${historico.map((x, i) => {
+                  const casaObj = estado.casas.find(c => c.id === x.casaId);
+                  return `
+                  <tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
+                    <td class="p-3 text-texto">${fmtData(x.dataBaixa)}</td>
+                    <td class="p-3 text-texto">${renderizarFlagCasa(casaObj ? casaObj.nome : 'N/A')}</td>
+                    <td class="p-3 text-texto text-xs">${fmtData(x.periodoDe)} a ${fmtData(x.periodoAte)}</td>
+                    <td class="p-3 font-bold ${x.tipo === 'pagar' ? 'text-red-400' : 'text-emerald-400'}">${x.tipo === 'pagar' ? '🔴 Pago à casa' : '🟢 Recebido da casa'}</td>
+                    <td class="p-3 font-bold text-texto">${fmtR$(x.valor)}</td>
+                    <td class="p-3 text-texto text-xs">${x.observacao || '—'}</td>
+                    ${podeEditar ? `<td class="p-3 no-print"><button onclick="excluirBaixa('${x.id}')" class="px-2.5 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold transition" title="Estornar baixa">🗑️</button></td>` : ''}
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function abrirModalBaixa(casaId) {
+      const casaObj = estado.casas.find(c => c.id === casaId);
+      const apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
+      let lucro = 0;
+      apostasFiltradas.forEach(a => {
+        if (a.finalizada && a.retorno !== null && a.casaId === casaId) lucro += (a.retorno - a.stake);
+      });
+      const de = estado.filtros.dataInicio || '';
+      const ate = estado.filtros.dataFim || '';
+      let baixado = 0;
+      (estado.acertos || []).forEach(x => {
+        const dentro = (!de || x.periodoDe >= de) && (!ate || x.periodoAte <= ate);
+        if (dentro && x.casaId === casaId) baixado += x.valor;
+      });
+      const devido = Math.abs(lucro);
+      const saldo = +(devido - baixado).toFixed(2);
+      const tipo = lucro > 0 ? 'pagar' : 'receber';
+      const tipoTxt = tipo === 'pagar' ? '🔴 Pagamento à casa' : '🟢 Recebimento da casa';
+      let perDe = de, perAte = ate;
+      if (!perDe || !perAte) {
+        const datas = apostasFiltradas.filter(a => a.finalizada && a.casaId === casaId && a.data).map(a => a.data).sort();
+        if (datas.length) { if (!perDe) perDe = datas[0]; if (!perAte) perAte = datas[datas.length - 1]; }
+        if (!perDe) perDe = new Date().toISOString().split('T')[0];
+        if (!perAte) perAte = perDe;
+      }
+      const hoje = new Date().toISOString().split('T')[0];
+
+      const overlay = document.createElement('div');
+      overlay.id = 'modalBaixa';
+      overlay.className = 'fixed inset-0 z-[100] bg-black/90 overflow-y-auto';
+      overlay.onclick = (e) => { if (e.target === overlay) fecharModalBaixa(); };
+      overlay.innerHTML = `
+        <div class="min-h-full flex p-3 md:p-4">
+        <div class="relative bg-panel border border-linha rounded-2xl max-w-md w-full m-auto p-5 md:p-6 shadow-2xl" onclick="event.stopPropagation()">
+          <button onclick="fecharModalBaixa()" class="absolute top-3 right-3 w-9 h-9 rounded-full bg-red-600 text-white font-bold shadow-xl">✕</button>
+          <h3 class="text-lg font-bold mb-1" style="color: var(--color-text);">💰 Dar baixa</h3>
+          <p class="text-xs text-mutado mb-4">${casaObj ? casaObj.nome : ''} · ${tipoTxt}</p>
+          <input type="hidden" id="baixaCasaId" value="${casaId}">
+          <input type="hidden" id="baixaTipo" value="${tipo}">
+          <input type="hidden" id="baixaPerDe" value="${perDe}">
+          <input type="hidden" id="baixaPerAte" value="${perAte}">
+          <div class="space-y-3">
+            <div class="bg-panelAlt border border-linha rounded-lg p-3 flex justify-between text-sm">
+              <span class="text-mutado">Devido no período</span>
+              <b class="text-texto">R$ ${devido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b>
+            </div>
+            <div class="bg-panelAlt border border-linha rounded-lg p-3 flex justify-between text-sm">
+              <span class="text-mutado">Já baixado</span>
+              <b class="text-texto">R$ ${baixado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b>
+            </div>
+            <div>
+              <label class="block text-xs text-mutado mb-1">Valor da baixa (permite parcial)</label>
+              <input type="number" id="baixaValor" min="0.01" step="0.01" value="${saldo.toFixed(2)}" class="w-full px-3 py-2 bg-input border border-linha rounded text-texto text-sm outline-none">
+            </div>
+            <div>
+              <label class="block text-xs text-mutado mb-1">Data</label>
+              <input type="date" id="baixaData" value="${hoje}" class="w-full px-3 py-2 bg-input border border-linha rounded text-texto text-sm outline-none">
+            </div>
+            <div>
+              <label class="block text-xs text-mutado mb-1">Observação (opcional)</label>
+              <input type="text" id="baixaObs" placeholder="Ex: PIX, transferência..." class="w-full px-3 py-2 bg-input border border-linha rounded text-texto text-sm outline-none">
+            </div>
+            <button onclick="salvarBaixa()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-black rounded-xl transition">✅ Confirmar baixa</button>
+          </div>
+        </div>
+        </div>`;
+      document.body.appendChild(overlay);
+    }
+
+    function fecharModalBaixa() {
+      const m = document.getElementById('modalBaixa');
+      if (m) m.remove();
+    }
+
+    async function salvarBaixa() {
+      const casaId = document.getElementById('baixaCasaId').value;
+      const tipo = document.getElementById('baixaTipo').value;
+      const perDe = document.getElementById('baixaPerDe').value;
+      const perAte = document.getElementById('baixaPerAte').value;
+      const valor = parseFloat(document.getElementById('baixaValor').value);
+      const dataBaixa = document.getElementById('baixaData').value;
+      const obs = document.getElementById('baixaObs').value.trim();
+      if (!valor || valor <= 0) { alert('Informe um valor maior que zero.'); return; }
+      if (!dataBaixa) { alert('Informe a data da baixa.'); return; }
+      const id = 'acerto-' + Date.now() + '-' + Math.floor(Math.random() * 1e6);
+      const registro = { id, casa_id: casaId, periodo_de: perDe, periodo_ate: perAte, tipo, valor: +valor.toFixed(2), data_baixa: dataBaixa, observacao: obs };
+      try {
+        const { error } = await supabaseClient.from('acertos').insert(registro);
+        if (error) throw error;
+      } catch (e) {
+        console.error(e);
+        alert('Não foi possível salvar a baixa. Verifique se a tabela "acertos" foi criada no Supabase.');
+        return;
+      }
+      estado.acertos = estado.acertos || [];
+      estado.acertos.push({ id, casaId, periodoDe: perDe, periodoAte: perAte, tipo, valor: +valor.toFixed(2), dataBaixa: dataBaixa, observacao: obs, createdAt: new Date().toISOString() });
+      salvarDadosNoLocalStorage();
+      fecharModalBaixa();
+      renderizarAcertos(document.getElementById('conteudo-principal'));
+    }
+
+    async function excluirBaixa(id) {
+      if (!confirm('Estornar esta baixa? O valor volta para o saldo em aberto.')) return;
+      try {
+        const { error } = await supabaseClient.from('acertos').delete().eq('id', id);
+        if (error) throw error;
+      } catch (e) {
+        console.error(e);
+        alert('Não foi possível excluir a baixa.');
+        return;
+      }
+      estado.acertos = (estado.acertos || []).filter(x => x.id !== id);
+      salvarDadosNoLocalStorage();
+      renderizarAcertos(document.getElementById('conteudo-principal'));
+    }
+
     // ================= 6. ABA DE PAGAMENTO =================
     function renderizarPagamentos(container) {
       const usuarioLogado = obterUsuarioLogado();
@@ -4165,6 +4484,9 @@
                           </label>
                           <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
                             <input type="checkbox" value="comissao" ${permissoesAtuais.includes('comissao') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Comissão
+                          </label>
+                          <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
+                            <input type="checkbox" value="acertos" ${permissoesAtuais.includes('acertos') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Acerto Casas
                           </label>
                           <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
                             <input type="checkbox" value="pagamentos" ${permissoesAtuais.includes('pagamentos') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Pagamento
