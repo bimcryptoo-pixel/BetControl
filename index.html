@@ -378,6 +378,9 @@
         <button id="nav-lucro" onclick="mudarAba('lucro')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
           💰 Lucro
         </button>
+        <button id="nav-analises" onclick="mudarAba('analises')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
+          🎯 Análises
+        </button>
         <button id="nav-comissao" onclick="mudarAba('comissao')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
           🤝 Comissão
         </button>
@@ -705,7 +708,7 @@
           atualizarVisibilidadeMenuLateral(usr);
 
           if (!verificarPermissaoAba(estado.abaAtiva)) {
-            const abasPossiveis = ['dashboard', 'volumemes', 'operadores', 'casas', 'relatorios', 'lucro', 'comissao', 'pagamentos', 'backup', 'usuarios'];
+            const abasPossiveis = ['dashboard', 'volumemes', 'operadores', 'casas', 'relatorios', 'lucro', 'analises', 'comissao', 'pagamentos', 'backup', 'usuarios'];
             const primeiraPermitida = abasPossiveis.find(a => verificarPermissaoAba(a));
             if (primeiraPermitida) {
               estado.abaAtiva = primeiraPermitida;
@@ -737,6 +740,7 @@
         'casas': 'nav-casas',
         'relatorios': 'nav-relatorios',
         'lucro': 'nav-lucro',
+        'analises': 'nav-analises',
         'comissao': 'nav-comissao',
         'pagamentos': 'nav-pagamentos',
         'backup': 'nav-backup',
@@ -1098,6 +1102,7 @@
       else if (estado.abaAtiva === 'casas') renderizarCasas(main);
       else if (estado.abaAtiva === 'relatorios') renderizarRelatorios(main);
       else if (estado.abaAtiva === 'lucro') renderizarLucro(main);
+      else if (estado.abaAtiva === 'analises') renderizarAnalises(main);
       else if (estado.abaAtiva === 'comissao') renderizarComissao(main);
       else if (estado.abaAtiva === 'pagamentos') renderizarPagamentos(main);
       else if (estado.abaAtiva === 'backup') renderizarBackup(main);
@@ -3451,6 +3456,181 @@
       `;
     }
 
+    // ================= 5a2. MÓDULO ANÁLISES (Esporte x Mercado) =================
+    // (05/10/2026, a pedido do usuário) Lucratividade por esporte e por mercado,
+    // respeitando os filtros globais (período, casa, operador). Só entram apostas
+    // finalizadas (retorno gravado).
+    const NBA_TIMES_ANALISE = ['heat','raptors','lakers','celtics','bulls','warriors','knicks','nets','76ers','bucks','suns','mavericks','nuggets','hawks','hornets','cavaliers','pistons','pacers','clippers','grizzlies','timberwolves','pelicans','thunder','magic','kings','spurs','rockets','jazz','trail blazers','wizards'];
+
+    function classificarEsporteAnalise(jogo, mercado) {
+      const j = String(jogo || '').toLowerCase();
+      const m = String(mercado || '').toLowerCase();
+      if (NBA_TIMES_ANALISE.some(t => j.includes(t))) return 'Basquete';
+      if (m.includes('escanteio') || /\bgols?\b/.test(m)) return 'Futebol';
+      if (m.includes('quarto') || m.includes('handicap de pontos') || m.includes('time - pontos')) return 'NFL';
+      if (m.includes('set') || m.includes('games') || m.includes('para ganhar a partida')) return 'Tênis';
+      if (m.includes('resultado final')) return 'Futebol';
+      return 'Outros';
+    }
+
+    function normalizarMercadoAnalise(m) {
+      let s = String(m || '').trim();
+      s = s.replace(/^(oe|ae)\s+/i, '');
+      s = s.replace(/[\.\|\*\='"]+\s*$/, '');
+      s = s.replace(/\s+(FT|FA|TA|Fo|A|f|t|e|a|u)$/, '').trim();
+      return s || 'Não informado';
+    }
+
+    function iconeEsporteAnalise(esporte) {
+      return { 'Tênis': '🎾', 'Futebol': '⚽', 'NFL': '🏈', 'Basquete': '🏀', 'Mista': '🔀', 'Outros': '❓' }[esporte] || '❓';
+    }
+
+    function renderizarAnalises(container) {
+      const apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
+      const selecoesPorAposta = {};
+      (estado.selecoes || []).forEach(s => {
+        if (!selecoesPorAposta[s.apostaId]) selecoesPorAposta[s.apostaId] = [];
+        selecoesPorAposta[s.apostaId].push(s);
+      });
+
+      const lucroPorEsporte = {};
+      const lucroPorMercado = {};
+      let lucroGeral = 0, volumeGeral = 0, finalizadas = 0;
+
+      apostasFiltradas.forEach(a => {
+        if (!(a.finalizada && a.retorno !== null && a.retorno !== undefined)) return;
+        const lucroAposta = Number(a.retorno) - Number(a.stake);
+        lucroGeral += lucroAposta;
+        volumeGeral += Number(a.stake);
+        finalizadas++;
+
+        // ---- por esporte (nível da aposta) ----
+        const pernas = selecoesPorAposta[a.id] || [];
+        const esportes = [...new Set(pernas.map(p => classificarEsporteAnalise(p.jogo, p.mercado)))];
+        const esporteChave = esportes.length === 0 ? 'Outros' : (esportes.length === 1 ? esportes[0] : 'Mista');
+        if (!lucroPorEsporte[esporteChave]) lucroPorEsporte[esporteChave] = { lucro: 0, volume: 0, apostas: 0, greens: 0, reds: 0 };
+        const de = lucroPorEsporte[esporteChave];
+        de.lucro += lucroAposta; de.volume += Number(a.stake); de.apostas++;
+        if (lucroAposta > 0) de.greens++; else if (lucroAposta < 0) de.reds++;
+
+        // ---- por mercado (nível da perna, rateio proporcional) ----
+        if (pernas.length > 0) {
+          const mercadosUnicos = [...new Set(pernas.map(p => normalizarMercadoAnalise(p.mercado)))];
+          mercadosUnicos.forEach(mk => {
+            if (!lucroPorMercado[mk]) lucroPorMercado[mk] = { lucro: 0, volume: 0, apostas: 0 };
+            const dm = lucroPorMercado[mk];
+            dm.lucro += lucroAposta / mercadosUnicos.length;
+            dm.volume += Number(a.stake) / mercadosUnicos.length;
+            dm.apostas++;
+          });
+        }
+      });
+
+      const esportesOrdenados = Object.keys(lucroPorEsporte).sort((x, y) => lucroPorEsporte[y].lucro - lucroPorEsporte[x].lucro);
+      const mercadosOrdenados = Object.keys(lucroPorMercado).sort((x, y) => lucroPorMercado[y].lucro - lucroPorMercado[x].lucro);
+      const fmt = v => `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+      const corLucro = v => v > 0 ? 'text-emerald-500' : v < 0 ? 'text-red-500' : 'text-texto';
+      const roiDe = d => d.volume > 0 ? ((d.lucro / d.volume) * 100).toFixed(2) + '%' : '—';
+
+      const linhaTotal = (tot, colspan) => `
+        <tr class="bg-panelAlt border-t-2 border-emerald-600">
+          <td class="p-3 font-black text-texto uppercase" colspan="${colspan - 4}">Total</td>
+          <td class="p-3 font-black text-texto">${tot.apostas}</td>
+          <td class="p-3 font-black text-texto">${fmt(tot.volume)}</td>
+          <td class="p-3 font-black ${corLucro(tot.lucro)}">${fmt(tot.lucro)}</td>
+          <td class="p-3 font-black ${corLucro(tot.lucro)}">${roiDe(tot)}</td>
+        </tr>`;
+
+      container.innerHTML = `
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
+          <div>
+            <h2 class="text-xl md:text-2xl font-bold" style="color: var(--color-text);">🎯 Análises de Lucratividade</h2>
+            <p class="text-xs text-mutado">Lucro por esporte e por mercado no período filtrado. Só apostas finalizadas.</p>
+          </div>
+          <button onclick="window.print()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition">
+            🖨️ Imprimir / Salvar PDF
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="bg-panel border border-linha rounded-xl p-5">
+            <p class="text-xs text-mutado mb-1">Lucro Líquido (Finalizadas)</p>
+            <h3 class="text-xl md:text-2xl font-black ${corLucro(lucroGeral)}">${fmt(lucroGeral)}</h3>
+          </div>
+          <div class="bg-panel border border-linha rounded-xl p-5">
+            <p class="text-xs text-mutado mb-1">Volume Total Analisado</p>
+            <h3 class="text-xl md:text-2xl font-bold text-blue-500">${fmt(volumeGeral)}</h3>
+          </div>
+          <div class="bg-panel border border-linha rounded-xl p-5">
+            <p class="text-xs text-mutado mb-1">ROI Geral do Período</p>
+            <h3 class="text-xl md:text-2xl font-bold text-teal-500">${volumeGeral > 0 ? ((lucroGeral / volumeGeral) * 100).toFixed(2) + '%' : '—'}</h3>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
+            <h3 class="text-sm md:text-md font-bold mb-4 text-texto uppercase tracking-wider">🏅 Lucro por Esporte</h3>
+            <div class="overflow-x-auto rounded-lg border border-linha">
+              <table class="w-full text-left text-xs text-mutado">
+                <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+                  <tr><th class="p-3 border-b border-linha">Esporte</th><th class="p-3 border-b border-linha">Apostas</th><th class="p-3 border-b border-linha">🟢</th><th class="p-3 border-b border-linha">🔴</th><th class="p-3 border-b border-linha">Volume</th><th class="p-3 border-b border-linha">Lucro / Prejuízo</th><th class="p-3 border-b border-linha">ROI</th></tr>
+                </thead>
+                <tbody class="divide-y divide-linha">
+                  ${esportesOrdenados.length === 0 ? '<tr><td colspan="7" class="p-4 text-center text-mutado">Nenhum dado financeiro finalizado.</td></tr>' : ''}
+                  ${esportesOrdenados.map((esp, i) => {
+                    const d = lucroPorEsporte[esp];
+                    return `<tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
+                      <td class="p-3 font-semibold text-texto">${iconeEsporteAnalise(esp)} ${esp}</td>
+                      <td class="p-3 text-texto">${d.apostas}</td>
+                      <td class="p-3 text-emerald-500 font-bold">${d.greens}</td>
+                      <td class="p-3 text-red-500 font-bold">${d.reds}</td>
+                      <td class="p-3 text-texto">${fmt(d.volume)}</td>
+                      <td class="p-3 font-bold ${corLucro(d.lucro)}">${fmt(d.lucro)}</td>
+                      <td class="p-3 font-bold ${corLucro(d.lucro)}">${roiDe(d)}</td>
+                    </tr>`;
+                  }).join('')}
+                  ${esportesOrdenados.length > 0 ? linhaTotal(esportesOrdenados.reduce((acc, k) => {
+                    const d = lucroPorEsporte[k];
+                    acc.apostas += d.apostas; acc.volume += d.volume; acc.lucro += d.lucro; return acc;
+                  }, { apostas: 0, volume: 0, lucro: 0 }), 7) : ''}
+                </tbody>
+              </table>
+            </div>
+            <p class="text-[10px] text-mutado mt-2">Apostas com pernas de esportes diferentes aparecem como "Mista".</p>
+          </div>
+
+          <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
+            <h3 class="text-sm md:text-md font-bold mb-4 text-texto uppercase tracking-wider">🎯 Lucro por Mercado</h3>
+            <div class="overflow-x-auto rounded-lg border border-linha">
+              <table class="w-full text-left text-xs text-mutado">
+                <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+                  <tr><th class="p-3 border-b border-linha">Mercado</th><th class="p-3 border-b border-linha">Apostas</th><th class="p-3 border-b border-linha">Volume</th><th class="p-3 border-b border-linha">Lucro / Prejuízo</th><th class="p-3 border-b border-linha">ROI</th></tr>
+                </thead>
+                <tbody class="divide-y divide-linha">
+                  ${mercadosOrdenados.length === 0 ? '<tr><td colspan="5" class="p-4 text-center text-mutado">Nenhum dado financeiro finalizado.</td></tr>' : ''}
+                  ${mercadosOrdenados.map((mk, i) => {
+                    const d = lucroPorMercado[mk];
+                    return `<tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
+                      <td class="p-3 font-semibold text-texto">${mk}</td>
+                      <td class="p-3 text-texto">${d.apostas}</td>
+                      <td class="p-3 text-texto">${fmt(d.volume)}</td>
+                      <td class="p-3 font-bold ${corLucro(d.lucro)}">${fmt(d.lucro)}</td>
+                      <td class="p-3 font-bold ${corLucro(d.lucro)}">${roiDe(d)}</td>
+                    </tr>`;
+                  }).join('')}
+                  ${mercadosOrdenados.length > 0 ? linhaTotal(mercadosOrdenados.reduce((acc, k) => {
+                    const d = lucroPorMercado[k];
+                    acc.apostas += d.apostas; acc.volume += d.volume; acc.lucro += d.lucro; return acc;
+                  }, { apostas: 0, volume: 0, lucro: 0 }), 5) : ''}
+                </tbody>
+              </table>
+            </div>
+            <p class="text-[10px] text-mutado mt-2">Em múltiplas, o lucro da aposta é rateado entre os mercados das pernas.</p>
+          </div>
+        </div>
+      `;
+    }
+
     // ================= 5b. MÓDULO COMISSÃO BANCA =================
     // (02/10/2026, a pedido do usuário) Comissão calculada SOMENTE sobre o
     // prejuízo da casa no período selecionado: se lucro/prejuízo < 0, cada
@@ -3925,6 +4105,9 @@
                           </label>
                           <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
                             <input type="checkbox" value="lucro" ${permissoesAtuais.includes('lucro') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Lucro
+                          </label>
+                          <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
+                            <input type="checkbox" value="analises" ${permissoesAtuais.includes('analises') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Análises
                           </label>
                           <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
                             <input type="checkbox" value="comissao" ${permissoesAtuais.includes('comissao') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Comissão
