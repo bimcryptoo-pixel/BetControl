@@ -571,7 +571,8 @@
             selecao: s.selecao,
             odd: Number(s.odd) || 1,
             status: s.status || 'pendente',
-            detalhe: s.detalhe || ''
+            detalhe: s.detalhe || '',
+            oddFechamento: (s.odd_fechamento !== null && s.odd_fechamento !== undefined) ? Number(s.odd_fechamento) : null
           }));
         }
         if (usrs && usrs.length > 0) {
@@ -1852,7 +1853,8 @@
             selecao: s.selecao,
             odd: Number(s.odd) || 1,
             status: s.status || 'pendente',
-            detalhe: s.detalhe || ''
+            detalhe: s.detalhe || '',
+            oddFechamento: (s.odd_fechamento !== null && s.odd_fechamento !== undefined) ? Number(s.odd_fechamento) : null
           }));
           estado.selecoes = (estado.selecoes || []).filter(s => s.apostaId !== apostaId).concat(mapeadas);
           salvarDadosNoLocalStorage();
@@ -1891,12 +1893,24 @@
           <div class="text-xs text-mutado">${s.jogo}</div>
           ${s.mercado ? `<div class="text-xs text-mutado">${s.mercado}</div>` : ''}
           ${s.detalhe ? `<div class="text-xs mt-1 text-texto opacity-80">📊 ${s.detalhe}</div>` : ''}
-          ${verificarSeTemPermissaoEdicao() ? `<div class="flex gap-1 mt-2 items-center">
+          ${(() => {
+            const of = (s.oddFechamento !== null && s.oddFechamento !== undefined) ? Number(s.oddFechamento) : null;
+            if (of && of > 0 && Number(s.odd) > 0) {
+              const clv = (Number(s.odd) / of - 1) * 100;
+              const cor = clv > 0.05 ? 'text-emerald-500' : clv < -0.05 ? 'text-red-500' : 'text-mutado';
+              return `<div class="text-xs mt-1 ${cor} font-bold">📏 CLV ${clv > 0 ? '+' : ''}${clv.toFixed(1)}% <span class="text-mutado font-normal">(fechamento @ ${of.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})</span></div>`;
+            }
+            return '';
+          })()}
+          ${verificarSeTemPermissaoEdicao() ? `<div class="flex gap-1 mt-2 items-center flex-wrap">
             <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'green')" title="Marcar GREEN" class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold hover:bg-emerald-500 hover:text-white transition">🟢</button>
             <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'red')" title="Marcar RED" class="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold hover:bg-red-500 hover:text-white transition">🔴</button>
             <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'void')" title="Marcar VOID" class="text-[10px] px-2 py-0.5 rounded bg-gray-500/20 text-gray-300 font-bold hover:bg-gray-500 hover:text-white transition">➖</button>
             <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'pendente')" title="Voltar para PENDENTE" class="text-[10px] px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-bold hover:bg-yellow-500 hover:text-black transition">⏳</button>
             <button onclick="excluirSelecaoPainel('${apostaId}', '${s.id}')" title="Apagar esta perna" class="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold hover:bg-red-500 hover:text-white transition">🗑️</button>
+            <label class="text-[10px] text-mutado font-bold ml-1">📏 Fechamento:
+              <input type="number" step="0.01" min="1.01" placeholder="ex: 2.38" value="${(s.oddFechamento !== null && s.oddFechamento !== undefined) ? s.oddFechamento : ''}" onchange="salvarOddFechamento('${apostaId}', '${s.id}', this.value)" class="w-20 px-1.5 py-0.5 bg-input border border-linha rounded text-texto text-[10px] outline-none">
+            </label>
           </div>` : ''}
         </div>`).join('');
 
@@ -2130,6 +2144,25 @@
       estado.selecoes = (estado.selecoes || []).filter(s => s.id !== selId);
       await deletarDaNuvemELocal('selecao', selId);
       salvarDadosNoLocalStorage();
+      abrirPainelBilhete(apostaId);
+      if (typeof renderizarAba === 'function') renderizarAba();
+    }
+
+    // CLV (05/10/2026): grava a odd de fechamento da perna para cálculo do Closing Line Value
+    async function salvarOddFechamento(apostaId, selId, valor) {
+      if (!verificarSeTemPermissaoEdicao()) return;
+      const num = valor === '' || valor === null || valor === undefined ? null : Number(String(valor).replace(',', '.'));
+      if (num !== null && !(num > 1)) { alert('Odd de fechamento inválida.'); return; }
+      try {
+        const { error } = await supabaseClient.from('selecoes').update({ odd_fechamento: num }).eq('id', selId);
+        if (error) throw error;
+        const sel = (estado.selecoes || []).find(x => x.id === selId);
+        if (sel) sel.oddFechamento = num;
+        salvarDadosNoLocalStorage();
+      } catch (e) {
+        alert('Não foi possível salvar a odd de fechamento: ' + (e.message || e));
+        return;
+      }
       abrirPainelBilhete(apostaId);
       if (typeof renderizarAba === 'function') renderizarAba();
     }
@@ -3628,6 +3661,56 @@
             <p class="text-[10px] text-mutado mt-2">Em múltiplas, o lucro da aposta é rateado entre os mercados das pernas.</p>
           </div>
         </div>
+
+        ${(() => {
+          // ---- CLV (05/10/2026): pernas com odd de fechamento registrada ----
+          const pernasClv = [];
+          apostasFiltradas.forEach(a => {
+            if (!(a.finalizada && a.retorno !== null && a.retorno !== undefined)) return;
+            (selecoesPorAposta[a.id] || []).forEach(p => {
+              const of = (p.oddFechamento !== null && p.oddFechamento !== undefined) ? Number(p.oddFechamento) : null;
+              if (of && of > 1 && Number(p.odd) > 0) {
+                pernasClv.push({ jogo: p.jogo, mercado: p.mercado, selecao: p.selecao, odd: Number(p.odd), fech: of, clv: (Number(p.odd) / of - 1) * 100 });
+              }
+            });
+          });
+          if (pernasClv.length === 0) return `
+            <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6">
+              <h3 class="text-sm md:text-md font-bold mb-2 text-texto uppercase tracking-wider">📏 CLV — Closing Line Value</h3>
+              <p class="text-xs text-mutado">Nenhuma perna com odd de fechamento registrada no período. A liquidação automática passa a capturar a odd de fechamento; também dá pra lançar manualmente no painel do bilhete (📎).</p>
+            </div>`;
+          pernasClv.sort((x, y) => y.clv - x.clv);
+          const clvMedio = pernasClv.reduce((s, p) => s + p.clv, 0) / pernasClv.length;
+          const positivas = pernasClv.filter(p => p.clv > 0.05).length;
+          return `
+          <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <h3 class="text-sm md:text-md font-bold text-texto uppercase tracking-wider">📏 CLV — Closing Line Value</h3>
+              <div class="flex gap-4 text-xs">
+                <span class="text-mutado">CLV médio: <strong class="${corLucro(clvMedio)}">${clvMedio > 0 ? '+' : ''}${clvMedio.toFixed(1)}%</strong></span>
+                <span class="text-mutado">Bateu a linha: <strong class="text-texto">${positivas}/${pernasClv.length}</strong></span>
+              </div>
+            </div>
+            <div class="overflow-x-auto rounded-lg border border-linha">
+              <table class="w-full text-left text-xs text-mutado">
+                <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+                  <tr><th class="p-3 border-b border-linha">Jogo</th><th class="p-3 border-b border-linha">Mercado</th><th class="p-3 border-b border-linha">Pegou @</th><th class="p-3 border-b border-linha">Fechou @</th><th class="p-3 border-b border-linha">CLV</th></tr>
+                </thead>
+                <tbody class="divide-y divide-linha">
+                  ${pernasClv.map((p, i) => `
+                    <tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
+                      <td class="p-3 text-texto">${p.jogo}<div class="text-mutado">${p.selecao}</div></td>
+                      <td class="p-3 text-texto">${p.mercado || '-'}</td>
+                      <td class="p-3 text-texto font-bold">${p.odd.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                      <td class="p-3 text-texto">${p.fech.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                      <td class="p-3 font-black ${corLucro(p.clv)}">${p.clv > 0 ? '+' : ''}${p.clv.toFixed(1)}%</td>
+                    </tr>`).join('')}
+                </tbody>
+              </table>
+            </div>
+            <p class="text-[10px] text-mutado mt-2">CLV = (odd que você pegou ÷ odd de fechamento − 1). Positivo = você bateu a linha.</p>
+          </div>`;
+        })()}
       `;
     }
 
