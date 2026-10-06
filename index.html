@@ -479,6 +479,8 @@
         estilo = "background-color: #ffffff; color: #000000;";
       } else if (/^ZAP\s*BET$/i.test(nomeLimpo)) {
         estilo = "background-color: #1f2937; color: #22c55e;";
+      } else if (/^BETS$/i.test(nomeLimpo)) {
+        estilo = "background-color: #009c3b; color: #ffdf00;";
       }
 
       return `<span class="flag-casa px-2.5 py-1 rounded-md text-[11px] md:text-xs font-black inline-flex items-center shadow-sm uppercase" style="${estilo}">${nomeLimpo}</span>`;
@@ -3686,7 +3688,8 @@
       'X BETS':   [['Fabio', 7.5], ['Lucas', 2.5]],
       'BET ZAP':  [['Fabio', 7.5], ['Lucas', 2.5]],
       'GG BETS':  [['Fabio', 7.5], ['Lucas', 2.5]],
-      'ZAP BET':  [['Renan', 2.5], ['Fabio', 5], ['Lucas', 2.5]]
+      'ZAP BET':  [['Renan', 2.5], ['Fabio', 5], ['Lucas', 2.5]],
+      'BETS':     [['Renan', 2.5], ['Fabio', 5], ['Lucas', 2.5]]
     };
 
     // Filtro por comissionado (05/10/2026, a pedido do usuário): '' = todos;
