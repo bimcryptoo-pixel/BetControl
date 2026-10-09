@@ -3399,14 +3399,17 @@
 
       // (09/10/2026) Comissão 10% com makeup: em ordem cronológica, a comissão só incide
       // sobre o lucro que superar o maior acumulado anterior (cobre o negativo primeiro).
+      // O makeup exibido é o negativo acumulado ainda a recuperar.
       const chavesCron = Object.keys(lucroPorPeriodo).sort((a, b) => a.localeCompare(b));
       let acumuladoMk = 0, tetoMk = 0;
       const comissaoPorPeriodo = {};
+      const makeupPorPeriodo = {};
       chavesCron.forEach(ch => {
         acumuladoMk += lucroPorPeriodo[ch].lucro;
         let com = 0;
         if (acumuladoMk > tetoMk) { com = (acumuladoMk - tetoMk) * 0.10; tetoMk = acumuladoMk; }
         comissaoPorPeriodo[ch] = Math.round(com * 100) / 100;
+        makeupPorPeriodo[ch] = acumuladoMk < 0 ? Math.round(acumuladoMk * 100) / 100 : 0;
       });
       const totalComissao = Object.values(comissaoPorPeriodo).reduce((a, b) => a + b, 0);
       const casasOrdenadas = Object.keys(lucroPorCasa).sort((a, b) => lucroPorCasa[b].lucro - lucroPorCasa[a].lucro);
@@ -3485,7 +3488,7 @@
                     <th class="p-3 border-b border-linha">🔴</th>
                     <th class="p-3 border-b border-linha">Volume</th>
                     <th class="p-3 border-b border-linha">Lucro / Prejuízo</th>
-                    <th class="p-3 border-b border-linha">Comissão 10%</th>
+                    <th class="p-3 border-b border-linha" title="Comissão de 10% sobre o lucro novo (após cobrir o negativo) / makeup ainda a recuperar">Comissão 10% / Makeup</th>
                     <th class="p-3 border-b border-linha">ROI</th>
                   </tr>
                 </thead>
@@ -3495,6 +3498,12 @@
                     const dados = lucroPorPeriodo[chave];
                     const nomePeriodoFormatado = rotuloPeriodo[chave] || chave;
                     const comissao = comissaoPorPeriodo[chave] || 0;
+                    const makeup = makeupPorPeriodo[chave] || 0;
+                    const celComissao = comissao > 0
+                      ? `<td class="p-3 text-emerald-500 font-bold">R$ ${comissao.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>`
+                      : makeup < 0
+                        ? `<td class="p-3 text-red-500 font-bold" title="Makeup a recuperar">-R$ ${(-makeup).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>`
+                        : `<td class="p-3 text-mutado">—</td>`;
                     const corLucro = dados.lucro > 0 ? 'text-emerald-500 font-bold' : dados.lucro < 0 ? 'text-red-500 font-bold' : 'text-texto font-bold';
                     const roiMes = dados.volume > 0 ? ((dados.lucro / dados.volume) * 100).toFixed(2) : '0.00';
                     const corRoi = dados.lucro > 0 ? 'text-emerald-500' : dados.lucro < 0 ? 'text-red-500' : 'text-texto';
@@ -3506,7 +3515,7 @@
                         <td class="p-3 text-red-500 font-bold">${dados.reds}</td>
                         <td class="p-3 text-texto">R$ ${dados.volume.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                         <td class="p-3 ${corLucro}">R$ ${dados.lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                        <td class="p-3 ${comissao > 0 ? 'text-emerald-500 font-bold' : 'text-mutado'}">${comissao > 0 ? 'R$ ' + comissao.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '—'}</td>
+                        ${celComissao}
                         <td class="p-3 ${corRoi} font-bold">${roiMes}%</td>
                       </tr>
                     `;
