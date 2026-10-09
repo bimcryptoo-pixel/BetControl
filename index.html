@@ -3396,6 +3396,19 @@
       const periodosOrdenados = Object.keys(lucroPorPeriodo).sort((a, b) => {
         return estado.ordemLucroMes === 'asc' ? a.localeCompare(b) : b.localeCompare(a);
       });
+
+      // (09/10/2026) Comissão 10% com makeup: em ordem cronológica, a comissão só incide
+      // sobre o lucro que superar o maior acumulado anterior (cobre o negativo primeiro).
+      const chavesCron = Object.keys(lucroPorPeriodo).sort((a, b) => a.localeCompare(b));
+      let acumuladoMk = 0, tetoMk = 0;
+      const comissaoPorPeriodo = {};
+      chavesCron.forEach(ch => {
+        acumuladoMk += lucroPorPeriodo[ch].lucro;
+        let com = 0;
+        if (acumuladoMk > tetoMk) { com = (acumuladoMk - tetoMk) * 0.10; tetoMk = acumuladoMk; }
+        comissaoPorPeriodo[ch] = Math.round(com * 100) / 100;
+      });
+      const totalComissao = Object.values(comissaoPorPeriodo).reduce((a, b) => a + b, 0);
       const casasOrdenadas = Object.keys(lucroPorCasa).sort((a, b) => lucroPorCasa[b].lucro - lucroPorCasa[a].lucro);
 
       // Casas disponíveis para o filtro do módulo (globais, unificadas)
@@ -3472,14 +3485,16 @@
                     <th class="p-3 border-b border-linha">🔴</th>
                     <th class="p-3 border-b border-linha">Volume</th>
                     <th class="p-3 border-b border-linha">Lucro / Prejuízo</th>
+                    <th class="p-3 border-b border-linha">Comissão 10%</th>
                     <th class="p-3 border-b border-linha">ROI</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-linha">
-                  ${periodosOrdenados.length === 0 ? '<tr><td colspan="7" class="p-4 text-center text-mutado">Nenhum dado financeiro finalizado.</td></tr>' : ''}
+                  ${periodosOrdenados.length === 0 ? '<tr><td colspan="8" class="p-4 text-center text-mutado">Nenhum dado financeiro finalizado.</td></tr>' : ''}
                   ${periodosOrdenados.map((chave, index) => {
                     const dados = lucroPorPeriodo[chave];
                     const nomePeriodoFormatado = rotuloPeriodo[chave] || chave;
+                    const comissao = comissaoPorPeriodo[chave] || 0;
                     const corLucro = dados.lucro > 0 ? 'text-emerald-500 font-bold' : dados.lucro < 0 ? 'text-red-500 font-bold' : 'text-texto font-bold';
                     const roiMes = dados.volume > 0 ? ((dados.lucro / dados.volume) * 100).toFixed(2) : '0.00';
                     const corRoi = dados.lucro > 0 ? 'text-emerald-500' : dados.lucro < 0 ? 'text-red-500' : 'text-texto';
@@ -3491,6 +3506,7 @@
                         <td class="p-3 text-red-500 font-bold">${dados.reds}</td>
                         <td class="p-3 text-texto">R$ ${dados.volume.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                         <td class="p-3 ${corLucro}">R$ ${dados.lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        <td class="p-3 ${comissao > 0 ? 'text-emerald-500 font-bold' : 'text-mutado'}">${comissao > 0 ? 'R$ ' + comissao.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '—'}</td>
                         <td class="p-3 ${corRoi} font-bold">${roiMes}%</td>
                       </tr>
                     `;
@@ -3511,6 +3527,7 @@
                         <td class="p-3 font-black text-red-500">${t.reds}</td>
                         <td class="p-3 font-black text-texto">R$ ${t.volume.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                         <td class="p-3 ${corLucroT}">R$ ${t.lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        <td class="p-3 font-black ${totalComissao > 0 ? 'text-emerald-500' : 'text-mutado'}">${totalComissao > 0 ? 'R$ ' + totalComissao.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '—'}</td>
                         <td class="p-3 font-black ${t.lucro > 0 ? 'text-emerald-500' : t.lucro < 0 ? 'text-red-500' : 'text-texto'}">${roiT}%</td>
                       </tr>
                     `;
