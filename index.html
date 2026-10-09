@@ -420,6 +420,7 @@
       ordemVolumeMes: 'desc',
       ordemLucroMes: 'desc',
       granLucro: 'mes',
+      fechamentoSemanal: '',
       filtroPendentes: false,
       filtros: { dataInicio: '', dataFim: '', operadorId: '', casaId: '', mes: '', ano: '' },
       usuarios: [
@@ -506,6 +507,7 @@
           if (!parsed.ordemVolumeMes) parsed.ordemVolumeMes = 'desc';
           if (!parsed.ordemLucroMes) parsed.ordemLucroMes = 'desc';
           if (!parsed.granLucro) parsed.granLucro = 'mes';
+          if (parsed.fechamentoSemanal === undefined) parsed.fechamentoSemanal = '';
           if (parsed.filtroPendentes === undefined) parsed.filtroPendentes = false;
           if (!parsed.selecoes) parsed.selecoes = [];
           if (!parsed.acertos) parsed.acertos = [];
@@ -3342,6 +3344,19 @@
 
       const gran = estado.granLucro || 'mes';
       const nomeGran = gran === 'semana' ? 'Semanal' : gran === 'dia' ? 'Diário' : 'Mensal';
+
+      // (09/10/2026) FECHAMENTO SEMANAL: semanas de segunda a domingo com apostas (recentes primeiro).
+      const semanasMap = {};
+      apostasFiltradas.forEach(a => {
+        const per = chavePeriodoLucro(a.data, 'semana');
+        if (per.chave !== 'Desconhecido') semanasMap[per.chave] = per.rotulo;
+      });
+      const semanasOrdenadas = Object.keys(semanasMap).sort((a, b) => b.localeCompare(a));
+      let fech = estado.fechamentoSemanal || '';
+      if (fech && !semanasMap[fech]) fech = '';
+      const rotuloFech = fech ? semanasMap[fech] : '';
+      const apostasFech = fech ? apostasFiltradas.filter(a => chavePeriodoLucro(a.data, 'semana').chave === fech) : apostasFiltradas;
+
       const lucroPorPeriodo = {};
       const rotuloPeriodo = {};
       const lucroPorCasa = {};
@@ -3349,7 +3364,7 @@
       let lucroGeralFinalizado = 0;
       let volumeGeral = 0;
 
-      apostasFiltradas.forEach(a => {
+      apostasFech.forEach(a => {
         volumeGeral += a.stake;
         if (a.finalizada && a.retorno !== null) {
           const lucroAposta = a.retorno - a.stake;
@@ -3427,8 +3442,13 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
             <div class="flex items-center justify-between mb-4 no-print">
-              <h3 class="text-sm md:text-md font-bold text-texto uppercase tracking-wider">📅 Lucro Detalhado — ${nomeGran}${nomeCasaFiltro ? ` — ${nomeCasaFiltro}` : ''}</h3>
-              <div class="flex items-center gap-2">
+              <h3 class="text-sm md:text-md font-bold text-texto uppercase tracking-wider">📅 Lucro Detalhado — ${nomeGran}${rotuloFech ? ` · ${rotuloFech}` : ''}${nomeCasaFiltro ? ` — ${nomeCasaFiltro}` : ''}</h3>
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-bold text-texto">Fechamento:</span>
+                <select id="selectFechamentoSemanal" onchange="estado.fechamentoSemanal=this.value;if(this.value)estado.granLucro='dia';salvarDadosNoLocalStorage();renderizarAba()" class="px-2.5 py-1.5 bg-input border border-linha rounded text-xs text-texto outline-none font-bold" title="Filtrar por semana de fechamento (segunda a domingo)">
+                  <option value="">📆 Todas as semanas</option>
+                  ${semanasOrdenadas.map(s => `<option value="${s}" ${fech === s ? 'selected' : ''}>${semanasMap[s]}</option>`).join('')}
+                </select>
                 <span class="text-xs font-bold text-texto">Período:</span>
                 <select id="selectGranLucro" onchange="estado.granLucro=this.value;salvarDadosNoLocalStorage();renderizarAba()" class="px-2.5 py-1.5 bg-input border border-linha rounded text-xs text-texto outline-none font-bold">
                   <option value="mes" ${gran === 'mes' ? 'selected' : ''}>📅 Mensal</option>
