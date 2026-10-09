@@ -419,6 +419,7 @@
       ordemDashboard: 'desc',
       ordemVolumeMes: 'desc',
       ordemLucroMes: 'desc',
+      granLucro: 'mes',
       filtroPendentes: false,
       filtros: { dataInicio: '', dataFim: '', operadorId: '', casaId: '', mes: '', ano: '' },
       usuarios: [
@@ -504,6 +505,7 @@
           if (!parsed.ordemDashboard) parsed.ordemDashboard = 'desc';
           if (!parsed.ordemVolumeMes) parsed.ordemVolumeMes = 'desc';
           if (!parsed.ordemLucroMes) parsed.ordemLucroMes = 'desc';
+          if (!parsed.granLucro) parsed.granLucro = 'mes';
           if (parsed.filtroPendentes === undefined) parsed.filtroPendentes = false;
           if (!parsed.selecoes) parsed.selecoes = [];
           if (!parsed.acertos) parsed.acertos = [];
@@ -3316,10 +3318,32 @@
     }
 
     // ================= 5. MÓDULO LUCRO =================
+    // (09/10/2026) Agrupa apostas finalizadas por período: mês, semana (segunda a domingo) ou dia.
+    function chavePeriodoLucro(dataStr, gran) {
+      if (!dataStr) return { chave: 'Desconhecido', rotulo: 'Desconhecido' };
+      const iso = dataStr.substring(0, 10);
+      if (gran === 'dia') return { chave: iso, rotulo: formatarDataBR(iso) };
+      if (gran === 'semana') {
+        const partes = iso.split('-').map(Number);
+        const d = new Date(partes[0], partes[1] - 1, partes[2]);
+        const recuo = (d.getDay() + 6) % 7; // 0 = segunda-feira
+        d.setDate(d.getDate() - recuo);
+        const ini = d;
+        const fim = new Date(d); fim.setDate(fim.getDate() + 6);
+        const isoIni = ini.getFullYear() + '-' + String(ini.getMonth() + 1).padStart(2, '0') + '-' + String(ini.getDate()).padStart(2, '0');
+        const rotIni = String(ini.getDate()).padStart(2, '0') + '/' + String(ini.getMonth() + 1).padStart(2, '0');
+        const rotFim = String(fim.getDate()).padStart(2, '0') + '/' + String(fim.getMonth() + 1).padStart(2, '0') + '/' + fim.getFullYear();
+        return { chave: isoIni, rotulo: rotIni + ' a ' + rotFim };
+      }
+      return { chave: iso.substring(0, 7), rotulo: iso.substring(5, 7) + '/' + iso.substring(0, 4) };
+    }
     function renderizarLucro(container) {
       const apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
 
-      const lucroPorMes = {};
+      const gran = estado.granLucro || 'mes';
+      const nomeGran = gran === 'semana' ? 'Semanal' : gran === 'dia' ? 'Diário' : 'Mensal';
+      const lucroPorPeriodo = {};
+      const rotuloPeriodo = {};
       const lucroPorCasa = {};
 
       let lucroGeralFinalizado = 0;
@@ -3331,15 +3355,17 @@
           const lucroAposta = a.retorno - a.stake;
           lucroGeralFinalizado += lucroAposta;
 
-          const mesAno = a.data ? a.data.substring(0, 7) : 'Desconhecido';
-          if (!lucroPorMes[mesAno]) {
-            lucroPorMes[mesAno] = { lucro: 0, volume: 0, totalApostas: 0, greens: 0, reds: 0 };
+          const per = chavePeriodoLucro(a.data, gran);
+          const chave = per.chave;
+          if (!lucroPorPeriodo[chave]) {
+            lucroPorPeriodo[chave] = { lucro: 0, volume: 0, totalApostas: 0, greens: 0, reds: 0 };
+            rotuloPeriodo[chave] = per.rotulo;
           }
-          lucroPorMes[mesAno].lucro += lucroAposta;
-          lucroPorMes[mesAno].volume += a.stake;
-          lucroPorMes[mesAno].totalApostas++;
-          if (lucroAposta > 0) lucroPorMes[mesAno].greens++;
-          else if (lucroAposta < 0) lucroPorMes[mesAno].reds++;
+          lucroPorPeriodo[chave].lucro += lucroAposta;
+          lucroPorPeriodo[chave].volume += a.stake;
+          lucroPorPeriodo[chave].totalApostas++;
+          if (lucroAposta > 0) lucroPorPeriodo[chave].greens++;
+          else if (lucroAposta < 0) lucroPorPeriodo[chave].reds++;
 
           const casaObj = estado.casas.find(c => c.id === a.casaId);
           const nomeCasa = normalizarNomeCasa(casaObj ? casaObj.nome : 'Outras / N/A');
@@ -3352,7 +3378,7 @@
         }
       });
 
-      const mesesOrdenados = Object.keys(lucroPorMes).sort((a, b) => {
+      const periodosOrdenados = Object.keys(lucroPorPeriodo).sort((a, b) => {
         return estado.ordemLucroMes === 'asc' ? a.localeCompare(b) : b.localeCompare(a);
       });
       const casasOrdenadas = Object.keys(lucroPorCasa).sort((a, b) => lucroPorCasa[b].lucro - lucroPorCasa[a].lucro);
@@ -3366,7 +3392,7 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
           <div>
             <h2 class="text-xl md:text-2xl font-bold text-texto" style="color: var(--color-text);">💰 Dashboard de Lucratividade</h2>
-            <p class="text-xs text-mutado">Relatórios consolidados de lucros por mês e por casas de apostas.</p>
+            <p class="text-xs text-mutado">Relatórios consolidados de lucros por período e por casas de apostas.</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <select id="selectLucroCasa" onchange="filtrarLucroPorCasa(this.value)" title="Filtrar por casa" class="px-2.5 py-2 bg-panel border border-linha rounded-xl text-texto text-xs cursor-pointer hover:border-emerald-500 transition outline-none font-bold">
@@ -3401,8 +3427,14 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
             <div class="flex items-center justify-between mb-4 no-print">
-              <h3 class="text-sm md:text-md font-bold text-texto uppercase tracking-wider">📅 Lucro Detalhado por Mês${nomeCasaFiltro ? ` — ${nomeCasaFiltro}` : ''}</h3>
+              <h3 class="text-sm md:text-md font-bold text-texto uppercase tracking-wider">📅 Lucro Detalhado — ${nomeGran}${nomeCasaFiltro ? ` — ${nomeCasaFiltro}` : ''}</h3>
               <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-texto">Período:</span>
+                <select id="selectGranLucro" onchange="estado.granLucro=this.value;salvarDadosNoLocalStorage();renderizarAba()" class="px-2.5 py-1.5 bg-input border border-linha rounded text-xs text-texto outline-none font-bold">
+                  <option value="mes" ${gran === 'mes' ? 'selected' : ''}>📅 Mensal</option>
+                  <option value="semana" ${gran === 'semana' ? 'selected' : ''}>📆 Semanal</option>
+                  <option value="dia" ${gran === 'dia' ? 'selected' : ''}>🗓️ Diário</option>
+                </select>
                 <span class="text-xs font-bold text-texto">Ordem:</span>
                 <select id="selectOrdemLucroMes" onchange="estado.ordemLucroMes=this.value;salvarDadosNoLocalStorage();renderizarAba()" class="px-2.5 py-1.5 bg-input border border-linha rounded text-xs text-texto outline-none font-bold">
                   <option value="desc" ${estado.ordemLucroMes === 'desc' ? 'selected' : ''}>🔽 Recentes</option>
@@ -3414,7 +3446,7 @@
               <table class="w-full text-left text-xs text-mutado">
                 <thead class="bg-panelAlt text-texto uppercase text-[10px]">
                   <tr>
-                    <th class="p-3 border-b border-linha">Mês / Ano</th>
+                    <th class="p-3 border-b border-linha">Período</th>
                     <th class="p-3 border-b border-linha">Apostas</th>
                     <th class="p-3 border-b border-linha">🟢</th>
                     <th class="p-3 border-b border-linha">🔴</th>
@@ -3424,17 +3456,16 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-linha">
-                  ${mesesOrdenados.length === 0 ? '<tr><td colspan="7" class="p-4 text-center text-mutado">Nenhum dado financeiro finalizado.</td></tr>' : ''}
-                  ${mesesOrdenados.map((mes, index) => {
-                    const dados = lucroPorMes[mes];
-                    const [ano, mesNum] = mes.split('-');
-                    const nomeMesFormatado = `${mesNum}/${ano}`;
+                  ${periodosOrdenados.length === 0 ? '<tr><td colspan="7" class="p-4 text-center text-mutado">Nenhum dado financeiro finalizado.</td></tr>' : ''}
+                  ${periodosOrdenados.map((chave, index) => {
+                    const dados = lucroPorPeriodo[chave];
+                    const nomePeriodoFormatado = rotuloPeriodo[chave] || chave;
                     const corLucro = dados.lucro > 0 ? 'text-emerald-500 font-bold' : dados.lucro < 0 ? 'text-red-500 font-bold' : 'text-texto font-bold';
                     const roiMes = dados.volume > 0 ? ((dados.lucro / dados.volume) * 100).toFixed(2) : '0.00';
                     const corRoi = dados.lucro > 0 ? 'text-emerald-500' : dados.lucro < 0 ? 'text-red-500' : 'text-texto';
                     return `
                       <tr class="${index % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
-                        <td class="p-3 font-semibold text-texto">${nomeMesFormatado}</td>
+                        <td class="p-3 font-semibold text-texto">${nomePeriodoFormatado}</td>
                         <td class="p-3 text-texto">${dados.totalApostas}</td>
                         <td class="p-3 text-emerald-500 font-bold">${dados.greens}</td>
                         <td class="p-3 text-red-500 font-bold">${dados.reds}</td>
@@ -3444,9 +3475,9 @@
                       </tr>
                     `;
                   }).join('')}
-                  ${mesesOrdenados.length > 0 ? (() => {
-                    const t = mesesOrdenados.reduce((acc, m) => {
-                      const d = lucroPorMes[m];
+                  ${periodosOrdenados.length > 0 ? (() => {
+                    const t = periodosOrdenados.reduce((acc, ch) => {
+                      const d = lucroPorPeriodo[ch];
                       acc.apostas += d.totalApostas; acc.greens += d.greens; acc.reds += d.reds; acc.volume += d.volume; acc.lucro += d.lucro;
                       return acc;
                     }, { apostas: 0, greens: 0, reds: 0, volume: 0, lucro: 0 });
