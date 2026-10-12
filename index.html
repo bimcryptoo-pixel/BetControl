@@ -3674,6 +3674,7 @@
       const porEsporte = {};       // nível aposta (com "Mista")
       const porEspMerc = {};       // nível perna: "esporte||mercado"
       const mercadosDoFiltro = new Set();
+      const serie = [];            // pernas em ordem cronológica: {data, esporte, mercado, status, odd, lucro}
       let lucroGeral = 0, volumeGeral = 0, apostasWin = 0;
 
       base.forEach(a => {
@@ -3706,6 +3707,7 @@
           const d = porEspMerc[chave];
           d.lucro += lucro / n; d.volume += stake / n; d.pernas++;
           if (p.status === 'green') d.greens++; else if (p.status === 'red') d.reds++;
+          serie.push({ data: a.data || '', liq: a.liquidada_em || a.liquidadaEm || '', esporte: esp, mercado: mk, status: p.status, odd: Number(p.odd) || 0, lucro: lucro / n });
         });
       });
 
@@ -3718,6 +3720,61 @@
       const esportesOrd = Object.keys(porEsporte).sort((x, y) => cmp(porEsporte[x], porEsporte[y]));
       const mercadosOrd = Object.keys(porEspMerc).sort((x, y) => cmp(porEspMerc[x], porEspMerc[y]));
       const mercadosLista = [...mercadosDoFiltro].sort();
+
+      // ---- 1. BREAKEVEN por mercado: acerto real x acerto necessário (1/odd média) ----
+      const breakeven = mercadosOrd.map(k => porEspMerc[k])
+        .filter(d => (d.greens + d.reds) >= 5)
+        .map(d => {
+          const legs = serie.filter(s => s.esporte === d.esporte && s.mercado === d.mercado && (s.status === 'green' || s.status === 'red'));
+          const oddMedia = legs.reduce((s, x) => s + x.odd, 0) / Math.max(legs.length, 1);
+          const acerto = d.greens / Math.max(d.greens + d.reds, 1);
+          const necessario = oddMedia > 0 ? 1 / oddMedia : 0;
+          return { esporte: d.esporte, mercado: d.mercado, pernas: legs.length, oddMedia, acerto, necessario, gap: acerto - necessario };
+        })
+        .sort((a, b) => a.gap - b.gap);
+
+      // ---- 2. EVOLUÇÃO MENSAL por esporte (últimos 6 meses) ----
+      const mesesOrd = [...new Set(serie.map(s => String(s.data || '').slice(0, 7)))].filter(m => /^\d{4}-\d{2}$/.test(m)).sort().slice(-6);
+      const lucroMesEsp = {};
+      serie.forEach(s => {
+        const mes = String(s.data || '').slice(0, 7);
+        if (!mesesOrd.includes(mes)) return;
+        if (!lucroMesEsp[s.esporte]) lucroMesEsp[s.esporte] = {};
+        lucroMesEsp[s.esporte][mes] = (lucroMesEsp[s.esporte][mes] || 0) + s.lucro;
+      });
+      const evolucao = Object.keys(lucroMesEsp).map(esp => {
+        let acc = 0;
+        const cumul = mesesOrd.map(m => { acc += (lucroMesEsp[esp][m] || 0); return acc; });
+        const ult = lucroMesEsp[esp][mesesOrd[mesesOrd.length - 1]] || 0;
+        const ant = mesesOrd.length > 1 ? (lucroMesEsp[esp][mesesOrd[mesesOrd.length - 2]] || 0) : 0;
+        return { esporte: esp, cumul, ult, ant, tend: ult > ant ? '▲' : ult < ant ? '▼' : '—' };
+      }).sort((a, b) => (b.cumul[b.cumul.length - 1] || 0) - (a.cumul[a.cumul.length - 1] || 0));
+
+      function sparklineEsp(valores) {
+        const w = 120, h = 34;
+        if (!valores.length) return '';
+        const min = Math.min(0, ...valores), max = Math.max(0, ...valores), rng = (max - min) || 1;
+        const px = i => (i / Math.max(valores.length - 1, 1) * (w - 4) + 2).toFixed(1);
+        const py = v => (h - 3 - ((v - min) / rng) * (h - 6)).toFixed(1);
+        const pts = valores.map((v, i) => `${px(i)},${py(v)}`).join(' ');
+        const cor = valores[valores.length - 1] >= 0 ? '#10b981' : '#ef4444';
+        return `<svg width="${w}" height="${h}" class="inline-block align-middle"><line x1="0" y1="${py(0)}" x2="${w}" y2="${py(0)}" stroke="#666" stroke-width="1" stroke-dasharray="3,3"/><polyline points="${pts}" fill="none" stroke="${cor}" stroke-width="2"/></svg>`;
+      }
+      const nomeMes = ym => { const [a, m] = ym.split('-'); return `${m}/${a.slice(2)}`; };
+
+      // ---- 3. SEQUÊNCIAS atuais por mercado (>= 2 seguidas) ----
+      const streaks = [];
+      Object.keys(porEspMerc).forEach(k => {
+        const d = porEspMerc[k];
+        const legs = serie.filter(s => s.esporte === d.esporte && s.mercado === d.mercado && (s.status === 'green' || s.status === 'red'))
+          .sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.liq).localeCompare(String(a.liq)));
+        if (legs.length < 2) return;
+        const tipo = legs[0].status;
+        let n = 0;
+        while (n < legs.length && legs[n].status === tipo) n++;
+        if (n >= 2) streaks.push({ esporte: d.esporte, mercado: d.mercado, tipo, n, ultimas: legs.slice(0, 5).map(x => x.status) });
+      });
+      streaks.sort((a, b) => (a.tipo === 'red' ? 0 : 1) - (b.tipo === 'red' ? 0 : 1) || b.n - a.n);
 
       // ---- insights automáticos ----
       const insights = [];
@@ -3891,6 +3948,78 @@
             </table>
           </div>
           <p class="text-[10px] text-mutado mt-2">Em múltiplas, lucro e volume da aposta são rateados igualmente entre as pernas.</p>
+        </div>
+
+        <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6">
+          <h3 class="text-sm md:text-md font-bold mb-2 text-texto uppercase tracking-wider">⚖️ Breakeven por Mercado</h3>
+          <p class="text-xs text-mutado mb-4">Sua taxa de acerto real contra a taxa necessária na odd média que você pega. Gap negativo = prejuízo estrutural, não azar. Mínimo 5 pernas.</p>
+          <div class="overflow-x-auto rounded-lg border border-linha">
+            <table class="w-full text-left text-xs text-mutado">
+              <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+                <tr><th class="p-3 border-b border-linha">Mercado</th><th class="p-3 border-b border-linha">Esporte</th><th class="p-3 border-b border-linha">Pernas</th><th class="p-3 border-b border-linha">Odd méd</th><th class="p-3 border-b border-linha">Acerto real</th><th class="p-3 border-b border-linha">Necessário</th><th class="p-3 border-b border-linha">Gap</th><th class="p-3 border-b border-linha">Veredito</th></tr>
+              </thead>
+              <tbody class="divide-y divide-linha">
+                ${breakeven.length === 0 ? '<tr><td colspan="8" class="p-4 text-center text-mutado">Sem mercados com 5+ pernas no período.</td></tr>' : ''}
+                ${breakeven.map((b, i) => {
+                  const verd = b.gap >= 0.02 ? ['🟢', 'Lucrativo', 'text-emerald-500'] : b.gap <= -0.02 ? ['🔴', 'Prejuízo estrutural', 'text-red-500'] : ['⚪', 'No limite', 'text-texto'];
+                  return `<tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
+                    <td class="p-3 font-semibold text-texto">${b.mercado}</td>
+                    <td class="p-3 text-texto">${iconeEsporteEsp(b.esporte)} ${b.esporte}</td>
+                    <td class="p-3 text-texto">${b.pernas}</td>
+                    <td class="p-3 text-texto">${b.oddMedia.toFixed(2)}</td>
+                    <td class="p-3 text-texto">${(b.acerto * 100).toFixed(0)}%</td>
+                    <td class="p-3 text-texto">${(b.necessario * 100).toFixed(0)}%</td>
+                    <td class="p-3 font-bold ${b.gap >= 0 ? 'text-emerald-500' : 'text-red-500'}">${b.gap >= 0 ? '+' : ''}${(b.gap * 100).toFixed(0)}pp</td>
+                    <td class="p-3 font-bold ${verd[2]}">${verd[0]} ${verd[1]}</td>
+                  </tr>`; }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6">
+          <h3 class="text-sm md:text-md font-bold mb-2 text-texto uppercase tracking-wider">📈 Evolução Mensal por Esporte</h3>
+          <p class="text-xs text-mutado mb-4">Lucro acumulado mês a mês (últimos 6 meses com movimento).</p>
+          <div class="overflow-x-auto rounded-lg border border-linha">
+            <table class="w-full text-left text-xs text-mutado">
+              <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+                <tr><th class="p-3 border-b border-linha">Esporte</th><th class="p-3 border-b border-linha">Curva acumulada</th><th class="p-3 border-b border-linha">${mesesOrd.length ? nomeMes(mesesOrd[mesesOrd.length - 1]) : '—'}</th><th class="p-3 border-b border-linha">${mesesOrd.length > 1 ? nomeMes(mesesOrd[mesesOrd.length - 2]) : '—'}</th><th class="p-3 border-b border-linha">Tendência</th></tr>
+              </thead>
+              <tbody class="divide-y divide-linha">
+                ${evolucao.length === 0 ? '<tr><td colspan="5" class="p-4 text-center text-mutado">Sem movimento no período.</td></tr>' : ''}
+                ${evolucao.map((e, i) => `
+                  <tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
+                    <td class="p-3 font-semibold text-texto">${iconeEsporteEsp(e.esporte)} ${e.esporte}</td>
+                    <td class="p-3">${sparklineEsp(e.cumul)}</td>
+                    <td class="p-3 font-bold ${corLucro(e.ult)}">${fmt(e.ult)}</td>
+                    <td class="p-3 text-texto">${fmt(e.ant)}</td>
+                    <td class="p-3 font-bold ${e.tend === '▲' ? 'text-emerald-500' : e.tend === '▼' ? 'text-red-500' : 'text-texto'}">${e.tend}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6">
+          <h3 class="text-sm md:text-md font-bold mb-2 text-texto uppercase tracking-wider">🔥 Sequências Atuais</h3>
+          <p class="text-xs text-mutado mb-4">Mercados com 2+ resultados iguais seguidos (mais recentes primeiro).</p>
+          <div class="overflow-x-auto rounded-lg border border-linha">
+            <table class="w-full text-left text-xs text-mutado">
+              <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+                <tr><th class="p-3 border-b border-linha">Mercado</th><th class="p-3 border-b border-linha">Esporte</th><th class="p-3 border-b border-linha">Sequência</th><th class="p-3 border-b border-linha">Últimas 5</th></tr>
+              </thead>
+              <tbody class="divide-y divide-linha">
+                ${streaks.length === 0 ? '<tr><td colspan="4" class="p-4 text-center text-mutado">Nenhuma sequência ativa de 2+.</td></tr>' : ''}
+                ${streaks.map((s, i) => `
+                  <tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
+                    <td class="p-3 font-semibold text-texto">${s.mercado}</td>
+                    <td class="p-3 text-texto">${iconeEsporteEsp(s.esporte)} ${s.esporte}</td>
+                    <td class="p-3 font-black ${s.tipo === 'green' ? 'text-emerald-500' : 'text-red-500'}">${s.n}x ${s.tipo === 'green' ? '🟢' : '🔴'}</td>
+                    <td class="p-3 text-sm">${s.ultimas.map(x => x === 'green' ? '🟢' : '🔴').join(' ')}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
         </div>
       `;
     }
