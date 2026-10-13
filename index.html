@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>BetControl - Gestão Operacional</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="favicon.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <script src="https://cdn.tailwindcss.com"></script>
   
   <!-- Configuração Dinâmica do Tailwind com Temas -->
@@ -1091,7 +1094,22 @@
             stake: aposta.stake,
             retorno: aposta.retorno,
             finalizada: aposta.finalizada,
-            anexo_url: aposta.anexo_url || null
+            anexo_url: aposta.anexo_url || null,
+            liquidada_em: aposta.liquidada_em || null,
+            odd_total: aposta.oddTotal || null
+          });
+        }
+        for (const sel of (estado.selecoes || [])) {
+          // inicio_jogo propositalmente fora: só o fluxo de lançamento via chat grava esse campo
+          await supabaseClient.from('selecoes').upsert({
+            id: sel.id,
+            aposta_id: sel.apostaId,
+            jogo: sel.jogo,
+            mercado: sel.mercado || '',
+            selecao: sel.selecao,
+            odd: sel.odd || 1,
+            status: sel.status || 'pendente',
+            detalhe: sel.detalhe || ''
           });
         }
         if (verificarSeTemPermissaoEdicao()) {
