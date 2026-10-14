@@ -1854,9 +1854,9 @@
     }
 
     function badgeStatusSelecao(status) {
-      if (status === 'green') return '<span class="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded text-[10px] font-bold">🟢 GREEN</span>';
-      if (status === 'red') return '<span class="bg-red-500/20 text-red-600 dark:text-red-400 px-2 py-0.5 rounded text-[10px] font-bold">🔴 RED</span>';
-      if (status === 'void') return '<span class="bg-gray-500/20 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded text-[10px] font-bold">➖ VOID</span>';
+      if (status === 'green') return '<span class="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded text-[10px] font-bold">✅ GREEN</span>';
+      if (status === 'red') return '<span class="bg-red-500/20 text-red-600 dark:text-red-400 px-2 py-0.5 rounded text-[10px] font-bold">❌ RED</span>';
+      if (status === 'void') return '<span class="bg-gray-500/20 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded text-[10px] font-bold">🔄 VOID</span>';
       return '<span class="bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-2 py-0.5 rounded text-[10px] font-bold">⏳ PENDENTE</span>';
     }
 
@@ -1922,9 +1922,9 @@
         : '-';
 
       let badgeGeral;
-      if (geral === 'green') badgeGeral = '<span class="bg-emerald-500 text-white px-4 py-1.5 rounded-full text-sm font-bold">🟢 GREEN</span>';
-      else if (geral === 'red') badgeGeral = '<span class="bg-red-500 text-white px-4 py-1.5 rounded-full text-sm font-bold">🔴 RED</span>';
-      else if (geral === 'void') badgeGeral = '<span class="bg-gray-500 text-white px-4 py-1.5 rounded-full text-sm font-bold">➖ VOID</span>';
+      if (geral === 'green') badgeGeral = '<span class="bg-emerald-500 text-white px-4 py-1.5 rounded-full text-sm font-bold">✅ GREEN</span>';
+      else if (geral === 'red') badgeGeral = '<span class="bg-red-500 text-white px-4 py-1.5 rounded-full text-sm font-bold">❌ RED</span>';
+      else if (geral === 'void') badgeGeral = '<span class="bg-gray-500 text-white px-4 py-1.5 rounded-full text-sm font-bold">🔄 VOID</span>';
       else if (geral === 'pendente') badgeGeral = '<span class="bg-yellow-500 text-black px-4 py-1.5 rounded-full text-sm font-bold">⏳ PENDENTE</span>';
       else badgeGeral = '<span class="bg-gray-500/30 text-mutado px-4 py-1.5 rounded-full text-sm font-bold">📋 SEM SELEÇÕES</span>';
 
@@ -1943,9 +1943,9 @@
           ${s.detalhe ? `<div class="text-xs mt-1 text-texto opacity-80">📊 ${s.detalhe}</div>` : ''}
           ${textoCountdown(s.inicioJogo) ? `<div class="text-xs mt-1 text-sky-400 font-bold">${textoCountdown(s.inicioJogo)}</div>` : ''}
           ${verificarSeTemPermissaoEdicao() ? `<div class="flex gap-1 mt-2 items-center">
-            <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'green')" title="Marcar GREEN" class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold hover:bg-emerald-500 hover:text-white transition">🟢</button>
-            <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'red')" title="Marcar RED" class="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold hover:bg-red-500 hover:text-white transition">🔴</button>
-            <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'void')" title="Marcar VOID" class="text-[10px] px-2 py-0.5 rounded bg-gray-500/20 text-gray-300 font-bold hover:bg-gray-500 hover:text-white transition">➖</button>
+            <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'green')" title="Marcar GREEN" class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold hover:bg-emerald-500 hover:text-white transition">✅</button>
+            <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'red')" title="Marcar RED" class="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold hover:bg-red-500 hover:text-white transition">❌</button>
+            <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'void')" title="Marcar VOID" class="text-[10px] px-2 py-0.5 rounded bg-gray-500/20 text-gray-300 font-bold hover:bg-gray-500 hover:text-white transition">🔄</button>
             <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'pendente')" title="Voltar para PENDENTE" class="text-[10px] px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-bold hover:bg-yellow-500 hover:text-black transition">⏳</button>
             <button onclick="excluirSelecaoPainel('${apostaId}', '${s.id}')" title="Apagar esta perna" class="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold hover:bg-red-500 hover:text-white transition">🗑️</button>
           </div>` : ''}
@@ -3504,8 +3504,8 @@
                   <tr>
                     <th class="p-3 border-b border-linha">Período</th>
                     <th class="p-3 border-b border-linha">Apostas</th>
-                    <th class="p-3 border-b border-linha">🟢</th>
-                    <th class="p-3 border-b border-linha">🔴</th>
+                    <th class="p-3 border-b border-linha">✅</th>
+                    <th class="p-3 border-b border-linha">❌</th>
                     <th class="p-3 border-b border-linha">Volume</th>
                     <th class="p-3 border-b border-linha">Lucro / Prejuízo</th>
                     <th class="p-3 border-b border-linha" title="Comissão de 10% sobre o lucro novo (após cobrir o negativo) / makeup ainda a recuperar">Comissão 10% / Makeup</th>
@@ -3802,8 +3802,8 @@
       if (mSignificativos.length) {
         const pior = [...mSignificativos].sort((a, b) => a.lucro - b.lucro)[0];
         const melhor = [...mSignificativos].sort((a, b) => b.lucro - a.lucro)[0];
-        if (pior.lucro < 0) insights.push({ ic: '🔴', txt: `<b>Maior sangria:</b> ${pior.mercado} (${pior.esporte}) — <b class="text-red-500">${fmt(pior.lucro)}</b> em ${pior.pernas} pernas (ROI ${roiTxt(pior)}).` });
-        if (melhor.lucro > 0) insights.push({ ic: '🟢', txt: `<b>Melhor mercado:</b> ${melhor.mercado} (${melhor.esporte}) — <b class="text-emerald-500">${fmt(melhor.lucro)}</b> em ${melhor.pernas} pernas (ROI ${roiTxt(melhor)}).` });
+        if (pior.lucro < 0) insights.push({ ic: '❌', txt: `<b>Maior sangria:</b> ${pior.mercado} (${pior.esporte}) — <b class="text-red-500">${fmt(pior.lucro)}</b> em ${pior.pernas} pernas (ROI ${roiTxt(pior)}).` });
+        if (melhor.lucro > 0) insights.push({ ic: '✅', txt: `<b>Melhor mercado:</b> ${melhor.mercado} (${melhor.esporte}) — <b class="text-emerald-500">${fmt(melhor.lucro)}</b> em ${melhor.pernas} pernas (ROI ${roiTxt(melhor)}).` });
         const noVermelho = mSignificativos.filter(d => d.lucro < 0 && (d.lucro / Math.max(d.volume, 1)) < -0.15);
         if (noVermelho.length) insights.push({ ic: '📉', txt: `<b>Atenção:</b> ${noVermelho.length} mercado(s) com ROI abaixo de -15%: ${noVermelho.slice(0, 3).map(d => `${d.mercado} (${d.esporte})`).join(', ')}${noVermelho.length > 3 ? '…' : ''}.` });
       }
@@ -3875,7 +3875,7 @@
               </select></label>
             <label class="flex flex-col gap-1"><span class="text-[10px] uppercase tracking-wider text-mutado font-bold">Resultado</span>
               <select onchange="definirFiltroEsp('resultado', this.value)" class="${selCls}">
-                ${opt('', fEsp.resultado, 'Todos')}${opt('lucro', fEsp.resultado, '🟢 Lucro')}${opt('prejuizo', fEsp.resultado, '🔴 Prejuízo')}
+                ${opt('', fEsp.resultado, 'Todos')}${opt('lucro', fEsp.resultado, '✅ Lucro')}${opt('prejuizo', fEsp.resultado, '❌ Prejuízo')}
               </select></label>
             <label class="flex flex-col gap-1"><span class="text-[10px] uppercase tracking-wider text-mutado font-bold">Ordenar por</span>
               <select onchange="definirFiltroEsp('ordem', this.value)" class="${selCls}">
@@ -3909,7 +3909,7 @@
           <div class="overflow-x-auto rounded-lg border border-linha">
             <table class="w-full text-left text-xs text-mutado">
               <thead class="bg-panelAlt text-texto uppercase text-[10px]">
-                <tr><th class="p-3 border-b border-linha">Esporte</th><th class="p-3 border-b border-linha">Apostas</th><th class="p-3 border-b border-linha">🟢</th><th class="p-3 border-b border-linha">🔴</th><th class="p-3 border-b border-linha">Acerto</th><th class="p-3 border-b border-linha">Volume</th><th class="p-3 border-b border-linha">Lucro / Prejuízo</th><th class="p-3 border-b border-linha">ROI</th></tr>
+                <tr><th class="p-3 border-b border-linha">Esporte</th><th class="p-3 border-b border-linha">Apostas</th><th class="p-3 border-b border-linha">✅</th><th class="p-3 border-b border-linha">❌</th><th class="p-3 border-b border-linha">Acerto</th><th class="p-3 border-b border-linha">Volume</th><th class="p-3 border-b border-linha">Lucro / Prejuízo</th><th class="p-3 border-b border-linha">ROI</th></tr>
               </thead>
               <tbody class="divide-y divide-linha">
                 ${esportesOrd.length === 0 ? '<tr><td colspan="8" class="p-4 text-center text-mutado">Nenhum dado finalizado para os filtros.</td></tr>' : ''}
@@ -3930,7 +3930,7 @@
                       <p class="text-[10px] uppercase tracking-wider text-mutado font-bold mb-2">Mercados — ${iconeEsporteEsp(k)} ${k}</p>
                       <div class="overflow-x-auto rounded-lg border border-linha">
                         <table class="w-full text-left text-xs text-mutado">
-                          <thead class="bg-panel text-texto uppercase text-[10px]"><tr><th class="p-2 border-b border-linha">Mercado</th><th class="p-2 border-b border-linha">Pernas</th><th class="p-2 border-b border-linha">🟢</th><th class="p-2 border-b border-linha">🔴</th><th class="p-2 border-b border-linha">Acerto</th><th class="p-2 border-b border-linha">Volume</th><th class="p-2 border-b border-linha">Lucro</th><th class="p-2 border-b border-linha">ROI</th></tr></thead>
+                          <thead class="bg-panel text-texto uppercase text-[10px]"><tr><th class="p-2 border-b border-linha">Mercado</th><th class="p-2 border-b border-linha">Pernas</th><th class="p-2 border-b border-linha">✅</th><th class="p-2 border-b border-linha">❌</th><th class="p-2 border-b border-linha">Acerto</th><th class="p-2 border-b border-linha">Volume</th><th class="p-2 border-b border-linha">Lucro</th><th class="p-2 border-b border-linha">ROI</th></tr></thead>
                           <tbody class="divide-y divide-linha">${mkChaves.map((ch, j) => linhaMercado(porEspMerc[ch], j)).join('')}</tbody>
                         </table>
                       </div>
@@ -3948,7 +3948,7 @@
           <div class="overflow-x-auto rounded-lg border border-linha">
             <table class="w-full text-left text-xs text-mutado">
               <thead class="bg-panelAlt text-texto uppercase text-[10px]">
-                <tr><th class="p-3 border-b border-linha">Mercado</th><th class="p-3 border-b border-linha">Esporte</th><th class="p-3 border-b border-linha">Pernas</th><th class="p-3 border-b border-linha">🟢</th><th class="p-3 border-b border-linha">🔴</th><th class="p-3 border-b border-linha">Acerto</th><th class="p-3 border-b border-linha">Volume</th><th class="p-3 border-b border-linha">Lucro / Prejuízo</th><th class="p-3 border-b border-linha">ROI</th></tr>
+                <tr><th class="p-3 border-b border-linha">Mercado</th><th class="p-3 border-b border-linha">Esporte</th><th class="p-3 border-b border-linha">Pernas</th><th class="p-3 border-b border-linha">✅</th><th class="p-3 border-b border-linha">❌</th><th class="p-3 border-b border-linha">Acerto</th><th class="p-3 border-b border-linha">Volume</th><th class="p-3 border-b border-linha">Lucro / Prejuízo</th><th class="p-3 border-b border-linha">ROI</th></tr>
               </thead>
               <tbody class="divide-y divide-linha">
                 ${mercadosOrd.length === 0 ? '<tr><td colspan="9" class="p-4 text-center text-mutado">Nenhum dado finalizado para os filtros.</td></tr>' : ''}
@@ -3981,7 +3981,7 @@
               <tbody class="divide-y divide-linha">
                 ${breakeven.length === 0 ? '<tr><td colspan="8" class="p-4 text-center text-mutado">Sem mercados com 5+ pernas no período.</td></tr>' : ''}
                 ${breakeven.map((b, i) => {
-                  const verd = b.gap >= 0.02 ? ['🟢', 'Lucrativo', 'text-emerald-500'] : b.gap <= -0.02 ? ['🔴', 'Prejuízo estrutural', 'text-red-500'] : ['⚪', 'No limite', 'text-texto'];
+                  const verd = b.gap >= 0.02 ? ['✅', 'Lucrativo', 'text-emerald-500'] : b.gap <= -0.02 ? ['❌', 'Prejuízo estrutural', 'text-red-500'] : ['⚪', 'No limite', 'text-texto'];
                   return `<tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
                     <td class="p-3 font-semibold text-texto">${b.mercado}</td>
                     <td class="p-3 text-texto">${iconeEsporteEsp(b.esporte)} ${b.esporte}</td>
@@ -4034,8 +4034,8 @@
                   <tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
                     <td class="p-3 font-semibold text-texto">${s.mercado}</td>
                     <td class="p-3 text-texto">${iconeEsporteEsp(s.esporte)} ${s.esporte}</td>
-                    <td class="p-3 font-black ${s.tipo === 'green' ? 'text-emerald-500' : 'text-red-500'}">${s.n}x ${s.tipo === 'green' ? '🟢' : '🔴'}</td>
-                    <td class="p-3 text-sm">${s.ultimas.map(x => x === 'green' ? '🟢' : '🔴').join(' ')}</td>
+                    <td class="p-3 font-black ${s.tipo === 'green' ? 'text-emerald-500' : 'text-red-500'}">${s.n}x ${s.tipo === 'green' ? '✅' : '❌'}</td>
+                    <td class="p-3 text-sm">${s.ultimas.map(x => x === 'green' ? '✅' : '❌').join(' ')}</td>
                   </tr>`).join('')}
               </tbody>
             </table>
@@ -4312,11 +4312,11 @@
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <div class="bg-panel border border-linha rounded-xl p-4">
-            <p class="text-[10px] uppercase text-mutado font-bold mb-1">🔴 A pagar</p>
+            <p class="text-[10px] uppercase text-mutado font-bold mb-1">❌ A pagar</p>
             <p class="text-xl font-black text-red-400">${fmtR$(totPagar)}</p>
           </div>
           <div class="bg-panel border border-linha rounded-xl p-4">
-            <p class="text-[10px] uppercase text-mutado font-bold mb-1">🟢 A receber</p>
+            <p class="text-[10px] uppercase text-mutado font-bold mb-1">✅ A receber</p>
             <p class="text-xl font-black text-emerald-400">${fmtR$(totReceber)}</p>
           </div>
           <div class="bg-panel border border-linha rounded-xl p-4">
@@ -4401,7 +4401,7 @@
                     <td class="p-3 text-texto">${fmtData(x.dataBaixa)}</td>
                     <td class="p-3 text-texto">${renderizarFlagCasa(casaObj ? casaObj.nome : 'N/A')}</td>
                     <td class="p-3 text-texto text-xs">${fmtData(x.periodoDe)} a ${fmtData(x.periodoAte)}</td>
-                    <td class="p-3 font-bold ${x.tipo === 'pagar' ? 'text-red-400' : 'text-emerald-400'}">${x.tipo === 'pagar' ? '🔴 Pago à casa' : '🟢 Recebido da casa'}</td>
+                    <td class="p-3 font-bold ${x.tipo === 'pagar' ? 'text-red-400' : 'text-emerald-400'}">${x.tipo === 'pagar' ? '❌ Pago à casa' : '✅ Recebido da casa'}</td>
                     <td class="p-3 font-bold text-texto">${fmtR$(x.valor)}</td>
                     <td class="p-3 text-texto text-xs">${x.observacao || '—'}</td>
                     ${podeEditar ? `<td class="p-3 no-print"><button onclick="excluirBaixa('${x.id}')" class="px-2.5 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold transition" title="Estornar baixa">🗑️</button></td>` : ''}
@@ -4431,7 +4431,7 @@
       const devido = Math.abs(lucro);
       const saldo = +(devido - baixado).toFixed(2);
       const tipo = lucro > 0 ? 'receber' : 'pagar';
-      const tipoTxt = tipo === 'pagar' ? '🔴 Pagamento à casa' : '🟢 Recebimento da casa';
+      const tipoTxt = tipo === 'pagar' ? '❌ Pagamento à casa' : '✅ Recebimento da casa';
       let perDe = de, perAte = ate;
       if (!perDe || !perAte) {
         const datas = apostasFiltradas.filter(a => a.finalizada && a.casaId === casaId && a.data).map(a => a.data).sort();
