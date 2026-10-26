@@ -518,6 +518,7 @@
           if (parsed.filtroPendentes === undefined) parsed.filtroPendentes = false;
           if (!parsed.selecoes) parsed.selecoes = [];
           if (!parsed.acertos) parsed.acertos = [];
+          if (!parsed.ajustes) parsed.ajustes = [];
           if (!parsed.usuarios || parsed.usuarios.length === 0) {
             parsed.usuarios = [
               { id: 'usr-1', usuario: 'admin', senha: '123456', perfil: 'editor', nome: 'Administrador Mestre', permissoesLeitor: [] },
@@ -561,6 +562,8 @@
         try { sels = await buscarTodosPaginado('selecoes'); } catch (e) { console.warn('Tabela selecoes ainda não criada:', e); }
         let acertosSrv = [];
         try { acertosSrv = await buscarTodosPaginado('acertos'); } catch (e) { console.warn('Tabela acertos ainda não criada:', e); }
+        let ajustesSrv = [];
+        try { ajustesSrv = await buscarTodosPaginado('ajustes'); } catch (e) { console.warn('Tabela ajustes ainda não criada:', e); }
 
         if (ops) {
           estado.operadores = ops;
@@ -605,6 +608,15 @@
             valor: Number(x.valor) || 0,
             dataBaixa: x.data_baixa,
             observacao: x.observacao || '',
+            createdAt: x.created_at || null
+          }));
+        }
+        if (ajustesSrv) {
+          estado.ajustes = ajustesSrv.map(x => ({
+            id: x.id,
+            data: x.data,
+            valor: Number(x.valor) || 0,
+            descricao: x.descricao || '',
             createdAt: x.created_at || null
           }));
         }
@@ -3415,6 +3427,36 @@
         }
       });
 
+      // (26/10/2026) AJUSTES MANUAIS de lucro (ex.: saque errado): entram IDENTIFICADOS
+      // no lucro do período (pela data), no Lucro Líquido Consolidado e no makeup.
+      // Não são apostas: sem volume/greens/reds e fora do relatório por casas.
+      // Só o editor vê/gerencia; com filtro de casa ativo, ficam fora dos totais.
+      const usrLucro = obterUsuarioLogado();
+      const ehEditorLucro = !!(usrLucro && usrLucro.perfil === 'editor');
+      const casaFiltroAtivo = estado.filtros ? (estado.filtros.casaId || '') : '';
+      const dataIniFiltro = estado.filtros ? (estado.filtros.dataInicio || '') : '';
+      const dataFimFiltro = estado.filtros ? (estado.filtros.dataFim || '') : '';
+      const ajustesAplicados = (ehEditorLucro && !casaFiltroAtivo)
+        ? (estado.ajustes || []).filter(x => {
+            if (fech && chavePeriodoLucro(x.data, 'semana').chave !== fech) return false;
+            if (dataIniFiltro && x.data < dataIniFiltro) return false;
+            if (dataFimFiltro && x.data > dataFimFiltro) return false;
+            return true;
+          })
+        : [];
+      const periodosComAjuste = new Set();
+      ajustesAplicados.forEach(x => {
+        const per = chavePeriodoLucro(x.data, gran);
+        if (per.chave === 'Desconhecido') return;
+        if (!lucroPorPeriodo[per.chave]) {
+          lucroPorPeriodo[per.chave] = { lucro: 0, volume: 0, totalApostas: 0, greens: 0, reds: 0 };
+          rotuloPeriodo[per.chave] = per.rotulo;
+        }
+        lucroPorPeriodo[per.chave].lucro += x.valor;
+        lucroGeralFinalizado += x.valor;
+        periodosComAjuste.add(per.chave);
+      });
+
       const periodosOrdenados = Object.keys(lucroPorPeriodo).sort((a, b) => {
         return estado.ordemLucroMes === 'asc' ? a.localeCompare(b) : b.localeCompare(a);
       });
@@ -3435,6 +3477,30 @@
       });
       const totalComissao = Object.values(comissaoPorPeriodo).reduce((a, b) => a + b, 0);
       const casasOrdenadas = Object.keys(lucroPorCasa).sort((a, b) => lucroPorCasa[b].lucro - lucroPorCasa[a].lucro);
+
+      // Bloco IDENTIFICADO dos ajustes manuais (tela + impressão do fechamento)
+      const fmtDataAj = (iso) => { const p = String(iso || '').substring(0, 10).split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : iso; };
+      const ajustesOrdenados = [...(estado.ajustes || [])].sort((a, b) => String(b.data).localeCompare(String(a.data)));
+      const ajustesHtml = ehEditorLucro ? `
+        <div class="mt-4 border-t border-linha pt-3">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <p class="text-xs font-black text-texto uppercase tracking-wider">🧾 Ajustes manuais identificados</p>
+            <button onclick="abrirModalAjuste()" class="no-print px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black rounded-lg transition">+ Novo ajuste</button>
+          </div>
+          <p class="text-[11px] text-mutado mt-1">Valores fora das apostas (ex.: saque errado) somados ao lucro do período, ao total consolidado e ao makeup. Ficam identificados aqui no fechamento.</p>
+          ${ajustesOrdenados.length === 0 ? '<p class="text-xs text-mutado mt-2">Nenhum ajuste lançado.</p>' : `
+          <div class="mt-2 space-y-1">
+            ${ajustesOrdenados.map(x => `
+              <div class="flex items-center justify-between gap-2 bg-panelAlt border border-linha rounded-lg px-3 py-2">
+                <span class="text-xs text-texto"><b>${fmtDataAj(x.data)}</b> — ${x.descricao ? String(x.descricao).replace(/</g, '&lt;') : 'Ajuste manual'}</span>
+                <span class="flex items-center gap-2">
+                  <b class="text-xs ${x.valor >= 0 ? 'text-emerald-500' : 'text-red-500'}">${x.valor >= 0 ? '+' : '−'}R$ ${Math.abs(x.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</b>
+                  <button onclick="excluirAjuste('${x.id}')" title="Excluir ajuste" class="no-print text-red-500 hover:text-red-400 text-sm font-black">🗑️</button>
+                </span>
+              </div>`).join('')}
+          </div>`}
+          ${casaFiltroAtivo ? '<p class="text-[11px] text-amber-500 mt-2">⚠️ Com filtro de casa ativo, os ajustes (globais) ficam fora dos totais acima.</p>' : ''}
+        </div>` : '';
 
       // Casas disponíveis para o filtro do módulo (globais, unificadas)
       const casasDisponiveisLucro = estado.casas;
@@ -3523,7 +3589,7 @@
                     const corRoi = dados.lucro > 0 ? 'text-emerald-500' : dados.lucro < 0 ? 'text-red-500' : 'text-texto';
                     return `
                       <tr class="${index % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
-                        <td class="p-3 font-semibold text-texto">${nomePeriodoFormatado}</td>
+                        <td class="p-3 font-semibold text-texto">${nomePeriodoFormatado}${periodosComAjuste.has(chave) ? ' 🧾' : ''}</td>
                         <td class="p-3 text-texto">${dados.totalApostas}</td>
                         <td class="p-3 text-emerald-500 font-bold">${dados.greens}</td>
                         <td class="p-3 text-red-500 font-bold">${dados.reds}</td>
@@ -3556,6 +3622,7 @@
                 </tbody>
               </table>
             </div>
+            ${ajustesHtml}
           </div>
 
           <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
@@ -3600,6 +3667,82 @@
     // Lucro da aposta é rateado igualmente entre as pernas (exato em simples).
     const NBA_TIMES_ANALISE = ['heat','raptors','lakers','celtics','bulls','warriors','knicks','nets','76ers','bucks','suns','mavericks','nuggets','hawks','hornets','cavaliers','pistons','pacers','clippers','grizzlies','timberwolves','pelicans','thunder','magic','kings','spurs','rockets','jazz','trail blazers','wizards'];
     const NFL_TIMES_ANALISE = ['dolphins','patriots','bills','jets','bengals','browns','steelers','texans','colts','titans','jaguars','chiefs','chargers','broncos','raiders','cowboys','giants','eagles','commanders','packers','bears','lions','vikings','falcons','panthers','saints','buccaneers','cardinals','rams','49ers','niners','seahawks'];
+
+    // ================= AJUSTES MANUAIS DE LUCRO (26/10/2026) =================
+    function abrirModalAjuste() {
+      const hoje = new Date().toISOString().split('T')[0];
+      const overlay = document.createElement('div');
+      overlay.id = 'modalAjuste';
+      overlay.className = 'fixed inset-0 z-[100] bg-black/90 overflow-y-auto';
+      overlay.onclick = (e) => { if (e.target === overlay) fecharModalAjuste(); };
+      overlay.innerHTML = `
+        <div class="min-h-full flex p-3 md:p-4">
+        <div class="relative bg-panel border border-linha rounded-2xl max-w-md w-full m-auto p-5 md:p-6 shadow-2xl" onclick="event.stopPropagation()">
+          <button onclick="fecharModalAjuste()" class="absolute top-3 right-3 w-9 h-9 rounded-full bg-red-600 text-white font-bold shadow-xl">✕</button>
+          <h3 class="text-lg font-bold mb-1" style="color: var(--color-text);">🧾 Novo ajuste de lucro</h3>
+          <p class="text-xs text-mutado mb-4">Valor fora das apostas (ex.: saque errado). Entra identificado no fechamento, no lucro do período e no makeup.</p>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs text-mutado mb-1">Data do ajuste</label>
+              <input type="date" id="ajusteData" value="${hoje}" class="w-full px-3 py-2 bg-input border border-linha rounded text-texto text-sm outline-none">
+            </div>
+            <div>
+              <label class="block text-xs text-mutado mb-1">Valor (negativo reduz o lucro — ex.: saque errado: -3630)</label>
+              <input type="number" id="ajusteValor" step="0.01" placeholder="Ex.: -3630.00" class="w-full px-3 py-2 bg-input border border-linha rounded text-texto text-sm outline-none">
+            </div>
+            <div>
+              <label class="block text-xs text-mutado mb-1">Descrição (aparece identificada no fechamento)</label>
+              <input type="text" id="ajusteDescricao" placeholder="Ex.: Saque errado" class="w-full px-3 py-2 bg-input border border-linha rounded text-texto text-sm outline-none">
+            </div>
+            <button onclick="salvarAjuste()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-black rounded-xl transition">✅ Salvar ajuste</button>
+          </div>
+        </div>
+        </div>`;
+      document.body.appendChild(overlay);
+    }
+
+    function fecharModalAjuste() {
+      const m = document.getElementById('modalAjuste');
+      if (m) m.remove();
+    }
+
+    async function salvarAjuste() {
+      const data = document.getElementById('ajusteData').value;
+      const valor = parseFloat(document.getElementById('ajusteValor').value);
+      const descricao = document.getElementById('ajusteDescricao').value.trim();
+      if (!data) { alert('Informe a data do ajuste.'); return; }
+      if (!valor || isNaN(valor)) { alert('Informe o valor do ajuste (negativo para reduzir o lucro).'); return; }
+      const id = 'ajuste-' + Date.now() + '-' + Math.floor(Math.random() * 1e6);
+      const registro = { id, data, valor: +valor.toFixed(2), descricao };
+      try {
+        const { error } = await supabaseClient.from('ajustes').insert(registro);
+        if (error) throw error;
+      } catch (e) {
+        console.error(e);
+        alert('Não foi possível salvar o ajuste. Verifique se a tabela "ajustes" foi criada no Supabase.');
+        return;
+      }
+      estado.ajustes = estado.ajustes || [];
+      estado.ajustes.push({ id, data, valor: +valor.toFixed(2), descricao, createdAt: new Date().toISOString() });
+      salvarDadosNoLocalStorage();
+      fecharModalAjuste();
+      renderizarLucro(document.getElementById('conteudo-principal'));
+    }
+
+    async function excluirAjuste(id) {
+      if (!confirm('Excluir este ajuste? Ele sai dos totais do fechamento.')) return;
+      try {
+        const { error } = await supabaseClient.from('ajustes').delete().eq('id', id);
+        if (error) throw error;
+      } catch (e) {
+        console.error(e);
+        alert('Não foi possível excluir o ajuste.');
+        return;
+      }
+      estado.ajustes = (estado.ajustes || []).filter(x => x.id !== id);
+      salvarDadosNoLocalStorage();
+      renderizarLucro(document.getElementById('conteudo-principal'));
+    }
 
     function classificarEsporteEsp(jogo, mercado) {
       const j = String(jogo || '').toLowerCase();
