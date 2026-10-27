@@ -4194,6 +4194,14 @@
       'BETS':     [['Renan', 2.5], ['Fabio', 5], ['Lucas', 2.5]],
       'FCS BETS': [['Fabio', 7.5], ['Lucas', 2.5]] // (14/10/2026, a pedido do usuário)
     };
+    // Regra por OPERADOR dentro da casa (27/10/2026, a pedido do usuário):
+    // nas casas listadas aqui, a base da comissão é o prejuízo DAS APOSTAS
+    // DAQUELE OPERADOR na casa (não o prejuízo total da casa). Operador sem
+    // regra específica usa a regra geral da casa (COMISSOES_BANCA).
+    // GG BETS: LUCAS → Fabio 5% / Lucas 5%; PANDOLFO (e demais) → regra geral.
+    const COMISSOES_BANCA_OPERADOR = {
+      'GG BETS': { 'LUCAS': [['Fabio', 5], ['Lucas', 5]] }
+    };
 
     // Filtro por comissionado (05/10/2026, a pedido do usuário): '' = todos;
     // com nome selecionado, o módulo mostra só as linhas/cards/total dele.
@@ -4207,6 +4215,7 @@
       const apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
 
       const lucroPorCasa = {};
+      const lucroPorCasaOperador = {}; // { casaNome: { OPERADOR: lucro } } — base das regras por operador
       apostasFiltradas.forEach(a => {
         if (a.finalizada && a.retorno !== null) {
           const casaObj = estado.casas.find(c => c.id === a.casaId);
@@ -4215,6 +4224,13 @@
           lucroPorCasa[nomeCasa].lucro += (a.retorno - a.stake);
           lucroPorCasa[nomeCasa].volume += a.stake;
           lucroPorCasa[nomeCasa].totalApostas++;
+          const opObj = (estado.operadores || []).find(o => o.id === a.operadorId);
+          const nomeOp = opObj ? String(opObj.nome || '').trim().toUpperCase() : '';
+          if (nomeOp) {
+            if (!lucroPorCasaOperador[nomeCasa]) lucroPorCasaOperador[nomeCasa] = {};
+            if (lucroPorCasaOperador[nomeCasa][nomeOp] === undefined) lucroPorCasaOperador[nomeCasa][nomeOp] = 0;
+            lucroPorCasaOperador[nomeCasa][nomeOp] += (a.retorno - a.stake);
+          }
         }
       });
       const casasOrdenadas = Object.keys(lucroPorCasa).sort((a, b) => lucroPorCasa[b].lucro - lucroPorCasa[a].lucro);
@@ -4224,15 +4240,31 @@
       Object.values(COMISSOES_BANCA).forEach(conf => conf.forEach(([nome]) => {
         if (!pessoasDisponiveis.includes(nome)) pessoasDisponiveis.push(nome);
       }));
-      const blocos = []; // [{ casa, base, linhas: [{nome, pct, valor}], subtotal }]
+      Object.values(COMISSOES_BANCA_OPERADOR).forEach(porOp => Object.values(porOp).forEach(conf => conf.forEach(([nome]) => {
+        if (!pessoasDisponiveis.includes(nome)) pessoasDisponiveis.push(nome);
+      })));
+      const blocos = []; // [{ casa, operador, base, linhas: [{nome, pct, valor}], subtotal }]
+      const montarBloco = (casaNome, operador, lucroGrupo, conf) => {
+        if (lucroGrupo < 0 && conf && conf.length) {
+          const base = Math.abs(lucroGrupo);
+          const linhas = conf.map(([nome, pct]) => ({ nome, pct, valor: +(base * pct / 100).toFixed(2) }));
+          const subtotal = +linhas.reduce((s, l) => s + l.valor, 0).toFixed(2);
+          blocos.push({ casa: casaNome, operador: operador || '', base, linhas, subtotal });
+        }
+      };
       casasOrdenadas.forEach(casaNome => {
         const dados = lucroPorCasa[casaNome];
         const conf = COMISSOES_BANCA[casaNome];
-        if (dados.lucro < 0 && conf && conf.length) {
-          const base = Math.abs(dados.lucro);
-          const linhas = conf.map(([nome, pct]) => ({ nome, pct, valor: +(base * pct / 100).toFixed(2) }));
-          const subtotal = +linhas.reduce((s, l) => s + l.valor, 0).toFixed(2);
-          blocos.push({ casa: casaNome, base, linhas, subtotal });
+        const confOp = COMISSOES_BANCA_OPERADOR[casaNome];
+        if (confOp) {
+          // Base por operador: regra específica do operador quando houver;
+          // os demais operadores da casa usam a regra geral da casa.
+          const grupos = lucroPorCasaOperador[casaNome] || {};
+          Object.keys(grupos).sort().forEach(opNome => {
+            montarBloco(casaNome, opNome, grupos[opNome], confOp[opNome] || conf);
+          });
+        } else {
+          montarBloco(casaNome, '', dados.lucro, conf);
         }
       });
       // Total de comissão por comissionado (soma de todas as casas no período)
@@ -4248,7 +4280,7 @@
         ? blocos.map(b => {
             const linhas = b.linhas.filter(l => l.nome === filtroComissionado);
             if (!linhas.length) return null;
-            return { casa: b.casa, base: b.base, linhas, subtotal: +linhas.reduce((s, l) => s + l.valor, 0).toFixed(2) };
+            return { casa: b.casa, operador: b.operador || '', base: b.base, linhas, subtotal: +linhas.reduce((s, l) => s + l.valor, 0).toFixed(2) };
           }).filter(Boolean)
         : blocos;
       const totaisExibir = filtroComissionado ? totaisPorPessoa.filter(p => p.nome === filtroComissionado) : totaisPorPessoa;
@@ -4313,7 +4345,7 @@
               </select>
             </label>
           </div>
-          <p class="text-xs text-mutado mb-4">Base = prejuízo da casa no período × % de cada comissionado. Casas com lucro não geram comissão.</p>
+          <p class="text-xs text-mutado mb-4">Base = prejuízo no período × % de cada comissionado. Casas com lucro não geram comissão. Na GG BETS, a base é o prejuízo de cada operador (Lucas: Fabio 5% / Lucas 5%; demais operadores: regra geral da casa).</p>
           ${totaisExibir.length > 0 ? `
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             ${totaisExibir.map(p => `
@@ -4340,7 +4372,7 @@
                 ${blocosExibir.map((b, bi) => `
                   ${b.linhas.map((l, li) => `
                     <tr class="${(bi + li) % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
-                      <td class="p-3 text-texto">${li === 0 ? renderizarFlagCasa(b.casa) : ''}</td>
+                      <td class="p-3 text-texto">${li === 0 ? renderizarFlagCasa(b.casa) + (b.operador ? ` <span class="text-xs font-bold text-mutado">· 👤 ${b.operador}</span>` : '') : ''}</td>
                       <td class="p-3 font-bold text-texto">${l.nome}</td>
                       <td class="p-3 text-texto">${fmtPct(l.pct)}</td>
                       <td class="p-3 text-red-500 font-bold">${fmtR$(b.base)}</td>
@@ -4348,7 +4380,7 @@
                     </tr>
                   `).join('')}
                   <tr class="bg-panelAlt">
-                    <td colspan="4" class="p-2.5 text-right font-black text-texto uppercase text-xs">Subtotal ${b.casa}</td>
+                    <td colspan="4" class="p-2.5 text-right font-black text-texto uppercase text-xs">Subtotal ${b.casa}${b.operador ? ' · ' + b.operador : ''}</td>
                     <td class="p-2.5 font-black text-emerald-500">${fmtR$(b.subtotal)}</td>
                   </tr>
                 `).join('')}
