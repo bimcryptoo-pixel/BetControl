@@ -4199,8 +4199,12 @@
     // DAQUELE OPERADOR na casa (não o prejuízo total da casa). Operador sem
     // regra específica usa a regra geral da casa (COMISSOES_BANCA).
     // GG BETS: LUCAS → Fabio 5% / Lucas 5%; PANDOLFO (e demais) → regra geral.
+    // EMIRATES BET: PANDOLFO → Renan 2,5% / Fabio 5% / Lucas 2,5% (28/10/2026,
+    // a pedido do usuário); demais operadores → regra geral da casa (a casa não
+    // tem regra geral cadastrada, então não gera comissão).
     const COMISSOES_BANCA_OPERADOR = {
-      'GG BETS': { 'LUCAS': [['Fabio', 5], ['Lucas', 5]] }
+      'GG BETS': { 'LUCAS': [['Fabio', 5], ['Lucas', 5]] },
+      'EMIRATES BET': { 'PANDOLFO': [['Renan', 2.5], ['Fabio', 5], ['Lucas', 2.5]] }
     };
 
     // Filtro por comissionado (05/10/2026, a pedido do usuário): '' = todos;
@@ -4345,7 +4349,7 @@
               </select>
             </label>
           </div>
-          <p class="text-xs text-mutado mb-4">Base = prejuízo no período × % de cada comissionado. Casas com lucro não geram comissão. Na GG BETS, a base é o prejuízo de cada operador (Lucas: Fabio 5% / Lucas 5%; demais operadores: regra geral da casa).</p>
+          <p class="text-xs text-mutado mb-4">Base = prejuízo no período × % de cada comissionado. Casas com lucro não geram comissão. Na GG BETS, a base é o prejuízo de cada operador (Lucas: Fabio 5% / Lucas 5%; demais operadores: regra geral da casa). Na EMIRATES BET, a comissão vale só sobre o prejuízo das apostas do PANDOLFO (Renan 2,5% / Fabio 5% / Lucas 2,5%).</p>
           ${totaisExibir.length > 0 ? `
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             ${totaisExibir.map(p => `
@@ -4372,7 +4376,7 @@
                 ${blocosExibir.map((b, bi) => `
                   ${b.linhas.map((l, li) => `
                     <tr class="${(bi + li) % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
-                      <td class="p-3 text-texto">${li === 0 ? renderizarFlagCasa(b.casa) + (b.operador ? ` <span class="text-xs font-bold text-mutado">· ${b.operador}</span>` : '') : ''}</td>
+                      <td class="p-3 text-texto">${li === 0 ? renderizarFlagCasa(b.casa) : ''}</td>
                       <td class="p-3 font-bold text-texto">${l.nome}</td>
                       <td class="p-3 text-texto">${fmtPct(l.pct)}</td>
                       <td class="p-3 text-red-500 font-bold">${fmtR$(b.base)}</td>
@@ -4380,7 +4384,7 @@
                     </tr>
                   `).join('')}
                   <tr class="bg-panelAlt">
-                    <td colspan="4" class="p-2.5 text-right font-black text-texto uppercase text-xs">Subtotal ${b.casa}${b.operador ? ' · ' + b.operador : ''}</td>
+                    <td colspan="4" class="p-2.5 text-right font-black text-texto uppercase text-xs">Subtotal ${b.casa}</td>
                     <td class="p-2.5 font-black text-emerald-500">${fmtR$(b.subtotal)}</td>
                   </tr>
                 `).join('')}
