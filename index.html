@@ -4338,7 +4338,7 @@
         <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-1">
             <h3 class="text-sm md:text-md font-bold text-texto uppercase tracking-wider">🤝 Comissionados por Casa</h3>
-            <label class="text-xs text-mutado flex items-center gap-2 no-print">👤 Comissionado:
+            <label class="text-xs text-mutado flex items-center gap-2 no-print">Comissionado:
               <select onchange="filtrarComissaoPorPessoa(this.value)" class="px-2.5 py-2 bg-panel border border-linha rounded-xl text-texto text-xs cursor-pointer hover:border-emerald-500 transition outline-none font-bold">
                 <option value="">Todos</option>
                 ${pessoasDisponiveis.map(n => `<option value="${n}" ${filtroComissionado === n ? 'selected' : ''}>${n}</option>`).join('')}
@@ -4350,7 +4350,7 @@
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             ${totaisExibir.map(p => `
               <div class="bg-panelAlt border border-linha rounded-xl p-4">
-                <p class="text-xs text-mutado uppercase font-bold mb-1">👤 ${p.nome}</p>
+                <p class="text-xs text-mutado uppercase font-bold mb-1">${p.nome}</p>
                 <p class="text-2xl font-black text-emerald-500">${fmtR$(p.total)}</p>
                 <p class="text-xs text-mutado mt-1">Total de comissão no período</p>
               </div>
@@ -4372,7 +4372,7 @@
                 ${blocosExibir.map((b, bi) => `
                   ${b.linhas.map((l, li) => `
                     <tr class="${(bi + li) % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
-                      <td class="p-3 text-texto">${li === 0 ? renderizarFlagCasa(b.casa) + (b.operador ? ` <span class="text-xs font-bold text-mutado">· 👤 ${b.operador}</span>` : '') : ''}</td>
+                      <td class="p-3 text-texto">${li === 0 ? renderizarFlagCasa(b.casa) + (b.operador ? ` <span class="text-xs font-bold text-mutado">· ${b.operador}</span>` : '') : ''}</td>
                       <td class="p-3 font-bold text-texto">${l.nome}</td>
                       <td class="p-3 text-texto">${fmtPct(l.pct)}</td>
                       <td class="p-3 text-red-500 font-bold">${fmtR$(b.base)}</td>
