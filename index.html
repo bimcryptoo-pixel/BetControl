@@ -101,6 +101,40 @@
       border: 1px solid var(--color-border);
       background: #000;
     }
+    /* Correção das pernas junto da foto na prévia (02/11/2026) */
+    #previaBilhete.com-pernas { width: min(430px, 94vw); }
+    #previaBilhete.com-pernas img {
+      max-height: 42vh;
+      border-radius: 10px 10px 0 0;
+      border-bottom: none;
+      box-shadow: none;
+    }
+    #previaBilhete .previa-pernas {
+      background: var(--color-panel);
+      border: 1px solid var(--color-border);
+      border-radius: 0 0 10px 10px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.65);
+      padding: 8px 10px;
+      max-height: 40vh;
+      overflow: hidden;
+      text-align: left;
+    }
+    #previaBilhete .previa-titulo {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--color-text);
+      margin-bottom: 4px;
+    }
+    #previaBilhete .previa-perna { padding: 5px 0; border-top: 1px solid var(--color-border); }
+    #previaBilhete .previa-titulo + .previa-perna { border-top: none; }
+    #previaBilhete .previa-perna-sel { font-size: 11.5px; color: var(--color-text); line-height: 1.35; }
+    #previaBilhete .previa-odd { color: var(--color-text-muted); font-size: 10.5px; }
+    #previaBilhete .previa-perna-jogo { font-size: 10px; color: var(--color-text-muted); margin-top: 1px; }
+    #previaBilhete .previa-perna-det { font-size: 10.5px; margin-top: 2px; line-height: 1.35; }
+    #previaBilhete .st-green { color: #34d399; }
+    #previaBilhete .st-red { color: #f87171; }
+    #previaBilhete .st-void { color: #94a3b8; }
+    #previaBilhete .st-pendente { color: #facc15; }
 
     /* ============ IMPRESSÃO / PDF — padrão visual BetControl (compacto) ============ */
     @media print {
@@ -1399,7 +1433,7 @@
                         ) : (a.retorno !== null ? `R$ ${a.retorno.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-')}
                       </td>
                       <td class="p-3">${statusTag}</td>
-                      <td class="p-3 text-center">${a.anexo_url ? `<button onclick="abrirPainelBilhete('${a.id}')" onmouseenter="mostrarPreviaBilhete(event, '${a.anexo_url}')" onmousemove="moverPreviaBilhete(event)" onmouseleave="esconderPreviaBilhete()" title="Passe o mouse para ver o bilhete · clique para abrir" class="text-lg hover:scale-125 transition inline-block">📎</button>` : '<span class="text-mutado text-xs">-</span>'}</td>
+                      <td class="p-3 text-center">${a.anexo_url ? `<button onclick="abrirPainelBilhete('${a.id}')" onmouseenter="mostrarPreviaBilhete(event, '${a.id}')" onmousemove="moverPreviaBilhete(event)" onmouseleave="esconderPreviaBilhete()" title="Passe o mouse para ver o bilhete e a correção · clique para abrir" class="text-lg hover:scale-125 transition inline-block">📎</button>` : '<span class="text-mutado text-xs">-</span>'}</td>
                       <td class="p-3 text-right no-print">
                         ${podeEditar ? `
                           <div class="flex items-center justify-end gap-1.5">
@@ -1831,15 +1865,16 @@
     // ===== Prévia do bilhete ao passar o mouse sobre o clipe (02/11/2026) =====
     // Só encostar o mouse no 📎 já mostra a foto flutuando ao lado do cursor,
     // sem precisar clicar. O clique continua abrindo o painel do bilhete.
+    // Junto da foto vai a CORREÇÃO das pernas (status + detalhe de cada uma),
+    // do jeito que a liquidação/varredura gravou — pedido do usuário em 02/11/2026.
     let previaBilheteTimer = null;
-    let previaBilheteUrl = null;
+    let previaBilheteAlvo = null;
     let previaBilhetePos = { x: 0, y: 0 };
     function previaBilheteEl() {
       let el = document.getElementById('previaBilhete');
       if (!el) {
         el = document.createElement('div');
         el.id = 'previaBilhete';
-        el.innerHTML = '<img alt="Prévia do bilhete">';
         document.body.appendChild(el);
       }
       return el;
@@ -1856,24 +1891,44 @@
       el.style.left = Math.max(6, x) + 'px';
       el.style.top = Math.max(6, y) + 'px';
     }
-    function mostrarPreviaBilhete(ev, url) {
+    function previaEsc(s) {
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function previaCorrecaoHtml(apostaId) {
+      const sels = obterSelecoesAposta(apostaId);
+      if (!sels.length) return '';
+      const icones = { green: '✅', red: '❌', void: '🔄', pendente: '⏳' };
+      const pernas = sels.map(s => `
+        <div class="previa-perna">
+          <div class="previa-perna-sel">${icones[s.status] || '⏳'} <b>${previaEsc(s.selecao)}</b> <span class="previa-odd">@${(Number(s.odd) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })}</span></div>
+          <div class="previa-perna-jogo">${previaEsc(s.jogo)} · ${previaEsc(s.mercado)}</div>
+          ${s.detalhe ? `<div class="previa-perna-det st-${previaEsc(s.status)}">${previaEsc(s.detalhe)}</div>` : ''}
+        </div>`).join('');
+      return `<div class="previa-pernas"><div class="previa-titulo">🧾 Correção das pernas</div>${pernas}</div>`;
+    }
+    function mostrarPreviaBilhete(ev, apostaId) {
       previaBilhetePos = { x: ev.clientX, y: ev.clientY };
-      previaBilheteUrl = url;
+      previaBilheteAlvo = apostaId;
       clearTimeout(previaBilheteTimer);
       previaBilheteTimer = setTimeout(() => {
-        if (previaBilheteUrl !== url) return;
+        if (previaBilheteAlvo !== apostaId) return;
+        const a = (estado.apostas || []).find(x => x.id === apostaId);
+        if (!a || !a.anexo_url) return;
         const el = previaBilheteEl();
+        const correcao = previaCorrecaoHtml(apostaId);
+        el.classList.toggle('com-pernas', !!correcao);
+        el.innerHTML = `<img alt="Prévia do bilhete">${correcao}`;
         const img = el.querySelector('img');
         const exibir = () => {
-          if (previaBilheteUrl !== url) return;
+          if (previaBilheteAlvo !== apostaId) return;
           el.classList.add('visivel');
           posicionarPreviaBilhete();
         };
-        if (img.getAttribute('src') === url && img.complete && img.naturalWidth > 0) {
+        if (img.complete && img.naturalWidth > 0 && img.getAttribute('src') === a.anexo_url) {
           exibir();
         } else {
           img.onload = exibir;
-          img.src = url;
+          img.src = a.anexo_url;
           posicionarPreviaBilhete();
         }
       }, 200);
@@ -1884,7 +1939,7 @@
       if (el && el.classList.contains('visivel')) posicionarPreviaBilhete();
     }
     function esconderPreviaBilhete() {
-      previaBilheteUrl = null;
+      previaBilheteAlvo = null;
       clearTimeout(previaBilheteTimer);
       const el = document.getElementById('previaBilhete');
       if (el) el.classList.remove('visivel');
