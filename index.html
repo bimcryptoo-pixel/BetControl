@@ -80,6 +80,28 @@
       opacity: 1;
     }
 
+    /* Prévia do bilhete ao passar o mouse sobre o clipe (02/11/2026) */
+    #previaBilhete {
+      position: fixed;
+      z-index: 90;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .15s ease;
+      width: min(400px, 92vw);
+    }
+    #previaBilhete.visivel { opacity: 1; }
+    #previaBilhete img {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 72vh;
+      object-fit: contain;
+      border-radius: 10px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.65);
+      border: 1px solid var(--color-border);
+      background: #000;
+    }
+
     /* ============ IMPRESSÃO / PDF — padrão visual BetControl (compacto) ============ */
     @media print {
       @page {
@@ -1377,7 +1399,7 @@
                         ) : (a.retorno !== null ? `R$ ${a.retorno.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-')}
                       </td>
                       <td class="p-3">${statusTag}</td>
-                      <td class="p-3 text-center">${a.anexo_url ? `<button onclick="abrirPainelBilhete('${a.id}')" title="Abrir bilhete" class="text-lg hover:scale-125 transition inline-block">📎</button>` : '<span class="text-mutado text-xs">-</span>'}</td>
+                      <td class="p-3 text-center">${a.anexo_url ? `<button onclick="abrirPainelBilhete('${a.id}')" onmouseenter="mostrarPreviaBilhete(event, '${a.anexo_url}')" onmousemove="moverPreviaBilhete(event)" onmouseleave="esconderPreviaBilhete()" title="Passe o mouse para ver o bilhete · clique para abrir" class="text-lg hover:scale-125 transition inline-block">📎</button>` : '<span class="text-mutado text-xs">-</span>'}</td>
                       <td class="p-3 text-right no-print">
                         ${podeEditar ? `
                           <div class="flex items-center justify-end gap-1.5">
@@ -1786,6 +1808,7 @@
     }
 
     function abrirAnexo(url) {
+      esconderPreviaBilhete();
       fecharAnexo();
       const overlay = document.createElement('div');
       overlay.id = 'lightboxAnexo';
@@ -1804,6 +1827,69 @@
       const el = document.getElementById('lightboxAnexo');
       if (el) el.remove();
     }
+
+    // ===== Prévia do bilhete ao passar o mouse sobre o clipe (02/11/2026) =====
+    // Só encostar o mouse no 📎 já mostra a foto flutuando ao lado do cursor,
+    // sem precisar clicar. O clique continua abrindo o painel do bilhete.
+    let previaBilheteTimer = null;
+    let previaBilheteUrl = null;
+    let previaBilhetePos = { x: 0, y: 0 };
+    function previaBilheteEl() {
+      let el = document.getElementById('previaBilhete');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'previaBilhete';
+        el.innerHTML = '<img alt="Prévia do bilhete">';
+        document.body.appendChild(el);
+      }
+      return el;
+    }
+    function posicionarPreviaBilhete() {
+      const el = document.getElementById('previaBilhete');
+      if (!el) return;
+      const w = el.offsetWidth || 320;
+      const h = el.offsetHeight || 320;
+      let x = previaBilhetePos.x + 18;
+      let y = previaBilhetePos.y + 18;
+      if (x + w > window.innerWidth - 10) x = previaBilhetePos.x - w - 14;
+      if (y + h > window.innerHeight - 10) y = previaBilhetePos.y - h - 14;
+      el.style.left = Math.max(6, x) + 'px';
+      el.style.top = Math.max(6, y) + 'px';
+    }
+    function mostrarPreviaBilhete(ev, url) {
+      previaBilhetePos = { x: ev.clientX, y: ev.clientY };
+      previaBilheteUrl = url;
+      clearTimeout(previaBilheteTimer);
+      previaBilheteTimer = setTimeout(() => {
+        if (previaBilheteUrl !== url) return;
+        const el = previaBilheteEl();
+        const img = el.querySelector('img');
+        const exibir = () => {
+          if (previaBilheteUrl !== url) return;
+          el.classList.add('visivel');
+          posicionarPreviaBilhete();
+        };
+        if (img.getAttribute('src') === url && img.complete && img.naturalWidth > 0) {
+          exibir();
+        } else {
+          img.onload = exibir;
+          img.src = url;
+          posicionarPreviaBilhete();
+        }
+      }, 200);
+    }
+    function moverPreviaBilhete(ev) {
+      previaBilhetePos = { x: ev.clientX, y: ev.clientY };
+      const el = document.getElementById('previaBilhete');
+      if (el && el.classList.contains('visivel')) posicionarPreviaBilhete();
+    }
+    function esconderPreviaBilhete() {
+      previaBilheteUrl = null;
+      clearTimeout(previaBilheteTimer);
+      const el = document.getElementById('previaBilhete');
+      if (el) el.classList.remove('visivel');
+    }
+    window.addEventListener('scroll', esconderPreviaBilhete, true);
 
     function fecharPainelBilhete() {
       const el = document.getElementById('painelBilhete');
@@ -1882,6 +1968,7 @@
     }
 
     async function abrirPainelBilhete(apostaId) {
+      esconderPreviaBilhete();
       fecharPainelBilhete();
       let a = (estado.apostas || []).find(x => x.id === apostaId);
       if (!a) return;
