@@ -1894,6 +1894,17 @@
     function previaEsc(s) {
       return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
+    function detalheFonteHtml(detalhe) {
+      const txt = String(detalhe == null ? '' : detalhe);
+      const m = txt.match(/https?:\/\/[^\s]+/);
+      if (!m) return previaEsc(txt);
+      const url = m[0].replace(/[)\].,;]+$/, '');
+      const antes = txt.slice(0, m.index).replace(/·?\s*Fonte:\s*$/i, '').replace(/[\s·—|-]+$/, '').trim();
+      const depois = txt.slice(m.index + m[0].length).replace(/^[\s·—|-]+/, '').trim();
+      const limpo = [antes, depois].filter(Boolean).join(' · ');
+      const link = `<a href="${previaEsc(url)}" target="_blank" rel="noopener" style="color:#38bdf8;text-decoration:underline;font-weight:600;white-space:nowrap">🔗 ver fonte</a>`;
+      return (limpo ? previaEsc(limpo) + ' ' : '') + link;
+    }
     function previaCorrecaoHtml(apostaId) {
       const sels = obterSelecoesAposta(apostaId);
       if (!sels.length) return '';
@@ -1902,7 +1913,7 @@
         <div class="previa-perna">
           <div class="previa-perna-sel">${icones[s.status] || '⏳'} <b>${previaEsc(s.selecao)}</b> <span class="previa-odd">@${(Number(s.odd) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })}</span></div>
           <div class="previa-perna-jogo">${previaEsc(s.jogo)} · ${previaEsc(s.mercado)}</div>
-          ${s.detalhe ? `<div class="previa-perna-det st-${previaEsc(s.status)}">${previaEsc(s.detalhe)}</div>` : ''}
+          ${s.detalhe ? `<div class="previa-perna-det st-${previaEsc(s.status)}">${detalheFonteHtml(s.detalhe)}</div>` : ''}
         </div>`).join('');
       return `<div class="previa-pernas"><div class="previa-titulo">🧾 Correção das pernas</div>${pernas}</div>`;
     }
@@ -2096,7 +2107,7 @@
           </div>
           <div class="text-xs text-mutado">${s.jogo}</div>
           ${s.mercado ? `<div class="text-xs text-mutado">${s.mercado}</div>` : ''}
-          ${s.detalhe ? `<div class="text-xs mt-1 text-texto opacity-80">📊 ${s.detalhe}</div>` : ''}
+          ${s.detalhe ? `<div class="text-xs mt-1 text-texto opacity-80">📊 ${detalheFonteHtml(s.detalhe)}</div>` : ''}
           ${textoCountdown(s.inicioJogo) ? `<div class="text-xs mt-1 text-sky-400 font-bold">${textoCountdown(s.inicioJogo)}</div>` : ''}
           ${verificarSeTemPermissaoEdicao() ? `<div class="flex gap-1 mt-2 items-center">
             <button onclick="corrigirSelecaoManual('${apostaId}', '${s.id}', 'green')" title="Marcar GREEN" class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold hover:bg-emerald-500 hover:text-white transition">✅</button>
