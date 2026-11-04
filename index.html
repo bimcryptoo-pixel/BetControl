@@ -658,6 +658,7 @@
           estado.acertos = acertosSrv.map(x => ({
             id: x.id,
             casaId: x.casa_id,
+            operadorId: x.operador_id || null,
             periodoDe: x.periodo_de,
             periodoAte: x.periodo_ate,
             tipo: x.tipo,
@@ -4562,6 +4563,25 @@
     // CONVENÇÃO (corrigida 05/10/2026 a pedido do usuário): "lucro" no BetControl
     // é o da operação (retorno - stake). Lucro > 0 = a casa deve ao usuário
     // (RECEBER, verde); lucro < 0 = o usuário deve à casa (PAGAR, vermelho).
+    // 🏦 Baixas são POR OPERADOR (04/11/2026, pedido do Fabio): a baixa de um
+    // operador NUNCA abate o saldo do outro na mesma casa/período. O operador
+    // ativo é o do filtro global; leitor (não editor) vê sempre só o dele.
+    function operadorAcertoAtual() {
+      if (estado.filtros && estado.filtros.operadorId) return estado.filtros.operadorId;
+      const usr = obterUsuarioLogado();
+      if (usr && usr.perfil !== 'editor') {
+        const op = (estado.operadores || []).find(o => o.nome.toLowerCase() === usr.nome.toLowerCase() || o.id === usr.operadorId);
+        if (op) return op.id;
+      }
+      return '';
+    }
+    function acertosDoOperadorAtual() {
+      const opId = operadorAcertoAtual();
+      const todos = estado.acertos || [];
+      if (!opId) return todos;
+      return todos.filter(x => x.operadorId === opId);
+    }
+
     function renderizarAcertos(container) {
       const podeEditar = verificarSeTemPermissaoEdicao();
       const apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
@@ -4595,7 +4615,7 @@
 
       // Baixas já registradas contidas no período selecionado
       const baixadoPorCasa = {};
-      (estado.acertos || []).forEach(x => {
+      (acertosDoOperadorAtual()).forEach(x => {
         const dentro = (!de || x.periodoDe >= de) && (!ate || x.periodoAte <= ate);
         if (!dentro || !x.casaId) return;
         baixadoPorCasa[x.casaId] = (baixadoPorCasa[x.casaId] || 0) + x.valor;
@@ -4618,7 +4638,7 @@
       const totBaixado = +linhas.reduce((s, l) => s + l.baixado, 0).toFixed(2);
       const totSaldo = +linhas.reduce((s, l) => s + l.saldo, 0).toFixed(2);
 
-      const historico = (estado.acertos || [])
+      const historico = (acertosDoOperadorAtual())
         .filter(x => (!de || x.periodoDe >= de) && (!ate || x.periodoAte <= ate))
         .sort((a, b) => (b.dataBaixa || '').localeCompare(a.dataBaixa || '') || (b.createdAt || '').localeCompare(a.createdAt || ''));
 
@@ -4724,7 +4744,7 @@
                   return `
                   <tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
                     <td class="p-3 text-texto">${fmtData(x.dataBaixa)}</td>
-                    <td class="p-3 text-texto">${renderizarFlagCasa(casaObj ? casaObj.nome : 'N/A')}</td>
+                    <td class="p-3 text-texto">${renderizarFlagCasa(casaObj ? casaObj.nome : 'N/A')}${x.operadorId ? `<div class="text-[10px] text-mutado mt-0.5">${((estado.operadores || []).find(o => o.id === x.operadorId) || {}).nome || ''}</div>` : ''}</td>
                     <td class="p-3 text-texto text-xs">${fmtData(x.periodoDe)} a ${fmtData(x.periodoAte)}</td>
                     <td class="p-3 font-bold ${x.tipo === 'pagar' ? 'text-red-400' : 'text-emerald-400'}">${x.tipo === 'pagar' ? '❌ Pago à casa' : '✅ Recebido da casa'}</td>
                     <td class="p-3 font-bold text-texto">${fmtR$(x.valor)}</td>
@@ -4741,6 +4761,9 @@
 
     function abrirModalBaixa(casaId) {
       const casaObj = estado.casas.find(c => c.id === casaId);
+      const opBaixa = operadorAcertoAtual();
+      if (!opBaixa) { alert('Selecione um operador no filtro do topo para dar baixa: a baixa é sempre de UM operador (a de um não abate o saldo do outro).'); return; }
+      const opBaixaObj = (estado.operadores || []).find(o => o.id === opBaixa);
       const apostasFiltradas = filtrarApostasPorGeral(estado.apostas);
       let lucro = 0;
       apostasFiltradas.forEach(a => {
@@ -4749,7 +4772,7 @@
       const de = estado.filtros.dataInicio || '';
       const ate = estado.filtros.dataFim || '';
       let baixado = 0;
-      (estado.acertos || []).forEach(x => {
+      (acertosDoOperadorAtual()).forEach(x => {
         const dentro = (!de || x.periodoDe >= de) && (!ate || x.periodoAte <= ate);
         if (dentro && x.casaId === casaId) baixado += x.valor;
       });
@@ -4775,9 +4798,10 @@
         <div class="relative bg-panel border border-linha rounded-2xl max-w-md w-full m-auto p-5 md:p-6 shadow-2xl" onclick="event.stopPropagation()">
           <button onclick="fecharModalBaixa()" class="absolute top-3 right-3 w-9 h-9 rounded-full bg-red-600 text-white font-bold shadow-xl">✕</button>
           <h3 class="text-lg font-bold mb-1" style="color: var(--color-text);">💰 Dar baixa</h3>
-          <p class="text-xs text-mutado mb-4">${casaObj ? casaObj.nome : ''} · ${tipoTxt}</p>
+          <p class="text-xs text-mutado mb-4">${casaObj ? casaObj.nome : ''} · ${tipoTxt} · Operador: <b class="text-texto">${opBaixaObj ? opBaixaObj.nome : ''}</b></p>
           <input type="hidden" id="baixaCasaId" value="${casaId}">
           <input type="hidden" id="baixaTipo" value="${tipo}">
+          <input type="hidden" id="baixaOperadorId" value="${opBaixa}">
           <input type="hidden" id="baixaPerDe" value="${perDe}">
           <input type="hidden" id="baixaPerAte" value="${perAte}">
           <div class="space-y-3">
@@ -4816,6 +4840,8 @@
     async function salvarBaixa() {
       const casaId = document.getElementById('baixaCasaId').value;
       const tipo = document.getElementById('baixaTipo').value;
+      const operadorId = (document.getElementById('baixaOperadorId') || {}).value || '';
+      if (!operadorId) { alert('Baixa sem operador não é permitida: selecione o operador no filtro do topo.'); return; }
       const perDe = document.getElementById('baixaPerDe').value;
       const perAte = document.getElementById('baixaPerAte').value;
       const valor = parseFloat(document.getElementById('baixaValor').value);
@@ -4824,7 +4850,7 @@
       if (!valor || valor <= 0) { alert('Informe um valor maior que zero.'); return; }
       if (!dataBaixa) { alert('Informe a data da baixa.'); return; }
       const id = 'acerto-' + Date.now() + '-' + Math.floor(Math.random() * 1e6);
-      const registro = { id, casa_id: casaId, periodo_de: perDe, periodo_ate: perAte, tipo, valor: +valor.toFixed(2), data_baixa: dataBaixa, observacao: obs };
+      const registro = { id, casa_id: casaId, operador_id: operadorId, periodo_de: perDe, periodo_ate: perAte, tipo, valor: +valor.toFixed(2), data_baixa: dataBaixa, observacao: obs };
       try {
         const { error } = await supabaseClient.from('acertos').insert(registro);
         if (error) throw error;
@@ -4834,7 +4860,7 @@
         return;
       }
       estado.acertos = estado.acertos || [];
-      estado.acertos.push({ id, casaId, periodoDe: perDe, periodoAte: perAte, tipo, valor: +valor.toFixed(2), dataBaixa: dataBaixa, observacao: obs, createdAt: new Date().toISOString() });
+      estado.acertos.push({ id, casaId, operadorId, periodoDe: perDe, periodoAte: perAte, tipo, valor: +valor.toFixed(2), dataBaixa: dataBaixa, observacao: obs, createdAt: new Date().toISOString() });
       salvarDadosNoLocalStorage();
       fecharModalBaixa();
       renderizarAcertos(document.getElementById('conteudo-principal'));
