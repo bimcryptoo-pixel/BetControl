@@ -1723,12 +1723,14 @@
                   // Sombra na área até a linha do zero, na cor da linha.
                   fill: 'origin',
                   backgroundColor: (bctx) => gradienteBicolor(bctx.chart, 'rgba(16, 185, 129, 0.15)', 'rgba(239, 68, 68, 0.15)'),
-                  borderWidth: 2,
-                  tension: 0.3,
+                  borderWidth: 2.5,
+                  // Curva suave e sem bolinhas: o ponto só aparece ao tocar/passar o mouse (balão).
+                  tension: 0.45,
                   yAxisID: 'y1',
                   pointBackgroundColor: (pctx) => (pctx.parsed.y >= 0 ? '#10b981' : '#ef4444'),
                   pointBorderColor: (pctx) => (pctx.parsed.y >= 0 ? '#10b981' : '#ef4444'),
-                  pointRadius: 3
+                  pointRadius: 0,
+                  pointHoverRadius: 4
                 },
                 {
                   // EV esperado: 8% do volume acumulado — linha amarela pontilhada
@@ -1740,7 +1742,7 @@
                   borderWidth: 2,
                   borderDash: [6, 4],
                   fill: false,
-                  tension: 0.3,
+                  tension: 0.45,
                   yAxisID: 'y1',
                   pointRadius: 0,
                   pointHoverRadius: 4,
@@ -1783,14 +1785,15 @@
               scales: {
                 x: { 
                   // Datas fora do eixo: a data de cada ponto aparece no balão (tooltip).
+                  // Sem grades: visual limpo, as linhas e os eixos laterais bastam.
                   ticks: { display: false }, 
-                  grid: { color: gridColor, drawBorder: false } 
+                  grid: { display: false, drawBorder: false } 
                 },
                 y: {
                   type: 'linear', display: true, position: 'left',
                   title: { display: true, text: 'Volume (R$)', color: '#3b82f6', font: {size: 10, weight: 'bold'} },
                   ticks: { color: '#3b82f6', font: {size: 10}, callback: value => 'R$ ' + (value/1000) + 'k' },
-                  grid: { color: gridColor, drawBorder: false }
+                  grid: { display: false, drawBorder: false }
                 },
                 y1: {
                   type: 'linear', display: true, position: 'right',
