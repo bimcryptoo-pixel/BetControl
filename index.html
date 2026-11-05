@@ -1557,6 +1557,10 @@
         dataLucroAcumulado.push(lucroAcum);
       });
 
+      // EV esperado: 8% sobre o volume acumulado, ponto a ponto (segue o filtro
+      // do dashboard — por operador, é 8% do volume acumulado dele).
+      const dataEVEsperado = dataVolumeAcumulado.map(v => Math.round(v * 0.08 * 100) / 100);
+
       // ROI do período: lucro líquido ÷ volume total × 100
       const roiGeral = volumeTotalGeral > 0 ? (lucroLiquidoTotalGeral / volumeTotalGeral) * 100 : 0;
 
@@ -1596,7 +1600,7 @@
           </div>
         </div>
 
-        <!-- GRÁFICO DE EVOLUÇÃO (SÓ LUCRO, BICOLOR + EIXO LATERAL DE VOLUME) -->
+        <!-- GRÁFICO DE EVOLUÇÃO (LUCRO BICOLOR + LINHA DE EV ESPERADO 8% + EIXO LATERAL DE VOLUME) -->
         ${datasCronologicas.length > 0 ? `
         <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6 no-print">
           <h3 class="text-sm font-bold text-texto uppercase tracking-wider mb-4">📉 Gráfico de Evolução (Acumulado)</h3>
@@ -1716,6 +1720,23 @@
                   pointBackgroundColor: (pctx) => (pctx.parsed.y >= 0 ? '#10b981' : '#ef4444'),
                   pointBorderColor: (pctx) => (pctx.parsed.y >= 0 ? '#10b981' : '#ef4444'),
                   pointRadius: 3
+                },
+                {
+                  // EV esperado: 8% do volume acumulado — linha amarela pontilhada
+                  // no eixo do lucro (y1), comparável ao Lucro Líquido Acumulado.
+                  label: 'EV Esperado (8%)',
+                  data: dataEVEsperado,
+                  borderColor: '#facc15',
+                  backgroundColor: '#facc15',
+                  borderWidth: 2,
+                  borderDash: [6, 4],
+                  fill: false,
+                  tension: 0.3,
+                  yAxisID: 'y1',
+                  pointRadius: 0,
+                  pointHoverRadius: 4,
+                  pointBackgroundColor: '#facc15',
+                  pointBorderColor: '#facc15'
                 }
               ]
             },
