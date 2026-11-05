@@ -1782,7 +1782,8 @@
               },
               scales: {
                 x: { 
-                  ticks: { color: textColor, font: { size: 10 } }, 
+                  // Datas fora do eixo: a data de cada ponto aparece no balão (tooltip).
+                  ticks: { display: false }, 
                   grid: { color: gridColor, drawBorder: false } 
                 },
                 y: {
