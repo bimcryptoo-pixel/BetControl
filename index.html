@@ -4407,6 +4407,20 @@
     // Respeita os filtros globais (período, casa, operador) via filtrarApostasPorGeral;
     // só entram apostas finalizadas com retorno registrado.
     // Winrate = greens / (greens + reds); bilhete com lucro zero (void/estorno) não entra na conta.
+    // Filtro de odds do módulo (08/11/2026, pedido do usuário): odd mínima e odd máxima
+    // digitadas manualmente; vale a odd TOTAL do bilhete (odd_total gravada; sem ela,
+    // o produto das odds das pernas, igual à coluna Odd do sistema).
+    let fBil = { oddMin: '', oddMax: '' };
+    function definirFiltroBilhetes() {
+      const elMin = document.getElementById('fBilOddMin');
+      const elMax = document.getElementById('fBilOddMax');
+      fBil = { oddMin: elMin ? elMin.value : '', oddMax: elMax ? elMax.value : '' };
+      renderizarBilhetes(document.getElementById('conteudo-principal'));
+    }
+    function limparFiltrosBilhetes() {
+      fBil = { oddMin: '', oddMax: '' };
+      renderizarBilhetes(document.getElementById('conteudo-principal'));
+    }
     function renderizarBilhetes(container) {
       const fmt = v => `R$ ${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
       const corLucro = v => v > 0 ? 'text-emerald-500' : v < 0 ? 'text-red-500' : 'text-texto';
@@ -4418,7 +4432,24 @@
         selPorAposta[s.apostaId].push(s);
       });
 
-      const base = filtrarApostasPorGeral(estado.apostas).filter(a => a.finalizada && a.retorno !== null && a.retorno !== undefined);
+      const parseOddFiltro = v => { const n = parseFloat(String(v || '').replace(',', '.')); return isNaN(n) ? null : n; };
+      const oddMin = parseOddFiltro(fBil.oddMin);
+      const oddMax = parseOddFiltro(fBil.oddMax);
+      const oddEfetivaBil = a => {
+        const ob = (a.oddTotal !== null && a.oddTotal !== undefined && a.oddTotal !== '') ? Number(a.oddTotal) : null;
+        if (ob) return ob;
+        const sels = selPorAposta[a.id] || [];
+        return sels.length ? calcularOddTotal(sels) : null;
+      };
+      const base = filtrarApostasPorGeral(estado.apostas).filter(a => a.finalizada && a.retorno !== null && a.retorno !== undefined)
+        .filter(a => {
+          if (oddMin === null && oddMax === null) return true;
+          const o = oddEfetivaBil(a);
+          if (o === null) return false;
+          if (oddMin !== null && o < oddMin) return false;
+          if (oddMax !== null && o > oddMax) return false;
+          return true;
+        });
 
       const gruposDef = [
         { chave: '1', nome: 'Simples', pernas: '1 perna' },
@@ -4479,6 +4510,20 @@
         <div class="mb-6">
           <h2 class="text-xl md:text-2xl font-bold text-texto">🎟️ Análise de Bilhetes</h2>
           <p class="text-xs md:text-sm text-mutado mt-1">Suas apostas finalizadas quebradas pelo tamanho do bilhete — simples, duplas, triplas e quádruplas. Respeita os filtros globais (período, casa e operador).</p>
+        </div>
+
+        <div class="bg-panel border border-linha rounded-xl p-4 mb-6 flex flex-wrap items-end gap-3" data-filtros-bilhetes="odds">
+          <div>
+            <label class="block text-[10px] uppercase tracking-wider text-mutado font-bold mb-1">🎯 Odd mínima</label>
+            <input type="number" step="0.01" min="1" id="fBilOddMin" value="${fBil.oddMin}" placeholder="Ex: 1,50" onkeydown="if(event.key==='Enter'){event.preventDefault();definirFiltroBilhetes();}" class="w-32 px-3 py-2 bg-input border border-linha rounded-lg text-texto text-sm outline-none">
+          </div>
+          <div>
+            <label class="block text-[10px] uppercase tracking-wider text-mutado font-bold mb-1">🎯 Odd máxima</label>
+            <input type="number" step="0.01" min="1" id="fBilOddMax" value="${fBil.oddMax}" placeholder="Ex: 3,00" onkeydown="if(event.key==='Enter'){event.preventDefault();definirFiltroBilhetes();}" class="w-32 px-3 py-2 bg-input border border-linha rounded-lg text-texto text-sm outline-none">
+          </div>
+          <button onclick="definirFiltroBilhetes()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition">Aplicar</button>
+          ${(fBil.oddMin || fBil.oddMax) ? '<button onclick="limparFiltrosBilhetes()" class="px-4 py-2 rounded-lg bg-input border border-linha text-mutado hover:text-texto text-sm font-bold transition">Limpar filtro</button>' : ''}
+          <p class="text-[11px] text-mutado w-full">Filtra pela <b>odd total do bilhete</b>. Deixe um dos campos vazio pra filtrar só de um lado (ex.: só odd mínima).${(oddMin !== null || oddMax !== null) ? ` Filtro ativo: ${oddMin !== null ? 'odd ≥ ' + oddMin.toLocaleString('pt-BR') : ''}${oddMin !== null && oddMax !== null ? ' e ' : ''}${oddMax !== null ? 'odd ≤ ' + oddMax.toLocaleString('pt-BR') : ''} — ${total.bets} aposta(s) no intervalo.` : ''}</p>
         </div>
 
         <div class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-6" data-resumo-bilhetes="total">
