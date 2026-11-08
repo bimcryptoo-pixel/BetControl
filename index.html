@@ -7,6 +7,8 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=2">
   <link rel="icon" type="image/png" sizes="192x192" href="favicon.png?v=2">
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0b0f0c">
   <script src="https://cdn.tailwindcss.com"></script>
   
   <!-- Configuração Dinâmica do Tailwind com Temas -->
@@ -341,6 +343,9 @@
         </div>
 
         <div class="flex md:hidden items-center gap-2">
+          <button id="btnPushMobile" onclick="bcPushAlternar()" title="Avisos de aposta finalizada" class="hidden p-2 bg-panel border border-linha rounded-lg text-xs font-bold">
+            🔔
+          </button>
           <button onclick="realizarLogout()" title="Sair" class="p-2 bg-red-600/20 text-red-400 rounded-lg text-xs font-bold">
             🔒 Sair
           </button>
@@ -405,6 +410,10 @@
             <option value="light">☀️ Claro</option>
             <option value="medium">🌤️ Mediano</option>
           </select>
+
+          <button id="btnPushDesktop" onclick="bcPushAlternar()" title="Ativar avisos de aposta finalizada neste aparelho" class="hidden px-3 py-2 bg-panel border border-linha rounded-lg text-xs font-bold text-texto transition hover:border-emerald-500">
+            🔔 Avisos
+          </button>
 
           <div class="text-right border-l border-linha pl-3">
             <span id="headerNomeUsuario" class="block text-xs font-bold text-texto">admin</span>
@@ -738,6 +747,11 @@
       } catch (erro) {
         console.error("Erro ao sincronizar com Supabase:", erro);
       }
+      // 🔔 Push de aposta finalizada (08/11/2026) — ponto único: cobre o
+      // painel de correção, o retorno manual, a edição e o "zerar".
+      if (tipo === 'aposta' && dadosObjeto && dadosObjeto.finalizada && dadosObjeto.retorno !== null && dadosObjeto.retorno !== undefined && typeof bcPushAvisar === 'function') {
+        bcPushAvisar(dadosObjeto);
+      }
     }
 
     async function deletarDaNuvemELocal(tipo, id) {
@@ -810,6 +824,7 @@
           const elPerfil = document.getElementById('headerPerfilUsuario');
           if (elNome) elNome.textContent = usr.usuario;
           if (elPerfil) elPerfil.textContent = usr.perfil === 'editor' ? '✏️ Editor' : '👁️ Leitura';
+          if (typeof bcPushAtualizarBotao === 'function') bcPushAtualizarBotao();
           
           atualizarVisibilidadeMenuLateral(usr);
 
@@ -5661,6 +5676,140 @@
         await deletarDaNuvemELocal('usuario', id);
         renderizarAba();
       }
+    }
+  </script>
+
+  <script>
+    /* 🔔 PUSH DE APOSTA FINALIZADA (08/11/2026) — só o editor (Fabio).
+       A inscrição fica amarrada ao aparelho/navegador onde ele ativou;
+       a função enviar-push-bet confere a credencial de editor antes de
+       gravar. Quem recebe NÃO precisa estar logado nem com o app aberto
+       — o aviso chega pelo serviço de notificações (Apple/Google). */
+    const BC_PUSH_FN = 'https://srenhrjrprufixoiqvlz.supabase.co/functions/v1/enviar-push-bet';
+    const BC_PUSH_VAPID = 'BJHqEanjzUE7hd_JnLtADHdEnMwErZmRD05yi5UhmvUaaK92XO5v_QQooDgR3FK6l5xbQ9-IkY4O1imBGs6NDxQ';
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+
+    function bcPushSuportado() {
+      return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
+    }
+    function bcPushBotoes() {
+      return [document.getElementById('btnPushDesktop'), document.getElementById('btnPushMobile')].filter(Boolean);
+    }
+    async function bcPushSubAtual() {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        return await reg.pushManager.getSubscription();
+      } catch (_) { return null; }
+    }
+    async function bcPushAtualizarBotao() {
+      const botoes = bcPushBotoes();
+      if (!botoes.length) return;
+      let usr = null;
+      try { usr = obterUsuarioLogado(); } catch (_) {}
+      if (!usr || usr.perfil !== 'editor' || !bcPushSuportado()) {
+        botoes.forEach(b => b.classList.add('hidden'));
+        return;
+      }
+      const sub = await bcPushSubAtual();
+      botoes.forEach(b => {
+        b.classList.remove('hidden');
+        if (b.id === 'btnPushDesktop') b.textContent = sub ? '🔔 Avisos ✓' : '🔔 Avisos';
+        b.title = sub
+          ? 'Avisos de aposta finalizada ATIVOS neste aparelho (toque para desativar)'
+          : 'Ativar avisos de aposta finalizada neste aparelho';
+      });
+    }
+    function bcPushUrlB64ParaBytes(b64) {
+      const pad = '='.repeat((4 - (b64.length % 4)) % 4);
+      const base = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+      const raw = atob(base);
+      const out = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+      return out;
+    }
+    async function bcPushAlternar() {
+      const usr = obterUsuarioLogado();
+      if (!usr || usr.perfil !== 'editor') return;
+      if (!bcPushSuportado()) { alert('Este navegador não suporta notificações push.'); return; }
+      const reg = await navigator.serviceWorker.ready;
+      const atual = await reg.pushManager.getSubscription();
+      if (atual) {
+        if (!confirm('Desativar os avisos de aposta finalizada neste aparelho?')) return;
+        try {
+          await fetch(BC_PUSH_FN, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ acao: 'desassinar', usuario: usr.usuario, senha: usr.senha, endpoint: atual.endpoint })
+          });
+        } catch (_) {}
+        await atual.unsubscribe().catch(() => {});
+        bcPushAtualizarBotao();
+        return;
+      }
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') { alert('Permita as notificações para ativar os avisos.'); return; }
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: bcPushUrlB64ParaBytes(BC_PUSH_VAPID)
+        });
+      }
+      let j = {};
+      try {
+        const r = await fetch(BC_PUSH_FN, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ acao: 'assinar', usuario: usr.usuario, senha: usr.senha, subscription: sub.toJSON(), user_agent: navigator.userAgent })
+        });
+        j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.ok) { alert('Não consegui ativar os avisos: ' + (j.erro || ('HTTP ' + r.status))); return; }
+      } catch (e) {
+        alert('Não consegui ativar os avisos (rede). Tente de novo.');
+        return;
+      }
+      bcPushAtualizarBotao();
+      try {
+        await reg.showNotification('🔔 Avisos ativados', {
+          body: 'É assim que uma aposta finalizada vai chegar pra você. ✓',
+          icon: 'favicon.png', tag: 'bc-teste'
+        });
+      } catch (_) {}
+    }
+
+    /* Chamado pelo salvarNaNuvemELocal quando uma aposta é salva
+       finalizada — e pelo painel/cron nunca trava o app (tudo em try). */
+    async function bcPushAvisar(aposta) {
+      try {
+        if (!aposta || !aposta.finalizada || aposta.retorno === null || aposta.retorno === undefined) return;
+        const op = (estado.operadores || []).find(o => o.id === aposta.operadorId);
+        const casa = (estado.casas || []).find(c => c.id === aposta.casaId);
+        let pernas = [];
+        try {
+          pernas = (obterSelecoesAposta(aposta.id) || []).map(s => ({ jogo: s.jogo || '', selecao: s.selecao || '' }));
+        } catch (_) {}
+        const corpo = JSON.stringify({
+          acao: 'avisar',
+          aposta: {
+            id: aposta.id,
+            operador: op ? op.nome : '',
+            casa: casa ? casa.nome : '',
+            stake: Number(aposta.stake) || 0,
+            retorno: Number(aposta.retorno) || 0
+          },
+          pernas
+        });
+        for (let i = 0; i < 2; i++) {
+          try {
+            const r = await fetch(BC_PUSH_FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: corpo });
+            if (r.ok) return;
+          } catch (_) {}
+          await new Promise(res => setTimeout(res, 1200));
+        }
+      } catch (_) { /* push nunca pode travar o app */ }
     }
   </script>
 </body>
