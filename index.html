@@ -440,6 +440,9 @@
         <button id="nav-analises" onclick="mudarAba('analises')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
           📊 Análise por Esportes
         </button>
+        <button id="nav-bilhetes" onclick="mudarAba('bilhetes')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
+          🎟️ Análise de Bilhetes
+        </button>
         <button id="nav-comissao" onclick="mudarAba('comissao')" class="aba-btn whitespace-nowrap flex items-center gap-2.5 px-3.5 py-2.5 md:px-4 md:py-3 rounded-lg bg-panel text-mutado hover:bg-input font-medium text-xs md:text-sm transition">
           🤝 Comissão
         </button>
@@ -811,7 +814,7 @@
           atualizarVisibilidadeMenuLateral(usr);
 
           if (!verificarPermissaoAba(estado.abaAtiva)) {
-            const abasPossiveis = ['dashboard', 'volumemes', 'operadores', 'casas', 'relatorios', 'lucro', 'analises', 'comissao', 'acertos', 'pagamentos', 'backup', 'usuarios'];
+            const abasPossiveis = ['dashboard', 'volumemes', 'operadores', 'casas', 'relatorios', 'lucro', 'analises', 'bilhetes', 'comissao', 'acertos', 'pagamentos', 'backup', 'usuarios'];
             const primeiraPermitida = abasPossiveis.find(a => verificarPermissaoAba(a));
             if (primeiraPermitida) {
               estado.abaAtiva = primeiraPermitida;
@@ -844,6 +847,7 @@
         'relatorios': 'nav-relatorios',
         'lucro': 'nav-lucro',
         'analises': 'nav-analises',
+        'bilhetes': 'nav-bilhetes',
         'comissao': 'nav-comissao',
         'acertos': 'nav-acertos',
         'pagamentos': 'nav-pagamentos',
@@ -1222,6 +1226,7 @@
       else if (estado.abaAtiva === 'relatorios') renderizarRelatorios(main);
       else if (estado.abaAtiva === 'lucro') renderizarLucro(main);
       else if (estado.abaAtiva === 'analises') renderizarAnalises(main);
+      else if (estado.abaAtiva === 'bilhetes') renderizarBilhetes(main);
       else if (estado.abaAtiva === 'comissao') renderizarComissao(main);
       else if (estado.abaAtiva === 'acertos') renderizarAcertos(main);
       else if (estado.abaAtiva === 'pagamentos') renderizarPagamentos(main);
@@ -4395,6 +4400,155 @@
       'EMIRATES BET': { 'PANDOLFO': [['Renan', 2.5], ['Fabio', 5], ['Lucas', 2.5]] }
     };
 
+    // ================= ANÁLISE DE BILHETES (08/11/2026, pedido do usuário) =================
+    // Quebra das apostas finalizadas pelo número de pernas do bilhete:
+    // Simples (1), Duplas (2), Triplas (3), Quádruplas (4) e 5+ pernas.
+    // Por grupo: total de apostas (nº de bets e valor girado), stake média, ROI e winrate.
+    // Respeita os filtros globais (período, casa, operador) via filtrarApostasPorGeral;
+    // só entram apostas finalizadas com retorno registrado.
+    // Winrate = greens / (greens + reds); bilhete com lucro zero (void/estorno) não entra na conta.
+    function renderizarBilhetes(container) {
+      const fmt = v => `R$ ${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const corLucro = v => v > 0 ? 'text-emerald-500' : v < 0 ? 'text-red-500' : 'text-texto';
+      const pctTxt = (num, den) => den > 0 ? (num / den * 100).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%' : '—';
+
+      const selPorAposta = {};
+      (estado.selecoes || []).forEach(s => {
+        if (!selPorAposta[s.apostaId]) selPorAposta[s.apostaId] = [];
+        selPorAposta[s.apostaId].push(s);
+      });
+
+      const base = filtrarApostasPorGeral(estado.apostas).filter(a => a.finalizada && a.retorno !== null && a.retorno !== undefined);
+
+      const gruposDef = [
+        { chave: '1', nome: 'Simples', pernas: '1 perna' },
+        { chave: '2', nome: 'Duplas', pernas: '2 pernas' },
+        { chave: '3', nome: 'Triplas', pernas: '3 pernas' },
+        { chave: '4', nome: 'Quádruplas', pernas: '4 pernas' },
+        { chave: '5+', nome: '5+ pernas', pernas: '5 ou mais pernas' }
+      ];
+      const grupos = {};
+      gruposDef.forEach(d => { grupos[d.chave] = { bets: 0, volume: 0, retorno: 0, greens: 0, reds: 0, voids: 0 }; });
+      let semPernas = 0;
+
+      base.forEach(a => {
+        const n = (selPorAposta[a.id] || []).length;
+        if (n === 0) { semPernas++; return; }
+        const g = grupos[n >= 5 ? '5+' : String(n)];
+        const stake = Number(a.stake) || 0;
+        const ret = Number(a.retorno) || 0;
+        g.bets++; g.volume += stake; g.retorno += ret;
+        const lucro = ret - stake;
+        if (lucro > 0.009) g.greens++; else if (lucro < -0.009) g.reds++; else g.voids++;
+      });
+
+      const metricas = g => {
+        const lucro = g.retorno - g.volume;
+        return {
+          lucro,
+          stakeMedia: g.bets > 0 ? g.volume / g.bets : 0,
+          roi: g.volume > 0 ? lucro / g.volume * 100 : null,
+          winrate: (g.greens + g.reds) > 0 ? g.greens / (g.greens + g.reds) * 100 : null
+        };
+      };
+      const roiTxt = m => m.roi === null ? '—' : m.roi.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+      const wrTxt = m => m.winrate === null ? '—' : m.winrate.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+
+      const total = { bets: 0, volume: 0, retorno: 0, greens: 0, reds: 0, voids: 0 };
+      gruposDef.forEach(d => { const g = grupos[d.chave]; total.bets += g.bets; total.volume += g.volume; total.retorno += g.retorno; total.greens += g.greens; total.reds += g.reds; total.voids += g.voids; });
+      const mTotal = metricas(total);
+      const gruposVisiveis = gruposDef.filter(d => d.chave !== '5+' || grupos[d.chave].bets > 0);
+
+      const cardGrupo = d => {
+        const g = grupos[d.chave]; const m = metricas(g);
+        return `
+        <div class="bg-panel border border-linha rounded-xl p-5" data-grupo-bilhetes="${d.chave}">
+          <p class="text-xs uppercase tracking-wider text-mutado font-bold mb-3">🎟️ ${d.nome} <span class="normal-case font-normal">(${d.pernas})</span></p>
+          <div class="space-y-2 text-sm">
+            <div class="flex justify-between gap-2"><span class="text-mutado">Total de apostas</span><span class="font-bold text-texto">${g.bets} bets · ${fmt(g.volume)}</span></div>
+            <div class="flex justify-between gap-2"><span class="text-mutado">Stake média</span><span class="font-bold text-texto">${fmt(m.stakeMedia)}</span></div>
+            <div class="flex justify-between gap-2"><span class="text-mutado">ROI</span><span class="font-bold ${corLucro(m.lucro)}">${roiTxt(m)}</span></div>
+            <div class="flex justify-between gap-2"><span class="text-mutado">Winrate</span><span class="font-bold text-teal-500">${wrTxt(m)}</span></div>
+            <div class="flex justify-between gap-2 text-xs"><span class="text-mutado">Resultado</span><span><span class="text-emerald-500 font-bold">✅ ${g.greens}</span> · <span class="text-red-500 font-bold">❌ ${g.reds}</span>${g.voids ? ` · ⚪ ${g.voids}` : ''}</span></div>
+            <div class="flex justify-between gap-2 text-xs"><span class="text-mutado">Lucro</span><span class="font-bold ${corLucro(m.lucro)}">${fmt(m.lucro)}</span></div>
+          </div>
+        </div>`;
+      };
+
+      container.innerHTML = `
+        <div class="mb-6">
+          <h2 class="text-xl md:text-2xl font-bold text-texto">🎟️ Análise de Bilhetes</h2>
+          <p class="text-xs md:text-sm text-mutado mt-1">Suas apostas finalizadas quebradas pelo tamanho do bilhete — simples, duplas, triplas e quádruplas. Respeita os filtros globais (período, casa e operador).</p>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-6" data-resumo-bilhetes="total">
+          <div class="bg-panel border border-linha rounded-xl p-5">
+            <p class="text-xs text-mutado mb-1">Total de apostas</p>
+            <h3 class="text-lg md:text-2xl font-bold text-texto">${total.bets}</h3>
+          </div>
+          <div class="bg-panel border border-linha rounded-xl p-5">
+            <p class="text-xs text-mutado mb-1">Valor girado</p>
+            <h3 class="text-lg md:text-2xl font-bold text-blue-500">${fmt(total.volume)}</h3>
+          </div>
+          <div class="bg-panel border border-linha rounded-xl p-5">
+            <p class="text-xs text-mutado mb-1">Stake média</p>
+            <h3 class="text-lg md:text-2xl font-bold text-texto">${fmt(mTotal.stakeMedia)}</h3>
+          </div>
+          <div class="bg-panel border border-linha rounded-xl p-5">
+            <p class="text-xs text-mutado mb-1">ROI</p>
+            <h3 class="text-lg md:text-2xl font-bold ${corLucro(mTotal.lucro)}">${roiTxt(mTotal)}</h3>
+          </div>
+          <div class="bg-panel border border-linha rounded-xl p-5">
+            <p class="text-xs text-mutado mb-1">Winrate</p>
+            <h3 class="text-lg md:text-2xl font-bold text-teal-500">${wrTxt(mTotal)}</h3>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 mb-6">
+          ${gruposVisiveis.map(cardGrupo).join('')}
+        </div>
+
+        <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6">
+          <h3 class="text-sm md:text-md font-bold mb-4 text-texto uppercase tracking-wider">📋 Resumo por tipo de bilhete</h3>
+          <div class="overflow-x-auto rounded-lg border border-linha">
+            <table class="w-full text-left text-xs text-mutado">
+              <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+                <tr><th class="p-3 border-b border-linha">Bilhete</th><th class="p-3 border-b border-linha">Apostas</th><th class="p-3 border-b border-linha">Valor girado</th><th class="p-3 border-b border-linha">Stake média</th><th class="p-3 border-b border-linha">Retorno</th><th class="p-3 border-b border-linha">Lucro</th><th class="p-3 border-b border-linha">ROI</th><th class="p-3 border-b border-linha">✅</th><th class="p-3 border-b border-linha">❌</th><th class="p-3 border-b border-linha">Winrate</th></tr>
+              </thead>
+              <tbody class="divide-y divide-linha">
+                ${gruposVisiveis.map((d, i) => { const g = grupos[d.chave]; const m = metricas(g);
+                  return `<tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}" data-linha-bilhetes="${d.chave}">
+                    <td class="p-3 font-semibold text-texto">🎟️ ${d.nome}</td>
+                    <td class="p-3 text-texto">${g.bets}</td>
+                    <td class="p-3 text-texto">${fmt(g.volume)}</td>
+                    <td class="p-3 text-texto">${fmt(m.stakeMedia)}</td>
+                    <td class="p-3 text-texto">${fmt(g.retorno)}</td>
+                    <td class="p-3 font-bold ${corLucro(m.lucro)}">${fmt(m.lucro)}</td>
+                    <td class="p-3 font-bold ${corLucro(m.lucro)}">${roiTxt(m)}</td>
+                    <td class="p-3 text-emerald-500 font-bold">${g.greens}</td>
+                    <td class="p-3 text-red-500 font-bold">${g.reds}</td>
+                    <td class="p-3 text-texto">${wrTxt(m)}</td>
+                  </tr>`; }).join('')}
+                <tr class="bg-panelAlt font-bold" data-linha-bilhetes="total">
+                  <td class="p-3 text-texto">TOTAL</td>
+                  <td class="p-3 text-texto">${total.bets}</td>
+                  <td class="p-3 text-texto">${fmt(total.volume)}</td>
+                  <td class="p-3 text-texto">${fmt(mTotal.stakeMedia)}</td>
+                  <td class="p-3 text-texto">${fmt(total.retorno)}</td>
+                  <td class="p-3 ${corLucro(mTotal.lucro)}">${fmt(mTotal.lucro)}</td>
+                  <td class="p-3 ${corLucro(mTotal.lucro)}">${roiTxt(mTotal)}</td>
+                  <td class="p-3 text-emerald-500">${total.greens}</td>
+                  <td class="p-3 text-red-500">${total.reds}</td>
+                  <td class="p-3 text-texto">${wrTxt(mTotal)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-[10px] text-mutado mt-2">Winrate = apostas com lucro ÷ (apostas com lucro + apostas com prejuízo). Bilhetes void/estornados (lucro zero) aparecem no ⚪ dos cards e não entram no winrate. ROI = lucro ÷ valor girado.${semPernas ? ` ${semPernas} aposta(s) finalizada(s) sem pernas registradas não entram na classificação por tamanho.` : ''}</p>
+        </div>
+      `;
+    }
+
     // Filtro por comissionado (05/10/2026, a pedido do usuário): '' = todos;
     // com nome selecionado, o módulo mostra só as linhas/cards/total dele.
     let filtroComissionado = '';
@@ -5239,6 +5393,9 @@
                           </label>
                           <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
                             <input type="checkbox" value="analises" ${permissoesAtuais.includes('analises') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Análises
+                          </label>
+                          <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
+                            <input type="checkbox" value="bilhetes" ${permissoesAtuais.includes('bilhetes') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Análise de Bilhetes
                           </label>
                           <label class="flex items-center gap-2 text-xs text-mutado cursor-pointer bg-input p-2 rounded border border-linha">
                             <input type="checkbox" value="comissao" ${permissoesAtuais.includes('comissao') ? 'checked' : ''} class="perm-check-${u.id} accent-emerald-500"> Comissão
