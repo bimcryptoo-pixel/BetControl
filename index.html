@@ -4494,6 +4494,31 @@
       const mTotal = metricas(total);
       const gruposVisiveis = gruposDef.filter(d => d.chave !== '5+' || grupos[d.chave].bets > 0);
 
+      // Quebra por DIA DA SEMANA (08/11/2026, pedido do usuário): onde o dinheiro
+      // escapa mais — mesma base classificada (só apostas com pernas), pela DATA DO BILHETE.
+      const NOMES_DIA = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
+      const ORDEM_DIAS = [1, 2, 3, 4, 5, 6, 0];
+      const diasSemana = {};
+      ORDEM_DIAS.forEach(d => { diasSemana[d] = { bets: 0, volume: 0, retorno: 0, greens: 0, reds: 0, voids: 0, somaOdds: 0, comOdd: 0 }; });
+      base.forEach(a => {
+        const n = (selPorAposta[a.id] || []).length;
+        if (n === 0) return;
+        const partes = String(a.data || '').slice(0, 10).split('-');
+        if (partes.length !== 3) return;
+        const dia = new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2])).getDay();
+        const g = diasSemana[dia];
+        const stake = Number(a.stake) || 0;
+        const ret = Number(a.retorno) || 0;
+        g.bets++; g.volume += stake; g.retorno += ret;
+        const lucro = ret - stake;
+        if (lucro > 0.009) g.greens++; else if (lucro < -0.009) g.reds++; else g.voids++;
+        const o = oddEfetivaBil(a);
+        if (o !== null && o > 0) { g.somaOdds += o; g.comOdd++; }
+      });
+      const lucrosDias = ORDEM_DIAS.map(d => diasSemana[d].retorno - diasSemana[d].volume);
+      const piorDia = lucrosDias.some(l => l < 0) ? ORDEM_DIAS[lucrosDias.indexOf(Math.min(...lucrosDias))] : null;
+      const melhorDia = lucrosDias.some(l => l > 0) ? ORDEM_DIAS[lucrosDias.indexOf(Math.max(...lucrosDias))] : null;
+
       const cardGrupo = d => {
         const g = grupos[d.chave]; const m = metricas(g);
         return `
@@ -4560,6 +4585,34 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 mb-6">
           ${gruposVisiveis.map(cardGrupo).join('')}
+        </div>
+
+        <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6" data-secao-bilhetes="dia-semana">
+          <h3 class="text-sm md:text-md font-bold mb-1 text-texto uppercase tracking-wider">📅 Por dia da semana</h3>
+          <p class="text-[11px] text-mutado mb-4">Onde o dinheiro escapa mais — pela <b>data do bilhete</b>, com os mesmos filtros da tela.</p>
+          <div class="overflow-x-auto rounded-lg border border-linha">
+            <table class="w-full text-left text-xs text-mutado">
+              <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+                <tr><th class="p-3 border-b border-linha">Dia</th><th class="p-3 border-b border-linha">Apostas</th><th class="p-3 border-b border-linha">Valor girado</th><th class="p-3 border-b border-linha">Stake média</th><th class="p-3 border-b border-linha">Odd média</th><th class="p-3 border-b border-linha">Retorno</th><th class="p-3 border-b border-linha">Lucro</th><th class="p-3 border-b border-linha">ROI</th><th class="p-3 border-b border-linha">✅</th><th class="p-3 border-b border-linha">❌</th><th class="p-3 border-b border-linha">Winrate</th></tr>
+              </thead>
+              <tbody class="divide-y divide-linha">
+                ${ORDEM_DIAS.map((d, i) => { const g = diasSemana[d]; const m = metricas(g);
+                  return `<tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}" data-dia-semana="${d}">
+                    <td class="p-3 font-semibold text-texto">📅 ${NOMES_DIA[d]}${d === piorDia ? ' <span class="text-red-500 font-bold">🔴 pior dia</span>' : ''}${d === melhorDia ? ' <span class="text-emerald-500 font-bold">✅ melhor dia</span>' : ''}</td>
+                    <td class="p-3 text-texto">${g.bets}</td>
+                    <td class="p-3 text-texto">${fmt(g.volume)}</td>
+                    <td class="p-3 text-texto">${fmt(m.stakeMedia)}</td>
+                    <td class="p-3 text-amber-500 font-bold">${oddTxt(m)}</td>
+                    <td class="p-3 text-texto">${fmt(g.retorno)}</td>
+                    <td class="p-3 font-bold ${corLucro(m.lucro)}">${fmt(m.lucro)}</td>
+                    <td class="p-3 font-bold ${corLucro(m.lucro)}">${roiTxt(m)}</td>
+                    <td class="p-3 text-emerald-500 font-bold">${g.greens}</td>
+                    <td class="p-3 text-red-500 font-bold">${g.reds}</td>
+                    <td class="p-3 text-texto">${wrTxt(m)}</td>
+                  </tr>`; }).join('')}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6">
