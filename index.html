@@ -4519,6 +4519,31 @@
       const piorDia = lucrosDias.some(l => l < 0) ? ORDEM_DIAS[lucrosDias.indexOf(Math.min(...lucrosDias))] : null;
       const melhorDia = lucrosDias.some(l => l > 0) ? ORDEM_DIAS[lucrosDias.indexOf(Math.max(...lucrosDias))] : null;
 
+      // MATRIZ dia da semana × tipo de bilhete (08/11/2026, pedido do usuário):
+      // lucro de cada estilo em cada dia + leitura de melhor/pior tipo do dia.
+      const matrizDiaTipo = {};
+      ORDEM_DIAS.forEach(d => { matrizDiaTipo[d] = {}; gruposDef.forEach(gd => { matrizDiaTipo[d][gd.chave] = { bets: 0, volume: 0, retorno: 0 }; }); });
+      base.forEach(a => {
+        const n = (selPorAposta[a.id] || []).length;
+        if (n === 0) return;
+        const partes = String(a.data || '').slice(0, 10).split('-');
+        if (partes.length !== 3) return;
+        const dia = new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2])).getDay();
+        const cel = matrizDiaTipo[dia][n >= 5 ? '5+' : String(n)];
+        cel.bets++; cel.volume += Number(a.stake) || 0; cel.retorno += Number(a.retorno) || 0;
+      });
+      const leituraDiaTipo = d => {
+        const cells = gruposVisiveis.map(gd => ({ nome: gd.nome, lucro: matrizDiaTipo[d][gd.chave].retorno - matrizDiaTipo[d][gd.chave].volume, bets: matrizDiaTipo[d][gd.chave].bets })).filter(c => c.bets > 0);
+        if (!cells.length) return '—';
+        const melhor = cells.reduce((m, c) => c.lucro > m.lucro ? c : m, cells[0]);
+        const pior = cells.reduce((m, c) => c.lucro < m.lucro ? c : m, cells[0]);
+        if (melhor.nome === pior.nome) return `só ${melhor.nome} no dia`;
+        const partes = [];
+        if (melhor.lucro > 0) partes.push(`✅ melhor: ${melhor.nome}`);
+        if (pior.lucro < 0) partes.push(`🔴 pior: ${pior.nome}`);
+        return partes.length ? partes.join(' · ') : '—';
+      };
+
       const cardGrupo = d => {
         const g = grupos[d.chave]; const m = metricas(g);
         return `
@@ -4610,6 +4635,26 @@
                     <td class="p-3 text-red-500 font-bold">${g.reds}</td>
                     <td class="p-3 text-texto">${wrTxt(m)}</td>
                   </tr>`; }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6" data-secao-bilhetes="matriz">
+          <h3 class="text-sm md:text-md font-bold mb-1 text-texto uppercase tracking-wider">🗓️ Dia da semana × Tipo de bilhete</h3>
+          <p class="text-[11px] text-mutado mb-4">O lucro de cada estilo em cada dia (com o nº de bets) — onde cada tipo ganha e onde perde.</p>
+          <div class="overflow-x-auto rounded-lg border border-linha">
+            <table class="w-full text-left text-xs text-mutado">
+              <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+                <tr><th class="p-3 border-b border-linha">Dia</th>${gruposVisiveis.map(gd => `<th class="p-3 border-b border-linha">${gd.nome}</th>`).join('')}<th class="p-3 border-b border-linha">Leitura do dia</th></tr>
+              </thead>
+              <tbody class="divide-y divide-linha">
+                ${ORDEM_DIAS.map((d, i) => `<tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}" data-matriz-dia="${d}">
+                    <td class="p-3 font-semibold text-texto">📅 ${NOMES_DIA[d]}</td>
+                    ${gruposVisiveis.map(gd => { const cel = matrizDiaTipo[d][gd.chave]; const lucro = cel.retorno - cel.volume;
+                      return `<td class="p-3" data-matriz-celula="${d}-${gd.chave}">${cel.bets === 0 ? '<span class="text-mutado">—</span>' : `<div class="font-bold ${corLucro(lucro)}">${fmt(lucro)}</div><div class="text-[10px] text-mutado">${cel.bets} bets</div>`}</td>`; }).join('')}
+                    <td class="p-3 text-texto">${leituraDiaTipo(d)}</td>
+                  </tr>`).join('')}
               </tbody>
             </table>
           </div>
