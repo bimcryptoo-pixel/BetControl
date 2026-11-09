@@ -6,7 +6,7 @@
    De quebra, guarda uma cópia do index pra navegação não abrir em
    branco se a rede cair na hora de abrir.
    NUNCA intercepta: métodos != GET e qualquer chamada ao Supabase. */
-const BC_CACHE = 'bc-shell-v1';
+const BC_CACHE = 'bc-shell-v2';
 const BC_SHELL = ['./', './index.html', './manifest.webmanifest', './favicon.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
