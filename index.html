@@ -4385,11 +4385,12 @@
       'EMIRATES BET': { 'PANDOLFO': [['Renan', 2.5], ['Fabio', 5], ['Lucas', 2.5]] }
     };
     // Regra NOVA da GG BETS a partir de 09/11/2026 (pedido do usuário em
-    // 09/11/2026): Fabio 10% / Lucas 5% sobre o prejuízo, para TODOS os
-    // operadores, valendo só para apostas com data >= 2026-11-09. Apostas de
-    // datas anteriores seguem as regras antigas (geral Fabio 7,5% / Lucas
-    // 2,5%; operador LUCAS Fabio 5% / Lucas 5%).
-    const COMISSOES_GG_NOVA = { desde: '2026-11-09', conf: [['Fabio', 10], ['Lucas', 5]] };
+    // 09/11/2026, com escopo esclarecido no mesmo dia): Fabio 10% / Lucas 5%
+    // sobre o prejuízo SOMENTE nas apostas do operador PANDOLFO com data
+    // >= 2026-11-09. As apostas do LUCAS seguem a regra dele (Fabio 5% /
+    // Lucas 5%) em qualquer data, e apostas de datas anteriores à vigência
+    // seguem as regras antigas (geral Fabio 7,5% / Lucas 2,5%).
+    const COMISSOES_GG_NOVA = { desde: '2026-11-09', porOperador: { 'PANDOLFO': [['Fabio', 10], ['Lucas', 5]] } };
 
     // ================= ANÁLISE DE BILHETES (08/11/2026, pedido do usuário) =================
     // Quebra das apostas finalizadas pelo número de pernas do bilhete:
@@ -4756,11 +4757,13 @@
         if (casaNome === 'GG BETS') {
           // GG BETS: bloco separado por operador E por era da regra (corte em
           // 09/11/2026): 'antes' usa a regra antiga (específica do operador ou
-          // a geral); 'nova' usa Fabio 10% / Lucas 5% para todos.
+          // a geral); 'nova' usa Fabio 10% / Lucas 5% SÓ pro PANDOLFO — os
+          // demais operadores mantêm na era nova a mesma regra da era antiga.
           Object.keys(lucroGGPorOperadorEra).sort().forEach(opNome => {
             const eras = lucroGGPorOperadorEra[opNome];
-            montarBloco(casaNome, opNome, eras.antes, (confOp && confOp[opNome]) || conf, 'até 08/11/2026');
-            montarBloco(casaNome, opNome, eras.nova, COMISSOES_GG_NOVA.conf, 'desde 09/11/2026');
+            const confAntiga = (confOp && confOp[opNome]) || conf;
+            montarBloco(casaNome, opNome, eras.antes, confAntiga, 'até 08/11/2026');
+            montarBloco(casaNome, opNome, eras.nova, COMISSOES_GG_NOVA.porOperador[opNome] || confAntiga, 'desde 09/11/2026');
           });
         } else if (confOp) {
           // Base por operador: regra específica do operador quando houver;
@@ -4851,7 +4854,7 @@
               </select>
             </label>
           </div>
-          <p class="text-xs text-mutado mb-4">Base = prejuízo no período × % de cada comissionado. Casas com lucro não geram comissão. Na GG BETS, a base é o prejuízo de cada operador: apostas até 08/11/2026 seguem a regra antiga (Lucas: Fabio 5% / Lucas 5%; demais operadores: Fabio 7,5% / Lucas 2,5%); a partir de 09/11/2026 vale Fabio 10% / Lucas 5% para todos os operadores. Na EMIRATES BET, a comissão vale só sobre o prejuízo das apostas do PANDOLFO (Renan 2,5% / Fabio 5% / Lucas 2,5%).</p>
+          <p class="text-xs text-mutado mb-4">Base = prejuízo no período × % de cada comissionado. Casas com lucro não geram comissão. Na GG BETS, a base é o prejuízo de cada operador: apostas até 08/11/2026 seguem a regra antiga (Lucas: Fabio 5% / Lucas 5%; demais operadores: Fabio 7,5% / Lucas 2,5%); a partir de 09/11/2026, só nas apostas do PANDOLFO vale Fabio 10% / Lucas 5% — as do Lucas seguem Fabio 5% / Lucas 5%. Na EMIRATES BET, a comissão vale só sobre o prejuízo das apostas do PANDOLFO (Renan 2,5% / Fabio 5% / Lucas 2,5%).</p>
           ${totaisExibir.length > 0 ? `
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             ${totaisExibir.map(p => `
