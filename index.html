@@ -4384,6 +4384,12 @@
       'GG BETS': { 'LUCAS': [['Fabio', 5], ['Lucas', 5]] },
       'EMIRATES BET': { 'PANDOLFO': [['Renan', 2.5], ['Fabio', 5], ['Lucas', 2.5]] }
     };
+    // Regra NOVA da GG BETS a partir de 09/11/2026 (pedido do usuário em
+    // 09/11/2026): Fabio 10% / Lucas 5% sobre o prejuízo, para TODOS os
+    // operadores, valendo só para apostas com data >= 2026-11-09. Apostas de
+    // datas anteriores seguem as regras antigas (geral Fabio 7,5% / Lucas
+    // 2,5%; operador LUCAS Fabio 5% / Lucas 5%).
+    const COMISSOES_GG_NOVA = { desde: '2026-11-09', conf: [['Fabio', 10], ['Lucas', 5]] };
 
     // ================= ANÁLISE DE BILHETES (08/11/2026, pedido do usuário) =================
     // Quebra das apostas finalizadas pelo número de pernas do bilhete:
@@ -4701,6 +4707,7 @@
 
       const lucroPorCasa = {};
       const lucroPorCasaOperador = {}; // { casaNome: { OPERADOR: lucro } } — base das regras por operador
+      const lucroGGPorOperadorEra = {}; // GG BETS: { OPERADOR: { antes, nova } } — corte em COMISSOES_GG_NOVA.desde
       apostasFiltradas.forEach(a => {
         if (a.finalizada && a.retorno !== null) {
           const casaObj = estado.casas.find(c => c.id === a.casaId);
@@ -4715,6 +4722,11 @@
             if (!lucroPorCasaOperador[nomeCasa]) lucroPorCasaOperador[nomeCasa] = {};
             if (lucroPorCasaOperador[nomeCasa][nomeOp] === undefined) lucroPorCasaOperador[nomeCasa][nomeOp] = 0;
             lucroPorCasaOperador[nomeCasa][nomeOp] += (a.retorno - a.stake);
+            if (nomeCasa === 'GG BETS') {
+              const era = (a.data && a.data >= COMISSOES_GG_NOVA.desde) ? 'nova' : 'antes';
+              if (!lucroGGPorOperadorEra[nomeOp]) lucroGGPorOperadorEra[nomeOp] = { antes: 0, nova: 0 };
+              lucroGGPorOperadorEra[nomeOp][era] += (a.retorno - a.stake);
+            }
           }
         }
       });
@@ -4729,19 +4741,28 @@
         if (!pessoasDisponiveis.includes(nome)) pessoasDisponiveis.push(nome);
       })));
       const blocos = []; // [{ casa, operador, base, linhas: [{nome, pct, valor}], subtotal }]
-      const montarBloco = (casaNome, operador, lucroGrupo, conf) => {
+      const montarBloco = (casaNome, operador, lucroGrupo, conf, rotulo) => {
         if (lucroGrupo < 0 && conf && conf.length) {
           const base = Math.abs(lucroGrupo);
           const linhas = conf.map(([nome, pct]) => ({ nome, pct, valor: +(base * pct / 100).toFixed(2) }));
           const subtotal = +linhas.reduce((s, l) => s + l.valor, 0).toFixed(2);
-          blocos.push({ casa: casaNome, operador: operador || '', base, linhas, subtotal });
+          blocos.push({ casa: casaNome, operador: operador || '', base, linhas, subtotal, rotulo: rotulo || '' });
         }
       };
       casasOrdenadas.forEach(casaNome => {
         const dados = lucroPorCasa[casaNome];
         const conf = COMISSOES_BANCA[casaNome];
         const confOp = COMISSOES_BANCA_OPERADOR[casaNome];
-        if (confOp) {
+        if (casaNome === 'GG BETS') {
+          // GG BETS: bloco separado por operador E por era da regra (corte em
+          // 09/11/2026): 'antes' usa a regra antiga (específica do operador ou
+          // a geral); 'nova' usa Fabio 10% / Lucas 5% para todos.
+          Object.keys(lucroGGPorOperadorEra).sort().forEach(opNome => {
+            const eras = lucroGGPorOperadorEra[opNome];
+            montarBloco(casaNome, opNome, eras.antes, (confOp && confOp[opNome]) || conf, 'até 08/11/2026');
+            montarBloco(casaNome, opNome, eras.nova, COMISSOES_GG_NOVA.conf, 'desde 09/11/2026');
+          });
+        } else if (confOp) {
           // Base por operador: regra específica do operador quando houver;
           // os demais operadores da casa usam a regra geral da casa.
           const grupos = lucroPorCasaOperador[casaNome] || {};
@@ -4765,7 +4786,7 @@
         ? blocos.map(b => {
             const linhas = b.linhas.filter(l => l.nome === filtroComissionado);
             if (!linhas.length) return null;
-            return { casa: b.casa, operador: b.operador || '', base: b.base, linhas, subtotal: +linhas.reduce((s, l) => s + l.valor, 0).toFixed(2) };
+            return { casa: b.casa, operador: b.operador || '', base: b.base, linhas, subtotal: +linhas.reduce((s, l) => s + l.valor, 0).toFixed(2), rotulo: b.rotulo || '' };
           }).filter(Boolean)
         : blocos;
       const totaisExibir = filtroComissionado ? totaisPorPessoa.filter(p => p.nome === filtroComissionado) : totaisPorPessoa;
@@ -4830,7 +4851,7 @@
               </select>
             </label>
           </div>
-          <p class="text-xs text-mutado mb-4">Base = prejuízo no período × % de cada comissionado. Casas com lucro não geram comissão. Na GG BETS, a base é o prejuízo de cada operador (Lucas: Fabio 5% / Lucas 5%; demais operadores: regra geral da casa). Na EMIRATES BET, a comissão vale só sobre o prejuízo das apostas do PANDOLFO (Renan 2,5% / Fabio 5% / Lucas 2,5%).</p>
+          <p class="text-xs text-mutado mb-4">Base = prejuízo no período × % de cada comissionado. Casas com lucro não geram comissão. Na GG BETS, a base é o prejuízo de cada operador: apostas até 08/11/2026 seguem a regra antiga (Lucas: Fabio 5% / Lucas 5%; demais operadores: Fabio 7,5% / Lucas 2,5%); a partir de 09/11/2026 vale Fabio 10% / Lucas 5% para todos os operadores. Na EMIRATES BET, a comissão vale só sobre o prejuízo das apostas do PANDOLFO (Renan 2,5% / Fabio 5% / Lucas 2,5%).</p>
           ${totaisExibir.length > 0 ? `
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             ${totaisExibir.map(p => `
@@ -4865,7 +4886,7 @@
                     </tr>
                   `).join('')}
                   <tr class="bg-panelAlt">
-                    <td colspan="4" class="p-2.5 text-right font-black text-texto uppercase text-xs">Subtotal ${b.casa}</td>
+                    <td colspan="4" class="p-2.5 text-right font-black text-texto uppercase text-xs">Subtotal ${b.casa}${b.rotulo ? ` (${b.rotulo})` : ''}</td>
                     <td class="p-2.5 font-black text-emerald-500">${fmtR$(b.subtotal)}</td>
                   </tr>
                 `).join('')}
