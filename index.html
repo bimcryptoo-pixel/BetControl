@@ -1581,7 +1581,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div class="bg-panel border border-linha rounded-xl p-5">
             <p class="text-xs text-mutado mb-1">Volume Total Acumulado</p>
-            <h3 class="text-xl md:text-2xl font-black text-blue-500">
+            <h3 class="text-xl md:text-2xl font-black text-texto">
               R$ ${volumeTotalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
             </h3>
           </div>
@@ -1652,7 +1652,7 @@
                       <td class="p-3 font-semibold text-emerald-500">${mesAnoStr}</td>
                       <td class="p-3 text-texto">${item.quantidade}</td>
                       <td class="p-3">${casasLista || '<span class="text-mutado">N/A</span>'}</td>
-                      <td class="p-3 font-semibold text-blue-500">R$ ${item.volumeDia.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                      <td class="p-3 font-semibold text-texto">R$ ${item.volumeDia.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                       <td class="p-3 ${corLucroDia}">R$ ${item.lucroLiquidoDia.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                     </tr>
                   `;
@@ -1768,8 +1768,8 @@
                 },
                 y: {
                   type: 'linear', display: true, position: 'left',
-                  title: { display: true, text: 'Volume (R$)', color: '#3b82f6', font: {size: 10, weight: 'bold'} },
-                  ticks: { color: '#3b82f6', font: {size: 10}, callback: value => 'R$ ' + (value/1000) + 'k' },
+                  title: { display: true, text: 'Volume (R$)', color: '#ffffff', font: {size: 10, weight: 'bold'} },
+                  ticks: { color: '#ffffff', font: {size: 10}, callback: value => 'R$ ' + (value/1000) + 'k' },
                   grid: { display: false, drawBorder: false }
                 },
                 y1: {
@@ -3403,7 +3403,7 @@
           </div>
           <div class="print-card bg-panel border border-linha rounded-xl p-3 shadow-md">
             <p class="text-[9px] text-mutado mb-0.5 uppercase tracking-wider font-bold">Volume Total</p>
-            <h3 class="text-xs md:text-lg font-black text-blue-500">R$ ${volumeTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
+            <h3 class="text-xs md:text-lg font-black text-texto">R$ ${volumeTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
           </div>
           <div class="print-card bg-panel border border-linha rounded-xl p-3 shadow-md">
             <p class="text-[9px] text-mutado mb-0.5 uppercase tracking-wider font-bold">Lucro Líquido</p>
@@ -3448,7 +3448,7 @@
                     <tr class="${index % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
                       <td class="p-2 md:p-3 text-texto">${renderizarFlagCasa(item.nome)}</td>${operadorSelecionadoId ? `<td class="p-2 md:p-3 font-bold text-texto">${item.operadorNome}</td>` : ''}
                       <td class="p-2 md:p-3 font-semibold text-texto">${item.numeroApostas}</td>
-                      <td class="p-2 md:p-3 font-semibold text-blue-500">R$ ${item.volume.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                      <td class="p-2 md:p-3 font-semibold text-texto">R$ ${item.volume.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                       <td class="p-2 md:p-3 ${corLucroCasa}">${sinalLucroStr}</td>
                     </tr>
                   `;
@@ -3458,7 +3458,7 @@
                 <tr class="bg-panelAlt">
                   <td class="p-2 md:p-3 font-black text-texto uppercase">Total</td>${operadorSelecionadoId ? '<td></td>' : ''}
                   <td class="p-2 md:p-3 font-black text-texto">${apostasFiltradas.length}</td>
-                  <td class="p-2 md:p-3 font-black text-blue-500">R$ ${volumeTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                  <td class="p-2 md:p-3 font-black text-texto">R$ ${volumeTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                   <td class="p-2 md:p-3 font-black ${lucroTotal > 0 ? 'text-emerald-500' : lucroTotal < 0 ? 'text-red-500' : 'text-texto'}">${lucroTotal > 0 ? `+R$ ${lucroTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : lucroTotal < 0 ? `-R$ ${Math.abs(lucroTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 'R$ 0,00'}</td>
                 </tr>
               </tfoot>
@@ -3507,7 +3507,7 @@
               <tfoot>
                 <tr class="bg-panelAlt">
                   <td colspan="3" class="p-1.5 md:p-2 font-black text-texto uppercase text-right">Total</td>
-                  <td class="p-1.5 md:p-2 font-black text-blue-500">R$ ${volumeTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                  <td class="p-1.5 md:p-2 font-black text-texto">R$ ${volumeTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                   <td class="p-1.5 md:p-2 font-black text-texto">R$ ${retornoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                   <td class="p-1.5 md:p-2 font-black ${lucroTotal > 0 ? 'text-emerald-500' : lucroTotal < 0 ? 'text-red-500' : 'text-texto'}">${lucroTotal > 0 ? `+R$ ${lucroTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : lucroTotal < 0 ? `-R$ ${Math.abs(lucroTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 'R$ 0,00'}</td>
                 </tr>
@@ -3698,7 +3698,7 @@
           </div>
           <div class="bg-panel border border-linha rounded-xl p-5">
             <p class="text-xs text-mutado mb-1">Volume Total Analisado</p>
-            <h3 class="text-xl md:text-2xl font-bold text-blue-500">R$ ${volumeGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
+            <h3 class="text-xl md:text-2xl font-bold text-texto">R$ ${volumeGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
           </div>
           <div class="bg-panel border border-linha rounded-xl p-5">
             <p class="text-xs text-mutado mb-1">ROI Geral do Período</p>
@@ -4145,7 +4145,7 @@
           </div>
           <div class="bg-panel border border-linha rounded-xl p-5">
             <p class="text-xs text-mutado mb-1">Volume</p>
-            <h3 class="text-lg md:text-2xl font-bold text-blue-500">${fmt(volumeGeral)}</h3>
+            <h3 class="text-lg md:text-2xl font-bold text-texto">${fmt(volumeGeral)}</h3>
           </div>
           <div class="bg-panel border border-linha rounded-xl p-5">
             <p class="text-xs text-mutado mb-1">ROI</p>
@@ -4567,7 +4567,7 @@
           </div>
           <div class="bg-panel border border-linha rounded-xl p-5">
             <p class="text-xs text-mutado mb-1">Valor girado</p>
-            <h3 class="text-lg md:text-2xl font-bold text-blue-500">${fmt(total.volume)}</h3>
+            <h3 class="text-lg md:text-2xl font-bold text-texto">${fmt(total.volume)}</h3>
           </div>
           <div class="bg-panel border border-linha rounded-xl p-5">
             <p class="text-xs text-mutado mb-1">Stake média</p>
