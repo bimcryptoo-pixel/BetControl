@@ -3672,6 +3672,41 @@
       const casaFiltroLucro = estado.filtros ? estado.filtros.casaId : '';
       const nomeCasaFiltro = casaFiltroLucro ? (estado.casas.find(c => c.id === casaFiltroLucro) || {}).nome || '' : '';
 
+      // (15/11/2026, pedido do usuário) Relatório por Casas do módulo Lucro:
+      // só aparece para o Adm (perfil editor). O relatório por datas/períodos
+      // segue visível para os dois logins (editor e leitura).
+      const relCasasHtml = ehEditorLucro ? `
+          <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
+            <h3 class="text-sm md:text-md font-bold mb-4 text-texto uppercase tracking-wider">🏛️ Relatório por Casas de Apostas</h3>
+            <div class="overflow-x-auto rounded-lg border border-linha">
+              <table class="w-full text-left text-xs text-mutado">
+                <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+                  <tr>
+                    <th class="p-3 border-b border-linha">Casa</th>
+                    <th class="p-3 border-b border-linha">Apostas</th>
+                    <th class="p-3 border-b border-linha">Volume</th>
+                    <th class="p-3 border-b border-linha">Lucro / Prejuízo</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-linha">
+                  ${casasOrdenadas.length === 0 ? '<tr><td colspan="4" class="p-4 text-center text-mutado">Nenhum dado financeiro finalizado.</td></tr>' : ''}
+                  ${casasOrdenadas.map((casaNome, index) => {
+                    const dados = lucroPorCasa[casaNome];
+                    const corLucro = dados.lucro > 0 ? 'text-emerald-500 font-bold' : dados.lucro < 0 ? 'text-red-500 font-bold' : 'text-texto font-bold';
+                    return `
+                      <tr class="${index % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
+                        <td class="p-3 text-texto">${renderizarFlagCasa(casaNome)}</td>
+                        <td class="p-3 text-texto">${dados.totalApostas}</td>
+                        <td class="p-3 text-texto">R$ ${dados.volume.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        <td class="p-3 ${corLucro}">R$ ${dados.lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>` : '';
+
       container.innerHTML = `
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
           <div>
@@ -3790,36 +3825,7 @@
             ${ajustesHtml}
           </div>
 
-          <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
-            <h3 class="text-sm md:text-md font-bold mb-4 text-texto uppercase tracking-wider">🏛️ Relatório por Casas de Apostas</h3>
-            <div class="overflow-x-auto rounded-lg border border-linha">
-              <table class="w-full text-left text-xs text-mutado">
-                <thead class="bg-panelAlt text-texto uppercase text-[10px]">
-                  <tr>
-                    <th class="p-3 border-b border-linha">Casa</th>
-                    <th class="p-3 border-b border-linha">Apostas</th>
-                    <th class="p-3 border-b border-linha">Volume</th>
-                    <th class="p-3 border-b border-linha">Lucro / Prejuízo</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-linha">
-                  ${casasOrdenadas.length === 0 ? '<tr><td colspan="4" class="p-4 text-center text-mutado">Nenhum dado financeiro finalizado.</td></tr>' : ''}
-                  ${casasOrdenadas.map((casaNome, index) => {
-                    const dados = lucroPorCasa[casaNome];
-                    const corLucro = dados.lucro > 0 ? 'text-emerald-500 font-bold' : dados.lucro < 0 ? 'text-red-500 font-bold' : 'text-texto font-bold';
-                    return `
-                      <tr class="${index % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
-                        <td class="p-3 text-texto">${renderizarFlagCasa(casaNome)}</td>
-                        <td class="p-3 text-texto">${dados.totalApostas}</td>
-                        <td class="p-3 text-texto">R$ ${dados.volume.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                        <td class="p-3 ${corLucro}">R$ ${dados.lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                      </tr>
-                    `;
-                  }).join('')}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          ${relCasasHtml}
         </div>
       `;
     }
