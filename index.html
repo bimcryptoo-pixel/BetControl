@@ -1564,6 +1564,33 @@
         dataLucroAcumulado.push(lucroAcum);
       });
 
+      // Série APOSTA POR APOSTA (15/11/2026): um ponto por aposta, em ordem
+      // cronológica (data do bilhete; no mesmo dia, o instante de criação
+      // embutido no id "aposta-<ms>-..."). É o mesmo lucro/volume dos cards e
+      // da tabela por data — só muda a granularidade: o gráfico mostra a
+      // trajetória real aposta a aposta, sem esconder as oscilações do dia.
+      // Linha EV 7%: lucro acumulado de referência = 7% do volume acumulado.
+      const msDoIdAposta = (id) => { const m = /aposta-(\d+)-/.exec(id || ''); return m ? parseInt(m[1], 10) : 0; };
+      const apostasCronologicas = [...apostasFiltradas].sort((a, b) => {
+        const dd = new Date(a.data || '0000-00-00') - new Date(b.data || '0000-00-00');
+        if (dd !== 0) return dd;
+        return msDoIdAposta(a.id) - msDoIdAposta(b.id);
+      });
+      const labelsPorAposta = [];
+      const dataVolumePorAposta = [];
+      const dataLucroPorAposta = [];
+      const dataEV7PorAposta = [];
+      let volAp = 0;
+      let lucroAp = 0;
+      apostasCronologicas.forEach((a, i) => {
+        volAp += a.stake || 0;
+        if (a.finalizada && a.retorno !== null) lucroAp += a.retorno - a.stake;
+        labelsPorAposta.push(`#${i + 1} · ${formatarDataBR(a.data)}`);
+        dataVolumePorAposta.push(volAp);
+        dataLucroPorAposta.push(lucroAp);
+        dataEV7PorAposta.push(Math.round(volAp * 0.07 * 100) / 100);
+      });
+
       // ROI do período: lucro líquido ÷ volume total × 100
       const roiGeral = volumeTotalGeral > 0 ? (lucroLiquidoTotalGeral / volumeTotalGeral) * 100 : 0;
 
@@ -1606,7 +1633,7 @@
         <!-- GRÁFICO DE EVOLUÇÃO (LUCRO BICOLOR + EIXO LATERAL DE VOLUME) -->
         ${datasCronologicas.length > 0 ? `
         <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6 no-print">
-          <h3 class="text-sm font-bold text-texto uppercase tracking-wider mb-4">📉 Gráfico de Evolução (Acumulado)</h3>
+          <h3 class="text-sm font-bold text-texto uppercase tracking-wider mb-4">📉 Gráfico de Evolução (Aposta por Aposta)</h3>
           <div class="relative h-64 md:h-80 w-full">
             <canvas id="graficoVolumeMes"></canvas>
           </div>
@@ -1696,13 +1723,13 @@
 
           window.graficoVolumeInstancia = new Chart(ctx, {            type: 'line',
             data: {
-              labels: labelsGrafico,
+              labels: labelsPorAposta,
               datasets: [
                 {
                   // Série invisível: sem linha no gráfico; serve só para manter
                   // a escala do eixo lateral de volume (indicador lateral).
                   label: 'Volume Acumulado',
-                  data: dataVolumeAcumulado,
+                  data: dataVolumePorAposta,
                   yAxisID: 'y',
                   borderWidth: 0,
                   pointRadius: 0,
@@ -1711,7 +1738,7 @@
                 },
                 {
                   label: 'Lucro Líquido Acumulado',
-                  data: dataLucroAcumulado,
+                  data: dataLucroPorAposta,
                   // Linha bicolor: verde acima da linha 0, vermelha abaixo.
                   borderColor: (bctx) => gradienteBicolor(bctx.chart, '#10b981', '#ef4444'),
                   // Sombra na área até a linha do zero, na cor da linha.
@@ -1725,6 +1752,23 @@
                   pointBorderColor: (pctx) => (pctx.parsed.y >= 0 ? '#10b981' : '#ef4444'),
                   pointRadius: 0,
                   pointHoverRadius: 4
+                },
+                {
+                  // Linha de referência EV 7%: lucro acumulado se o retorno
+                  // fosse 7% do volume girado — pontilhada laranja, sem área.
+                  label: 'EV 7%',
+                  data: dataEV7PorAposta,
+                  yAxisID: 'y1',
+                  borderColor: '#f97316',
+                  backgroundColor: '#f97316',
+                  borderDash: [6, 4],
+                  borderWidth: 2,
+                  fill: false,
+                  tension: 0,
+                  pointRadius: 0,
+                  pointHoverRadius: 4,
+                  pointBackgroundColor: '#f97316',
+                  pointBorderColor: '#f97316'
                 }
               ]
             },
