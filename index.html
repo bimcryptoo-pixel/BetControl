@@ -4081,13 +4081,34 @@
         });
       });
 
+      // ---- FOCO EM UM MERCADO (18/11/2026, pedido do usuário) ----
+      // Com um mercado selecionado no filtro, o módulo inteiro estuda só ele:
+      // os cards do topo e o "Lucro por Esporte" passam a ser lidos pelas
+      // PERNAS desse mercado (lucro/volume rateados igualmente entre as
+      // pernas, a mesma convenção do porEspMerc). Sem mercado, nada muda.
+      const focoMercado = fEsp.mercado || '';
+      let porEsporteExib = porEsporte;
+      let focoTot = null;
+      if (focoMercado) {
+        porEsporteExib = {};
+        focoTot = { lucro: 0, volume: 0, pernas: 0, greens: 0, reds: 0 };
+        Object.values(porEspMerc).forEach(d => {
+          if (!porEsporteExib[d.esporte]) porEsporteExib[d.esporte] = { lucro: 0, volume: 0, apostas: 0, greens: 0, reds: 0 };
+          const e = porEsporteExib[d.esporte];
+          e.lucro += d.lucro; e.volume += d.volume; e.apostas += d.pernas; e.greens += d.greens; e.reds += d.reds;
+          focoTot.lucro += d.lucro; focoTot.volume += d.volume; focoTot.pernas += d.pernas; focoTot.greens += d.greens; focoTot.reds += d.reds;
+        });
+      }
+      const lucroCard = focoTot ? focoTot.lucro : lucroGeral;
+      const volumeCard = focoTot ? focoTot.volume : volumeGeral;
+
       // ---- ordenação ----
       const ord = fEsp.ordem;
       const cmp = (a, b) => ord === 'roi' ? (b.lucro / Math.max(b.volume, 1)) - (a.lucro / Math.max(a.volume, 1))
         : ord === 'volume' ? b.volume - a.volume
         : ord === 'apostas' ? (b.apostas || b.pernas) - (a.apostas || a.pernas)
         : b.lucro - a.lucro;
-      const esportesOrd = Object.keys(porEsporte).sort((x, y) => cmp(porEsporte[x], porEsporte[y]));
+      const esportesOrd = Object.keys(porEsporteExib).sort((x, y) => cmp(porEsporteExib[x], porEsporteExib[y]));
       const mercadosOrd = Object.keys(porEspMerc).sort((x, y) => cmp(porEspMerc[x], porEspMerc[y]));
       const mercadosLista = [...mercadosDoFiltro].sort();
 
@@ -4157,13 +4178,13 @@
         const noVermelho = mSignificativos.filter(d => d.lucro < 0 && (d.lucro / Math.max(d.volume, 1)) < -0.15);
         if (noVermelho.length) insights.push({ ic: '📉', txt: `<b>Atenção:</b> ${noVermelho.length} mercado(s) com ROI abaixo de -15%: ${noVermelho.slice(0, 3).map(d => `${d.mercado} (${d.esporte})`).join(', ')}${noVermelho.length > 3 ? '…' : ''}.` });
       }
-      const espNoVermelho = esportesOrd.map(k => ({ nome: k, ...porEsporte[k] })).filter(d => d.nome !== 'Mista' && d.lucro < 0 && d.apostas >= 3);
+      const espNoVermelho = esportesOrd.map(k => ({ nome: k, ...porEsporteExib[k] })).filter(d => d.nome !== 'Mista' && d.lucro < 0 && d.apostas >= 3);
       if (espNoVermelho.length) {
         const p = espNoVermelho.sort((a, b) => a.lucro - b.lucro)[0];
-        insights.push({ ic: '⚠️', txt: `<b>${iconeEsporteEsp(p.nome)} ${p.nome} no vermelho:</b> <b class="text-red-500">${fmt(p.lucro)}</b> em ${p.apostas} apostas.` });
+        insights.push({ ic: '⚠️', txt: `<b>${iconeEsporteEsp(p.nome)} ${p.nome} no vermelho:</b> <b class="text-red-500">${fmt(p.lucro)}</b> em ${p.apostas} ${focoMercado ? 'pernas' : 'apostas'}.` });
       }
 
-      const maxAbsLucroEsp = Math.max(1, ...esportesOrd.map(k => Math.abs(porEsporte[k].lucro)));
+      const maxAbsLucroEsp = Math.max(1, ...esportesOrd.map(k => Math.abs(porEsporteExib[k].lucro)));
       const opt = (v, sel, rot) => `<option value="${v}" ${sel === v ? 'selected' : ''}>${rot}</option>`;
       const selCls = 'bg-input border border-linha rounded-lg px-3 py-2 text-xs text-texto font-medium focus:outline-none focus:border-emerald-500';
 
@@ -4184,6 +4205,7 @@
           <div>
             <h2 class="text-xl md:text-2xl font-bold" style="color: var(--color-text);">📊 Análise por Esportes</h2>
             <p class="text-xs text-mutado">Lucro por esporte e por mercado no período filtrado. Só apostas finalizadas. Filtros globais (período, casa, operador) continuam valendo.</p>
+            ${focoMercado ? `<p class="text-xs font-bold text-emerald-500 mt-1">🎯 Foco no mercado: ${focoMercado} — todo o módulo mostra só esse mercado (${focoTot.pernas} pernas no período)</p>` : ''}
           </div>
           <button onclick="window.print()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition">🖨️ Imprimir / Salvar PDF</button>
         </div>
@@ -4191,19 +4213,19 @@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div class="bg-panel border border-linha rounded-xl p-5">
             <p class="text-xs text-mutado mb-1">Lucro Líquido</p>
-            <h3 class="text-lg md:text-2xl font-black ${corLucro(lucroGeral)}">${fmt(lucroGeral)}</h3>
+            <h3 class="text-lg md:text-2xl font-black ${corLucro(lucroCard)}">${fmt(lucroCard)}</h3>
           </div>
           <div class="bg-panel border border-linha rounded-xl p-5">
             <p class="text-xs text-mutado mb-1">Volume</p>
-            <h3 class="text-lg md:text-2xl font-bold text-blue-500">${fmt(volumeGeral)}</h3>
+            <h3 class="text-lg md:text-2xl font-bold text-blue-500">${fmt(volumeCard)}</h3>
           </div>
           <div class="bg-panel border border-linha rounded-xl p-5">
             <p class="text-xs text-mutado mb-1">ROI</p>
-            <h3 class="text-lg md:text-2xl font-bold ${corLucro(lucroGeral)}">${volumeGeral > 0 ? ((lucroGeral / volumeGeral) * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%' : '—'}</h3>
+            <h3 class="text-lg md:text-2xl font-bold ${corLucro(lucroCard)}">${volumeCard > 0 ? ((lucroCard / volumeCard) * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%' : '—'}</h3>
           </div>
           <div class="bg-panel border border-linha rounded-xl p-5">
-            <p class="text-xs text-mutado mb-1">Taxa de Acerto (apostas)</p>
-            <h3 class="text-lg md:text-2xl font-bold text-teal-500">${acertoTxt(apostasWin, base.length)}</h3>
+            <p class="text-xs text-mutado mb-1">Taxa de Acerto ${focoMercado ? '(pernas)' : '(apostas)'}</p>
+            <h3 class="text-lg md:text-2xl font-bold text-teal-500">${focoTot ? acertoTxt(focoTot.greens, focoTot.greens + focoTot.reds) : acertoTxt(apostasWin, base.length)}</h3>
           </div>
         </div>
 
@@ -4244,10 +4266,10 @@
         </div>` : ''}
 
         <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6">
-          <h3 class="text-sm md:text-md font-bold mb-4 text-texto uppercase tracking-wider">🏅 Lucro por Esporte <span class="normal-case font-normal text-mutado text-xs">(toque na linha para ver os mercados)</span></h3>
+          <h3 class="text-sm md:text-md font-bold mb-4 text-texto uppercase tracking-wider">🏅 Lucro por Esporte ${focoMercado ? `— 🎯 ${focoMercado}` : ''} <span class="normal-case font-normal text-mutado text-xs">(${focoMercado ? 'só esse mercado, rateado por perna' : 'toque na linha para ver os mercados'})</span></h3>
           ${esportesOrd.length ? `
           <div class="space-y-2 mb-4">
-            ${esportesOrd.map(k => { const d = porEsporte[k]; const pct = Math.min(100, (Math.abs(d.lucro) / maxAbsLucroEsp) * 100);
+            ${esportesOrd.map(k => { const d = porEsporteExib[k]; const pct = Math.min(100, (Math.abs(d.lucro) / maxAbsLucroEsp) * 100);
               return `<div class="flex items-center gap-3 text-xs">
                 <span class="w-28 shrink-0 font-semibold text-texto truncate">${iconeEsporteEsp(k)} ${k}</span>
                 <div class="flex-1 h-5 bg-panelAlt rounded overflow-hidden flex ${d.lucro < 0 ? 'justify-end' : ''}">
@@ -4259,11 +4281,11 @@
           <div class="overflow-x-auto rounded-lg border border-linha">
             <table class="w-full text-left text-xs text-mutado">
               <thead class="bg-panelAlt text-texto uppercase text-[10px]">
-                <tr><th class="p-3 border-b border-linha">Esporte</th><th class="p-3 border-b border-linha">Apostas</th><th class="p-3 border-b border-linha">✅</th><th class="p-3 border-b border-linha">❌</th><th class="p-3 border-b border-linha">Acerto</th><th class="p-3 border-b border-linha">Volume</th><th class="p-3 border-b border-linha">Lucro / Prejuízo</th><th class="p-3 border-b border-linha">ROI</th></tr>
+                <tr><th class="p-3 border-b border-linha">Esporte</th><th class="p-3 border-b border-linha">${focoMercado ? 'Pernas' : 'Apostas'}</th><th class="p-3 border-b border-linha">✅</th><th class="p-3 border-b border-linha">❌</th><th class="p-3 border-b border-linha">Acerto</th><th class="p-3 border-b border-linha">Volume</th><th class="p-3 border-b border-linha">Lucro / Prejuízo</th><th class="p-3 border-b border-linha">ROI</th></tr>
               </thead>
               <tbody class="divide-y divide-linha">
                 ${esportesOrd.length === 0 ? '<tr><td colspan="8" class="p-4 text-center text-mutado">Nenhum dado finalizado para os filtros.</td></tr>' : ''}
-                ${esportesOrd.map((k, i) => { const d = porEsporte[k];
+                ${esportesOrd.map((k, i) => { const d = porEsporteExib[k];
                   const mkChaves = mercadosOrd.filter(ch => porEspMerc[ch].esporte === k);
                   return `<tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'} cursor-pointer hover:bg-input" onclick="alternarEsporteEsp('${k}')">
                     <td class="p-3 font-semibold text-texto">${espExpandido[k] ? '▾' : '▸'} ${iconeEsporteEsp(k)} ${k}</td>
@@ -4290,11 +4312,11 @@
               </tbody>
             </table>
           </div>
-          <p class="text-[10px] text-mutado mt-2">Apostas com pernas de esportes diferentes aparecem como "Mista". Toque na linha do esporte para abrir os mercados.</p>
+          <p class="text-[10px] text-mutado mt-2">${focoMercado ? 'No foco de mercado, lucro e volume da aposta são rateados igualmente entre as pernas desse mercado.' : 'Apostas com pernas de esportes diferentes aparecem como "Mista". Toque na linha do esporte para abrir os mercados.'}</p>
         </div>
 
         <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6">
-          <h3 class="text-sm md:text-md font-bold mb-4 text-texto uppercase tracking-wider">🎯 Lucro por Mercado ${fEsp.esporte ? `— ${iconeEsporteEsp(fEsp.esporte)} ${fEsp.esporte}` : '(todos os esportes)'}</h3>
+          <h3 class="text-sm md:text-md font-bold mb-4 text-texto uppercase tracking-wider">🎯 Lucro por Mercado ${fEsp.esporte ? `— ${iconeEsporteEsp(fEsp.esporte)} ${fEsp.esporte}` : '(todos os esportes)'}${fEsp.mercado ? ` — 🎯 ${fEsp.mercado}` : ''}</h3>
           <div class="overflow-x-auto rounded-lg border border-linha">
             <table class="w-full text-left text-xs text-mutado">
               <thead class="bg-panelAlt text-texto uppercase text-[10px]">
