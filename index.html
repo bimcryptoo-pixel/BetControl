@@ -4043,6 +4043,7 @@
 
       const porEsporte = {};       // nível aposta (com "Mista")
       const porEspMerc = {};       // nível perna: "esporte||mercado"
+      const detalheEsp = {};       // drill-down: esporte exibido -> { apostaId: {a, legs} } (as apostas atrás dos números)
       const mercadosDoFiltro = new Set();
       const serie = [];            // pernas em ordem cronológica: {data, esporte, mercado, status, odd, lucro}
       let lucroGeral = 0, volumeGeral = 0, apostasWin = 0;
@@ -4063,6 +4064,23 @@
           const d = porEsporte[espAposta];
           d.lucro += lucro; d.volume += stake; d.apostas++;
           if (lucro > 0) d.greens++; else if (lucro < 0) d.reds++;
+        }
+
+        // drill-down (18/11/2026, pedido do usuário): guarda as apostas de cada
+        // linha de esporte exibida, pro clique na linha mostrar os bilhetes —
+        // no foco, só as pernas do mercado; sem foco, o bilhete inteiro.
+        if (fEsp.mercado) {
+          pernas.forEach(p => {
+            if (normalizarMercadoEsp(p.mercado) !== fEsp.mercado) return;
+            const esp = classificarEsporteEsp(p.jogo, p.mercado);
+            if (fEsp.esporte && esp !== fEsp.esporte) return;
+            if (!detalheEsp[esp]) detalheEsp[esp] = {};
+            if (!detalheEsp[esp][a.id]) detalheEsp[esp][a.id] = { a, legs: [] };
+            detalheEsp[esp][a.id].legs.push(p);
+          });
+        } else if (!fEsp.esporte || espAposta === fEsp.esporte || (fEsp.esporte !== 'Mista' && esportes.includes(fEsp.esporte))) {
+          if (!detalheEsp[espAposta]) detalheEsp[espAposta] = {};
+          detalheEsp[espAposta][a.id] = { a, legs: pernas };
         }
 
         // mercados por esporte (nível perna, rateio)
@@ -4200,6 +4218,48 @@
           <td class="p-3 font-bold ${corLucro(d.lucro)}">${roiTxt(d)}</td>
         </tr>`;
 
+      // ---- drill-down profissional (18/11/2026, pedido do usuário): as apostas
+      // atrás de cada linha de esporte. Cada bilhete mostra data/casa/operador,
+      // stake, odd e lucro; cada perna mostra jogo, a LINHA apostada e o
+      // RESULTADO (placar/estatística + conta da linha, via detalheFonteHtml,
+      // que esconde a URL crua e vira o link "ver fonte") — dá pra analisar a
+      // diferença entre a linha e o que aconteceu em campo.
+      const nomeCasaEsp = id => { const c = (estado.casas || []).find(x => x.id === id); return c ? c.nome : ''; };
+      const nomeOpEsp = id => { const o = (estado.operadores || []).find(x => x.id === id); return o ? o.nome : ''; };
+      const iconePernaEsp = s => s === 'green' ? '✅' : s === 'red' ? '❌' : (s === 'void' || s === 'cancelada') ? '🔄' : '⏳';
+      const fmtDataEsp = d => { const p = String(d || '').split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : (d || ''); };
+      function listaApostasEsp(k) {
+        const bets = Object.values(detalheEsp[k] || {})
+          .sort((x, y) => String(y.a.data || '').localeCompare(String(x.a.data || '')) || String(y.a.liquidada_em || y.a.liquidadaEm || '').localeCompare(String(x.a.liquidada_em || x.a.liquidadaEm || '')));
+        if (!bets.length) return '';
+        const max = 50;
+        return `<div class="mt-4">
+          <p class="text-[10px] uppercase tracking-wider text-mutado font-bold mb-2">📋 Apostas — ${iconeEsporteEsp(k)} ${k}${focoMercado ? ` · 🎯 ${focoMercado}` : ''} (${bets.length})</p>
+          <div class="space-y-2">
+            ${bets.slice(0, max).map(({ a, legs }) => { const luc = Number(a.retorno) - Number(a.stake); const totalPernas = (selPorAposta[a.id] || []).length;
+              return `<div class="bg-panel border border-linha rounded-lg p-3">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-mutado">
+                  <span>📅 ${fmtDataEsp(a.data)}</span>
+                  ${nomeCasaEsp(a.casaId) ? `<span>🏠 ${nomeCasaEsp(a.casaId)}</span>` : ''}
+                  ${nomeOpEsp(a.operadorId || a.clienteId) ? `<span>👤 ${nomeOpEsp(a.operadorId || a.clienteId)}</span>` : ''}
+                  <span>💰 ${fmt(Number(a.stake))}</span>
+                  <span>🎯 odd ${Number(a.oddTotal || a.odd_total || 0).toFixed(2)}</span>
+                  <span class="font-bold ${corLucro(luc)}">${luc > 0 ? '▲ +' : luc < 0 ? '▼ ' : ''}${fmt(luc)}</span>
+                </div>
+                <div class="mt-2 space-y-2">
+                  ${legs.map(p => `<div>
+                    <div class="text-xs text-texto">${iconePernaEsp(p.status)} <b>${p.jogo}</b></div>
+                    <div class="text-[11px] text-mutado ml-5">Linha: ${focoMercado ? '' : `${normalizarMercadoEsp(p.mercado)} · `}${p.selecao} <span class="text-texto font-semibold">@${Number(p.odd || 0).toFixed(2)}</span></div>
+                    ${p.detalhe ? `<div class="text-[11px] text-texto ml-5">📊 ${detalheFonteHtml(p.detalhe)}</div>` : ''}
+                  </div>`).join('')}
+                  ${focoMercado && totalPernas > legs.length ? `<div class="text-[11px] text-mutado ml-5">+ ${totalPernas - legs.length} perna(s) de outro(s) mercado(s) neste bilhete</div>` : ''}
+                </div>
+              </div>`; }).join('')}
+          </div>
+          ${bets.length > max ? `<p class="text-[10px] text-mutado mt-2">Mostrando as ${max} apostas mais recentes de ${bets.length} — refine o período nos filtros globais para ver as demais.</p>` : ''}
+        </div>`;
+      }
+
       container.innerHTML = `
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
           <div>
@@ -4266,7 +4326,7 @@
         </div>` : ''}
 
         <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6">
-          <h3 class="text-sm md:text-md font-bold mb-4 text-texto uppercase tracking-wider">🏅 Lucro por Esporte ${focoMercado ? `— 🎯 ${focoMercado}` : ''} <span class="normal-case font-normal text-mutado text-xs">(${focoMercado ? 'só esse mercado, rateado por perna' : 'toque na linha para ver os mercados'})</span></h3>
+          <h3 class="text-sm md:text-md font-bold mb-4 text-texto uppercase tracking-wider">🏅 Lucro por Esporte ${focoMercado ? `— 🎯 ${focoMercado}` : ''} <span class="normal-case font-normal text-mutado text-xs">(${focoMercado ? 'só esse mercado, rateado por perna — toque na linha para ver as apostas' : 'toque na linha para ver mercados e apostas'})</span></h3>
           ${esportesOrd.length ? `
           <div class="space-y-2 mb-4">
             ${esportesOrd.map(k => { const d = porEsporteExib[k]; const pct = Math.min(100, (Math.abs(d.lucro) / maxAbsLucroEsp) * 100);
@@ -4287,6 +4347,7 @@
                 ${esportesOrd.length === 0 ? '<tr><td colspan="8" class="p-4 text-center text-mutado">Nenhum dado finalizado para os filtros.</td></tr>' : ''}
                 ${esportesOrd.map((k, i) => { const d = porEsporteExib[k];
                   const mkChaves = mercadosOrd.filter(ch => porEspMerc[ch].esporte === k);
+                  const detHtml = listaApostasEsp(k);
                   return `<tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'} cursor-pointer hover:bg-input" onclick="alternarEsporteEsp('${k}')">
                     <td class="p-3 font-semibold text-texto">${espExpandido[k] ? '▾' : '▸'} ${iconeEsporteEsp(k)} ${k}</td>
                     <td class="p-3 text-texto">${d.apostas}</td>
@@ -4297,22 +4358,23 @@
                     <td class="p-3 font-bold ${corLucro(d.lucro)}">${fmt(d.lucro)}</td>
                     <td class="p-3 font-bold ${corLucro(d.lucro)}">${roiTxt(d)}</td>
                   </tr>
-                  ${espExpandido[k] && mkChaves.length ? `<tr class="bg-panelAlt"><td colspan="8" class="p-0">
+                  ${espExpandido[k] && (mkChaves.length || detHtml) ? `<tr class="bg-panelAlt"><td colspan="8" class="p-0">
                     <div class="p-3 md:p-4">
-                      <p class="text-[10px] uppercase tracking-wider text-mutado font-bold mb-2">Mercados — ${iconeEsporteEsp(k)} ${k}</p>
+                      ${mkChaves.length ? `<p class="text-[10px] uppercase tracking-wider text-mutado font-bold mb-2">Mercados — ${iconeEsporteEsp(k)} ${k}</p>
                       <div class="overflow-x-auto rounded-lg border border-linha">
                         <table class="w-full text-left text-xs text-mutado">
                           <thead class="bg-panel text-texto uppercase text-[10px]"><tr><th class="p-2 border-b border-linha">Mercado</th><th class="p-2 border-b border-linha">Pernas</th><th class="p-2 border-b border-linha">✅</th><th class="p-2 border-b border-linha">❌</th><th class="p-2 border-b border-linha">Acerto</th><th class="p-2 border-b border-linha">Volume</th><th class="p-2 border-b border-linha">Lucro</th><th class="p-2 border-b border-linha">ROI</th></tr></thead>
                           <tbody class="divide-y divide-linha">${mkChaves.map((ch, j) => linhaMercado(porEspMerc[ch], j)).join('')}</tbody>
                         </table>
-                      </div>
+                      </div>` : ''}
+                      ${detHtml}
                     </div>
                   </td></tr>` : ''}`;
                 }).join('')}
               </tbody>
             </table>
           </div>
-          <p class="text-[10px] text-mutado mt-2">${focoMercado ? 'No foco de mercado, lucro e volume da aposta são rateados igualmente entre as pernas desse mercado.' : 'Apostas com pernas de esportes diferentes aparecem como "Mista". Toque na linha do esporte para abrir os mercados.'}</p>
+          <p class="text-[10px] text-mutado mt-2">${focoMercado ? 'No foco de mercado, lucro e volume da aposta são rateados igualmente entre as pernas desse mercado.' : 'Apostas com pernas de esportes diferentes aparecem como "Mista". Toque na linha do esporte para abrir os mercados e as apostas.'}</p>
         </div>
 
         <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6">
