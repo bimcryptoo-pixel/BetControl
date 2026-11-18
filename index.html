@@ -4882,7 +4882,7 @@
         </div>
 
         <div class="bg-panel border border-linha rounded-xl p-4 md:p-6">
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-1">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
             <h3 class="text-sm md:text-md font-bold text-texto uppercase tracking-wider">🤝 Comissionados por Casa</h3>
             <label class="text-xs text-mutado flex items-center gap-2 no-print">Comissionado:
               <select onchange="filtrarComissaoPorPessoa(this.value)" class="px-2.5 py-2 bg-panel border border-linha rounded-xl text-texto text-xs cursor-pointer hover:border-emerald-500 transition outline-none font-bold">
@@ -4891,7 +4891,6 @@
               </select>
             </label>
           </div>
-          <p class="text-xs text-mutado mb-4">Base = prejuízo no período × % de cada comissionado. Casas com lucro não geram comissão. Na GG BETS, a base é o prejuízo de cada operador: apostas até 08/11/2026 seguem a regra antiga (Lucas: Fabio 5% / Lucas 5%; demais operadores: Fabio 7,5% / Lucas 2,5%); a partir de 09/11/2026, só nas apostas do PANDOLFO vale Fabio 10% / Lucas 5% — as do Lucas seguem Fabio 5% / Lucas 5%. Na EMIRATES BET, a comissão vale só sobre o prejuízo das apostas do PANDOLFO (Renan 2,5% / Fabio 5% / Lucas 2,5%).</p>
           ${totaisExibir.length > 0 ? `
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             ${totaisExibir.map(p => `
