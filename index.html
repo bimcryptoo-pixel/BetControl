@@ -4245,7 +4245,7 @@
                   <span>💰 ${fmt(Number(a.stake))}</span>
                   <span>🎯 odd ${Number(a.oddTotal || a.odd_total || 0).toFixed(2)}</span>
                   <span class="font-bold ${corLucro(luc)}">${luc > 0 ? '▲ +' : luc < 0 ? '▼ ' : ''}${fmt(luc)}</span>
-                  ${a.anexo_url ? `<button onclick="abrirAnexo('${a.anexo_url}')" class="ml-auto inline-flex items-center gap-1 text-sky-400 font-bold hover:underline" title="Ver o bilhete (foto anexada)">🎟️ Bilhete</button>` : ''}
+                  ${a.anexo_url ? `<button onclick="abrirAnexo('${a.anexo_url}')" onmouseenter="mostrarPreviaBilhete(event, '${a.id}')" onmousemove="moverPreviaBilhete(event)" onmouseleave="esconderPreviaBilhete()" class="ml-auto inline-flex items-center gap-1 text-sky-400 font-bold hover:underline" title="Passe o mouse para ver o bilhete · clique para abrir em tela cheia">🎟️ Bilhete</button>` : ''}
                 </div>
                 <div class="mt-2 space-y-2">
                   ${legs.map(p => `<div>
