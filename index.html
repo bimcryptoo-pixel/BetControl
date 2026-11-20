@@ -863,7 +863,12 @@
         if (!btnEl) return;
 
         if (usr.perfil === 'editor') {
-          btnEl.style.display = 'flex';
+          // (20/11/2026, a pedido do usuário) Comissão só aparece para o admin principal (usuario 'admin'); demais editores não veem o módulo.
+          if (aba === 'comissao' && usr.usuario !== 'admin') {
+            btnEl.style.display = 'none';
+          } else {
+            btnEl.style.display = 'flex';
+          }
         } else {
           if (aba === 'backup') {
             btnEl.style.display = 'none';
@@ -1216,6 +1221,11 @@
 
     function renderizarAba() {
       const main = document.getElementById('conteudo-principal');
+      // (20/11/2026, a pedido do usuário) Comissão só aparece para o admin principal (usuario 'admin'); demais editores não veem o módulo.
+      const usrRenderAtual = obterUsuarioLogado();
+      if (estado.abaAtiva === 'comissao' && usrRenderAtual && usrRenderAtual.perfil === 'editor' && usrRenderAtual.usuario !== 'admin') {
+        estado.abaAtiva = 'dashboard';
+      }
       if (!verificarPermissaoAba(estado.abaAtiva)) {
         main.innerHTML = `<div class="p-6 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-center">Acesso negado a esta seção.</div>`;
         return;
