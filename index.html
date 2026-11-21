@@ -4033,9 +4033,43 @@
       return [antes, depois].filter(Boolean).join(' · ');
     }
     let pdfBilAlvo = '';
+    // Monta o contexto do PDF na hora, a partir do estado atual — assim o
+    // botão funciona em qualquer módulo (Análise por Esportes ou Análise de
+    // Bilhetes), sem depender de ter aberto a aba de Esportes antes.
+    // (21/11/2026, pedido do usuário: botão também na Análise de Bilhetes.)
+    // A classificação espelha a da renderizarAnalises (detalheEsp).
+    function montarCtxPdfBilhetes() {
+      const selPorAposta = {};
+      (estado.selecoes || []).forEach(s => { (selPorAposta[s.apostaId] = selPorAposta[s.apostaId] || []).push(s); });
+      let base = filtrarApostasPorGeral(estado.apostas).filter(a => a.finalizada && a.retorno !== null && a.retorno !== undefined);
+      if (fEsp.tipo) base = base.filter(a => ((selPorAposta[a.id] || []).length <= 1 ? 'simples' : 'multipla') === fEsp.tipo);
+      if (fEsp.resultado === 'lucro') base = base.filter(a => (Number(a.retorno) - Number(a.stake)) > 0);
+      if (fEsp.resultado === 'prejuizo') base = base.filter(a => (Number(a.retorno) - Number(a.stake)) < 0);
+      const detalheEsp = {};
+      base.forEach(a => {
+        const pernas = selPorAposta[a.id] || [];
+        const esportes = [...new Set(pernas.map(p => classificarEsporteEsp(p.jogo, p.mercado)))];
+        const espAposta = esportes.length === 0 ? 'Outros' : (esportes.length === 1 ? esportes[0] : 'Mista');
+        if (fEsp.mercado) {
+          pernas.forEach(p => {
+            if (normalizarMercadoEsp(p.mercado) !== fEsp.mercado) return;
+            const esp = classificarEsporteEsp(p.jogo, p.mercado);
+            if (fEsp.esporte && esp !== fEsp.esporte) return;
+            if (!detalheEsp[esp]) detalheEsp[esp] = {};
+            if (!detalheEsp[esp][a.id]) detalheEsp[esp][a.id] = { a, legs: [] };
+            detalheEsp[esp][a.id].legs.push(p);
+          });
+        } else if (!fEsp.esporte || espAposta === fEsp.esporte || (fEsp.esporte !== 'Mista' && esportes.includes(fEsp.esporte))) {
+          if (!detalheEsp[espAposta]) detalheEsp[espAposta] = {};
+          detalheEsp[espAposta][a.id] = { a, legs: pernas };
+        }
+      });
+      return { detalheEsp, selPorAposta, focoMercado: fEsp.mercado || '', filtros: { ...fEsp } };
+    }
+
     function gerarPdfBilhetes(esporte) {
-      const ctx = window.__pdfBilCtx;
-      if (!ctx || !ctx.detalheEsp) { alert('Abra a Análise por Esportes antes de gerar o PDF.'); return; }
+      const ctx = montarCtxPdfBilhetes();
+      window.__pdfBilCtx = ctx;
       const alvo = esporte || '';
       const tem = alvo ? (ctx.detalheEsp[alvo] && Object.keys(ctx.detalheEsp[alvo]).length) : Object.values(ctx.detalheEsp).some(g => g && Object.keys(g).length);
       if (!tem) { alert('Nenhum bilhete no filtro atual para gerar o PDF.'); return; }
@@ -4899,9 +4933,12 @@
       };
 
       container.innerHTML = `
-        <div class="mb-6">
-          <h2 class="text-xl md:text-2xl font-bold text-texto">🎟️ Análise de Bilhetes</h2>
-          <p class="text-xs md:text-sm text-mutado mt-1">Suas apostas finalizadas quebradas pelo tamanho do bilhete — simples, duplas, triplas e quádruplas. Respeita os filtros globais (período, casa e operador).</p>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div>
+            <h2 class="text-xl md:text-2xl font-bold text-texto">🎟️ Análise de Bilhetes</h2>
+            <p class="text-xs md:text-sm text-mutado mt-1">Suas apostas finalizadas quebradas pelo tamanho do bilhete — simples, duplas, triplas e quádruplas. Respeita os filtros globais (período, casa e operador).</p>
+          </div>
+          <button onclick="gerarPdfBilhetes('')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition">📄 Gerar PDF — análise por bilhete</button>
         </div>
 
         <div class="bg-panel border border-linha rounded-xl p-4 mb-6 flex flex-wrap items-end gap-3" data-filtros-bilhetes="odds">
