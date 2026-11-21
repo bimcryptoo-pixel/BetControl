@@ -4015,6 +4015,211 @@
     }
 
     // Filtros próprios do módulo (somam-se aos globais)
+    // ===== 📄 PDF profissional da Análise por Bilhete (21/11/2026, pedido do usuário) =====
+    // Documento padronizado (A4, Arial, cabeçalho/faixas/totais no padrão dos
+    // relatórios da casa) com os bilhetes do drill-down da Análise por Esportes:
+    // resumo do documento, bilhetes por esporte com as pernas e o resultado de
+    // cada uma, e os resumos por operador e por casa no fim (regra da casa:
+    // todo relatório de valores é separado por operador, total geral só no fim).
+    function pdfBilDetalheLimpo(d) {
+      const txt = String(d == null ? '' : d);
+      const m = txt.match(/https?:\/\/[^\s]+/);
+      if (!m) return txt.trim();
+      const antes = txt.slice(0, m.index).replace(/·?\s*Fonte:\s*$/i, '').replace(/[\s·—|-]+$/, '').trim();
+      const depois = txt.slice(m.index + m[0].length).replace(/^[\s·—|-]+/, '').trim();
+      return [antes, depois].filter(Boolean).join(' · ');
+    }
+    let pdfBilAlvo = '';
+    function gerarPdfBilhetes(esporte) {
+      const ctx = window.__pdfBilCtx;
+      if (!ctx || !ctx.detalheEsp) { alert('Abra a Análise por Esportes antes de gerar o PDF.'); return; }
+      const alvo = esporte || '';
+      const tem = alvo ? (ctx.detalheEsp[alvo] && Object.keys(ctx.detalheEsp[alvo]).length) : Object.values(ctx.detalheEsp).some(g => g && Object.keys(g).length);
+      if (!tem) { alert('Nenhum bilhete no filtro atual para gerar o PDF.'); return; }
+      pdfBilAlvo = alvo;
+      let m = document.getElementById('modalPdfBil');
+      if (!m) {
+        m = document.createElement('div');
+        m.id = 'modalPdfBil';
+        m.className = 'fixed inset-0 z-[90] hidden items-center justify-center bg-black/60 p-4';
+        m.innerHTML = `<div class="bg-panel border border-linha rounded-2xl w-full max-w-sm p-5 shadow-2xl">
+          <h3 class="text-sm font-black text-texto mb-1">📄 O que entra no PDF?</h3>
+          <p id="pdfBilEscopo" class="text-[11px] text-mutado mb-4"></p>
+          <div class="space-y-2.5 text-xs text-texto">
+            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pdfOpResumo" class="accent-emerald-500 w-4 h-4"> 📊 Resumo geral (lucro, volume, ROI, acerto)</label>
+            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pdfOpBilhetes" class="accent-emerald-500 w-4 h-4"> 🎟️ Bilhetes e pernas (por esporte)</label>
+            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pdfOpOperador" class="accent-emerald-500 w-4 h-4"> 👤 Resumo por operador</label>
+            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pdfOpCasa" class="accent-emerald-500 w-4 h-4"> 🏠 Resumo por casa</label>
+            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pdfOpTipo" class="accent-emerald-500 w-4 h-4"> 🎫 Resumo por tipo de bilhete</label>
+          </div>
+          <div class="flex gap-2 mt-5">
+            <button onclick="fecharOpcoesPdfBilhetes()" class="flex-1 px-3 py-2 bg-input hover:bg-panelAlt text-texto text-xs font-bold rounded-xl transition">Cancelar</button>
+            <button onclick="confirmarPdfBilhetes()" class="flex-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition">📄 Gerar PDF</button>
+          </div>
+        </div>`;
+        document.body.appendChild(m);
+      }
+      let salvo = null;
+      try { salvo = JSON.parse(localStorage.getItem('bc_pdf_bil_opcoes') || 'null'); } catch (e) {}
+      if (!salvo) salvo = { resumo: true, bilhetes: true, operador: true, casa: true, tipo: true };
+      document.getElementById('pdfOpResumo').checked = !!salvo.resumo;
+      document.getElementById('pdfOpBilhetes').checked = !!salvo.bilhetes;
+      document.getElementById('pdfOpOperador').checked = !!salvo.operador;
+      document.getElementById('pdfOpCasa').checked = !!salvo.casa;
+      document.getElementById('pdfOpTipo').checked = !!salvo.tipo;
+      document.getElementById('pdfBilEscopo').textContent = alvo ? `Esporte: ${alvo} · com os filtros atuais da Análise por Esportes` : 'Todos os esportes · com os filtros atuais da Análise por Esportes';
+      m.classList.remove('hidden'); m.classList.add('flex');
+    }
+    function fecharOpcoesPdfBilhetes() { const m = document.getElementById('modalPdfBil'); if (m) { m.classList.add('hidden'); m.classList.remove('flex'); } }
+    function confirmarPdfBilhetes() {
+      const opcoes = {
+        resumo: document.getElementById('pdfOpResumo').checked,
+        bilhetes: document.getElementById('pdfOpBilhetes').checked,
+        operador: document.getElementById('pdfOpOperador').checked,
+        casa: document.getElementById('pdfOpCasa').checked,
+        tipo: document.getElementById('pdfOpTipo').checked,
+      };
+      if (!Object.values(opcoes).some(Boolean)) { alert('Selecione pelo menos uma parte para entrar no relatório.'); return; }
+      try { localStorage.setItem('bc_pdf_bil_opcoes', JSON.stringify(opcoes)); } catch (e) {}
+      fecharOpcoesPdfBilhetes();
+      const html = montarHtmlPdfBilhetes(window.__pdfBilCtx, pdfBilAlvo, opcoes);
+      let f = document.getElementById('printFrameBC');
+      if (!f) { f = document.createElement('iframe'); f.id = 'printFrameBC'; f.style.display = 'none'; document.body.appendChild(f); }
+      const docw = f.contentWindow.document;
+      docw.open(); docw.write(html); docw.close();
+      setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) {} }, 80);
+    }
+    function montarHtmlPdfBilhetes(ctx, esporte, opcoes) {
+      const op = Object.assign({ resumo: true, bilhetes: true, operador: true, casa: true, tipo: true }, opcoes || {});
+      const esc = previaEsc;
+      const fmt = v => `R$ ${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const fmtData = d => { const p = String(d || '').split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : (d || ''); };
+      const nomeCasa = id => { const c = (estado.casas || []).find(x => x.id === id); return c ? c.nome : ''; };
+      const nomeOp = id => { const o = (estado.operadores || []).find(x => x.id === id); return o ? o.nome : ''; };
+      const icone = s => s === 'green' ? '✅' : s === 'red' ? '❌' : (s === 'void' || s === 'cancelada') ? '🔄' : '⏳';
+      const rotulo = s => s === 'green' ? 'GREEN' : s === 'red' ? 'RED' : (s === 'void' || s === 'cancelada') ? 'VOID' : 'PENDENTE';
+      const agora = new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const gf = estado.filtros || {};
+      const partes = [];
+      if (gf.dataInicio || gf.dataFim) partes.push(`Período: ${gf.dataInicio ? fmtData(gf.dataInicio) : '…'} a ${gf.dataFim ? fmtData(gf.dataFim) : '…'}`);
+      if (gf.casaId) partes.push(`Casa: ${nomeCasa(gf.casaId)}`);
+      if (gf.operadorId) partes.push(`Operador: ${nomeOp(gf.operadorId)}`);
+      if (esporte) partes.push(`Esporte: ${esporte}`);
+      if (ctx.focoMercado) partes.push(`🎯 Foco no mercado: ${ctx.focoMercado}`);
+      if (ctx.filtros && ctx.filtros.tipo) partes.push(`Tipo: ${ctx.filtros.tipo === 'simples' ? 'Simples' : 'Múltipla'}`);
+      if (ctx.filtros && ctx.filtros.resultado) partes.push(`Resultado: ${ctx.filtros.resultado === 'lucro' ? 'Lucro' : 'Prejuízo'}`);
+      const chaves = (esporte ? [esporte] : Object.keys(ctx.detalheEsp))
+        .filter(k => ctx.detalheEsp[k] && Object.keys(ctx.detalheEsp[k]).length);
+      let vol = 0, luc = 0, nBets = 0, wins = 0;
+      const porOp = {}, porCasa = {};
+      const soma = (map, chave, a, l) => { if (!map[chave]) map[chave] = { apostas: 0, volume: 0, retorno: 0, lucro: 0 }; const d = map[chave]; d.apostas++; d.volume += Number(a.stake); d.retorno += Number(a.retorno); d.lucro += l; };
+      const tipoBilhete = n => n <= 0 ? 'Sem pernas' : n === 1 ? 'Simples' : n === 2 ? 'Dupla' : n === 3 ? 'Tripla' : n === 4 ? 'Quádrupla' : `Múltipla (${n} pernas)`;
+      const porTipo = {}; let semPernas = 0;
+      const somaTipo = (a, l, n) => { if (n <= 0) { semPernas++; return; } const chave = tipoBilhete(n); if (!porTipo[chave]) porTipo[chave] = { ordem: n, apostas: 0, volume: 0, retorno: 0, lucro: 0, somaOdd: 0, greens: 0, reds: 0 }; const d = porTipo[chave]; d.apostas++; d.volume += Number(a.stake); d.retorno += Number(a.retorno); d.lucro += l; d.somaOdd += Number(a.oddTotal || a.odd_total || 0); if (l > 0) d.greens++; else if (l < 0) d.reds++; };
+      const secoes = chaves.map(k => {
+        const bets = Object.values(ctx.detalheEsp[k])
+          .sort((x, y) => String(y.a.data || '').localeCompare(String(x.a.data || '')) || String(y.a.liquidada_em || y.a.liquidadaEm || '').localeCompare(String(x.a.liquidada_em || x.a.liquidadaEm || '')));
+        let volE = 0, lucE = 0;
+        const blocos = bets.map(({ a, legs }) => {
+          const l = Number(a.retorno) - Number(a.stake);
+          vol += Number(a.stake); luc += l; nBets++; if (l > 0) wins++;
+          volE += Number(a.stake); lucE += l;
+          soma(porOp, nomeOp(a.operadorId || a.clienteId) || '—', a, l);
+          soma(porCasa, nomeCasa(a.casaId) || '—', a, l);
+          const res = l > 0 ? '<span class="pos">▲ GREEN</span>' : l < 0 ? '<span class="neg">▼ RED</span>' : '<span class="neu">🔄 VOID</span>';
+          const totalPernas = (ctx.selPorAposta[a.id] || []).length;
+          somaTipo(a, l, totalPernas);
+          const linhas = legs.map(p => `<tr>
+              <td class="jogo"><b>${esc(p.jogo || '')}</b></td>
+              <td>${esc((ctx.focoMercado ? '' : normalizarMercadoEsp(p.mercado) + ' · ') + (p.selecao || ''))}</td>
+              <td class="c">@${Number(p.odd || 0).toFixed(2)}</td>
+              <td>${icone(p.status)} <b>${rotulo(p.status)}</b>${p.detalhe ? `<div class="det">${esc(pdfBilDetalheLimpo(p.detalhe))}</div>` : ''}</td>
+            </tr>`).join('');
+          const extra = (ctx.focoMercado && totalPernas > legs.length) ? `<tr><td colspan="4" class="extra">+ ${totalPernas - legs.length} perna(s) de outro(s) mercado(s) neste bilhete</td></tr>` : '';
+          return `<table class="bilhete">
+            <thead><tr><th colspan="4"><span class="dir">${res} <span class="${l > 0 ? 'pos' : l < 0 ? 'neg' : ''}">${l > 0 ? '+' : ''}${fmt(l)}</span></span><span>📅 ${fmtData(a.data)}</span> <span>🏠 ${esc(nomeCasa(a.casaId))}</span> <span>👤 ${esc(nomeOp(a.operadorId || a.clienteId))}</span> <span>💰 ${fmt(a.stake)}</span> <span>🎯 odd ${Number(a.oddTotal || a.odd_total || 0).toFixed(2)}</span> <span>🎟️ ${tipoBilhete(totalPernas)}</span></th></tr></thead>
+            <tbody>${linhas}${extra}</tbody>
+          </table>`;
+        }).join('');
+        return { k, n: bets.length, volE, lucE, blocos };
+      }).sort((x, y) => y.lucE - x.lucE);
+      const roi = vol > 0 ? (luc / vol * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%' : '—';
+      const acerto = nBets > 0 ? Math.round(wins / nBets * 100) + '%' : '—';
+      const tabelaResumo = (titulo, coluna, map) => {
+        const linhas = Object.keys(map).sort().map(nome => { const d = map[nome]; return `<tr><td>${esc(nome)}</td><td class="c">${d.apostas}</td><td class="r azul">${fmt(d.volume)}</td><td class="r">${fmt(d.retorno)}</td><td class="r ${d.lucro > 0 ? 'pos' : d.lucro < 0 ? 'neg' : ''}"><b>${d.lucro > 0 ? '+' : ''}${fmt(d.lucro)}</b></td></tr>`; }).join('');
+        return `<h3 class="sub">${titulo}</h3><table class="resumo"><thead><tr><th>${coluna}</th><th class="c">Bilhetes</th><th class="r">Volume</th><th class="r">Retorno</th><th class="r">Lucro</th></tr></thead><tbody>${linhas}<tr class="total"><td>TOTAL GERAL</td><td class="c">${nBets}</td><td class="r azul">${fmt(vol)}</td><td class="r">${fmt(vol + luc)}</td><td class="r ${luc > 0 ? 'pos' : luc < 0 ? 'neg' : ''}"><b>${luc > 0 ? '+' : ''}${fmt(luc)}</b></td></tr></tbody></table>`;
+      };
+      const tabelaTipo = () => {
+        const chavesT = Object.keys(porTipo).sort((x, y) => porTipo[x].ordem - porTipo[y].ordem);
+        if (!chavesT.length) return '';
+        const linhas = chavesT.map(nome => { const d = porTipo[nome]; const roiT = d.volume > 0 ? (d.lucro / d.volume * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%' : '—'; const wr = (d.greens + d.reds) > 0 ? (d.greens / (d.greens + d.reds) * 100).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%' : '—';
+          return `<tr><td><b>${esc(nome)}</b></td><td class="c">${d.apostas}</td><td class="r azul">${fmt(d.volume)}</td><td class="r">${fmt(d.volume / d.apostas)}</td><td class="c">${(d.somaOdd / d.apostas).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td class="r">${fmt(d.retorno)}</td><td class="r ${d.lucro > 0 ? 'pos' : d.lucro < 0 ? 'neg' : ''}"><b>${d.lucro > 0 ? '+' : ''}${fmt(d.lucro)}</b></td><td class="r ${d.lucro > 0 ? 'pos' : d.lucro < 0 ? 'neg' : ''}">${roiT}</td><td class="c pos">${d.greens}</td><td class="c neg">${d.reds}</td><td class="c">${wr}</td></tr>`; }).join('');
+        const nota = semPernas ? `<p class="nota">${semPernas} bilhete(s) sem pernas registradas não entram na classificação por tipo.</p>` : '';
+        return `<h3 class="sub">Resumo por tipo de bilhete</h3><table class="resumo"><thead><tr><th>Tipo</th><th class="c">Bilhetes</th><th class="r">Volume</th><th class="r">Stake média</th><th class="c">Odd média</th><th class="r">Retorno</th><th class="r">Lucro</th><th class="r">ROI</th><th class="c">✅</th><th class="c">❌</th><th class="c">Winrate</th></tr></thead><tbody>${linhas}</tbody></table>${nota}`;
+      };
+      const secoesHtml = secoes.map(s => `
+        <div class="secao"><span>${iconeEsporteEsp(s.k)} ${esc(s.k)}</span><span class="sdir">${s.n} bilhete(s) · Volume <span class="azul">${fmt(s.volE)}</span> · <span class="${s.lucE > 0 ? 'poscl' : s.lucE < 0 ? 'negcl' : ''}">${s.lucE > 0 ? '+' : ''}${fmt(s.lucE)}</span></span></div>
+        ${s.blocos}`).join('');
+      return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Análise por Bilhete — BetControl</title>
+  <style>
+    *{box-sizing:border-box}
+    @page{ size:A4; margin:12mm 10mm 14mm 10mm; @bottom-right{ content:"Página " counter(page) " de " counter(pages); font-size:8px; color:#999; } }
+    body{font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;font-size:10.5px;margin:0;padding:0;line-height:1.42;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .topo{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #059669;padding-bottom:8px;margin:0 0 8px;}
+    .marca .nome{font-size:17px;font-weight:900;letter-spacing:.5px;}
+    .marca .nome span{color:#059669;}
+    .marca .tag{font-size:9px;color:#888;letter-spacing:2px;margin-top:2px;}
+    .doc{text-align:right;}
+    .doc h1{font-size:15px;margin:0;letter-spacing:.6px;color:#111;}
+    .doc .tipo{font-size:10.5px;color:#555;margin-top:2px;}
+    .meta{font-size:10px;color:#555;margin:0 0 10px;}
+    .cards{display:flex;gap:8px;margin:0 0 12px;}
+    .card{flex:1;border:1px solid #e2e8f0;border-radius:8px;padding:7px 10px;background:#f8fafc;}
+    .card .t{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;}
+    .card .v{font-size:14px;font-weight:900;margin-top:1px;}
+    .pos{color:#059669;} .neg{color:#dc2626;} .azul{color:#2563eb;} .neu{color:#555;}
+    .poscl{color:#a7f3d0;} .negcl{color:#fecaca;}
+    .secao{display:flex;justify-content:space-between;align-items:center;background:#065f46;color:#fff;font-weight:700;font-size:11px;padding:6px 10px;border-radius:6px;margin:14px 0 8px;}
+    .secao .sdir{font-weight:400;font-size:10px;}
+    .secao .sdir .azul{color:#bfdbfe;}
+    table.bilhete{width:100%;border-collapse:collapse;margin:0 0 10px;page-break-inside:avoid;}
+    table.bilhete thead th{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;font-size:10px;text-align:left;padding:5px 8px;font-weight:700;}
+    table.bilhete thead th span{margin-right:10px;}
+    table.bilhete thead th .dir{float:right;margin-right:0;}
+    table.bilhete tbody td{padding:4px 8px;border:1px solid #e2e8f0;font-size:9.5px;vertical-align:top;}
+    table.bilhete td.c{text-align:center;white-space:nowrap;}
+    table.bilhete td.jogo{width:27%;}
+    table.bilhete .det{color:#475569;font-size:9px;margin-top:1px;}
+    table.bilhete .extra{color:#64748b;font-style:italic;}
+    h3.sub{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#065f46;margin:14px 0 6px;}
+    table.resumo{width:100%;border-collapse:collapse;}
+    table.resumo thead th{background:#047857;color:#fff;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;padding:5px 8px;text-align:left;}
+    table.resumo tbody td{padding:4px 8px;border:1px solid #e2e8f0;font-size:9.5px;}
+    table.resumo td.c, table.resumo th.c{text-align:center;}
+    table.resumo td.r, table.resumo th.r{text-align:right;}
+    table.resumo tr.total td{background:#f1f5f9;font-weight:700;}
+    .nota{font-size:9px;color:#888;margin:4px 0 0;}
+    .rodape{position:fixed;bottom:0;left:0;right:0;padding-top:6px;border-top:1px solid #ddd;display:flex;justify-content:space-between;font-size:9px;color:#999;background:#fff;}
+  </style></head><body>
+  <div class="topo">
+    <div class="marca"><div class="nome">BET<span>CONTROL</span></div><div class="tag">GESTÃO DE APOSTAS</div></div>
+    <div class="doc"><h1>ANÁLISE POR BILHETE</h1><div class="tipo">Análise por Esportes — bilhetes e pernas</div></div>
+  </div>
+  <div class="meta"><b>Gerado em ${esc(agora)}</b>${partes.length ? ' · ' + esc(partes.join(' · ')) : ''} · ${nBets} bilhete(s) no documento</div>
+  ${op.resumo ? `<div class="cards">
+    <div class="card"><div class="t">Lucro líquido</div><div class="v ${luc > 0 ? 'pos' : luc < 0 ? 'neg' : ''}">${luc > 0 ? '+' : ''}${fmt(luc)}</div></div>
+    <div class="card"><div class="t">Volume</div><div class="v azul">${fmt(vol)}</div></div>
+    <div class="card"><div class="t">Retorno</div><div class="v">${fmt(vol + luc)}</div></div>
+    <div class="card"><div class="t">ROI</div><div class="v ${luc > 0 ? 'pos' : luc < 0 ? 'neg' : ''}">${roi}</div></div>
+    <div class="card"><div class="t">Acerto (bilhetes)</div><div class="v">${acerto}</div></div>
+  </div>` : ''}
+  ${op.bilhetes ? secoesHtml : ''}
+  ${op.operador ? tabelaResumo('Resumo por operador', 'Operador', porOp) : ''}
+  ${op.casa ? tabelaResumo('Resumo por casa', 'Casa', porCasa) : ''}
+  ${op.tipo ? tabelaTipo() : ''}
+  <div class="rodape"><span>BetControl — análise por bilhete gerada a partir dos filtros atuais da Análise por Esportes</span><span>Gerado em ${esc(agora)}</span></div>
+  </body></html>`;
+    }
     let fEsp = { esporte: '', mercado: '', tipo: '', resultado: '', ordem: 'lucro' };
     let espExpandido = {};
 
@@ -4244,7 +4449,10 @@
         if (!bets.length) return '';
         const max = 50;
         return `<div class="mt-4">
-          <p class="text-[10px] uppercase tracking-wider text-mutado font-bold mb-2">📋 Apostas — ${iconeEsporteEsp(k)} ${k}${focoMercado ? ` · 🎯 ${focoMercado}` : ''} (${bets.length})</p>
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <p class="text-[10px] uppercase tracking-wider text-mutado font-bold">📋 Apostas — ${iconeEsporteEsp(k)} ${k}${focoMercado ? ` · 🎯 ${focoMercado}` : ''} (${bets.length})</p>
+            <button onclick="gerarPdfBilhetes('${k}')" class="no-print shrink-0 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black rounded-lg transition">📄 PDF deste esporte</button>
+          </div>
           <div class="space-y-2">
             ${bets.slice(0, max).map(({ a, legs }) => { const luc = Number(a.retorno) - Number(a.stake); const totalPernas = (selPorAposta[a.id] || []).length;
               return `<div class="bg-panel border border-linha rounded-lg p-3">
@@ -4271,6 +4479,8 @@
         </div>`;
       }
 
+      // contexto pro PDF por bilhete (gerarPdfBilhetes lê daqui)
+      window.__pdfBilCtx = { detalheEsp, selPorAposta, focoMercado, filtros: { ...fEsp } };
       container.innerHTML = `
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
           <div>
@@ -4278,7 +4488,7 @@
             <p class="text-xs text-mutado">Lucro por esporte e por mercado no período filtrado. Só apostas finalizadas. Filtros globais (período, casa, operador) continuam valendo.</p>
             ${focoMercado ? `<p class="text-xs font-bold text-emerald-500 mt-1">🎯 Foco no mercado: ${focoMercado} — todo o módulo mostra só esse mercado (${focoTot.pernas} pernas no período)</p>` : ''}
           </div>
-          <button onclick="window.print()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition">🖨️ Imprimir / Salvar PDF</button>
+          <button onclick="gerarPdfBilhetes('')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition">📄 Gerar PDF — análise por bilhete</button>
         </div>
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
