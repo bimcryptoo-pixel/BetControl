@@ -4467,7 +4467,7 @@
           <div class="ln"><span>Odd média</span><b class="amb">${oddTxt(m)}</b></div>
           <div class="ln"><span>ROI</span><b class="${cls(m.lucro)}">${roiTxt(m)}</b></div>
           <div class="ln"><span>Winrate</span><b class="teal">${wrTxt(m)}</b></div>
-          <div class="ln"><span>Resultado</span><b><span class="pos">✅ ${g.greens}</span> · <span class="neg">❌ ${g.reds}</span>${g.voids ? ` · ⚪ ${g.voids}` : ''}</b></div>
+          <div class="ln"><span>Resultado</span><b><span class="pos">✅ ${g.greens}</span> · <span class="neg">❌ ${g.reds}</span>${g.voids ? ` · 🔄 ${g.voids}` : ''}</b></div>
           <div class="ln"><span>Lucro</span><b class="${cls(m.lucro)}">${fmt(m.lucro)}</b></div>
         </div>`;
       }).join('')}</div>` : '';
@@ -4486,7 +4486,7 @@
       const resumoHtml = op.resumo ? `<h3 class="sub">📋 Resumo por tipo de bilhete</h3><table class="resumo"><thead><tr><th>Bilhete</th><th class="c">Apostas</th><th class="r">Valor girado</th><th class="r">Stake média</th><th class="c">Odd média</th><th class="r">Retorno</th><th class="r">Lucro</th><th class="r">ROI</th><th class="c">✅</th><th class="c">❌</th><th class="c">Winrate</th></tr></thead><tbody>${d.gruposVisiveis.map(gd => {
         const g = d.grupos[gd.chave]; const m = d.metricas(g);
         return `<tr><td><b>🎟️ ${esc(gd.nome)}</b></td><td class="c">${g.bets}</td><td class="r azul">${fmt(g.volume)}</td><td class="r">${fmt(m.stakeMedia)}</td><td class="c amb"><b>${oddTxt(m)}</b></td><td class="r">${fmt(g.retorno)}</td><td class="r ${cls(m.lucro)}"><b>${fmt(m.lucro)}</b></td><td class="r ${cls(m.lucro)}">${roiTxt(m)}</td><td class="c pos"><b>${g.greens}</b></td><td class="c neg"><b>${g.reds}</b></td><td class="c">${wrTxt(m)}</td></tr>`;
-      }).join('')}<tr class="total"><td>TOTAL</td><td class="c">${d.total.bets}</td><td class="r azul">${fmt(d.total.volume)}</td><td class="r">${fmt(mt.stakeMedia)}</td><td class="c amb">${oddTxt(mt)}</td><td class="r">${fmt(d.total.retorno)}</td><td class="r ${cls(mt.lucro)}"><b>${fmt(mt.lucro)}</b></td><td class="r ${cls(mt.lucro)}">${roiTxt(mt)}</td><td class="c pos">${d.total.greens}</td><td class="c neg">${d.total.reds}</td><td class="c">${wrTxt(mt)}</td></tr></tbody></table><p class="nota">Winrate = apostas com lucro ÷ (apostas com lucro + apostas com prejuízo). Bilhetes void/estornados (lucro zero) aparecem no ⚪ dos cards e não entram no winrate. ROI = lucro ÷ valor girado.${d.semPernas ? ` ${d.semPernas} aposta(s) finalizada(s) sem pernas registradas não entram na classificação por tamanho.` : ''}</p>` : '';
+      }).join('')}<tr class="total"><td>TOTAL</td><td class="c">${d.total.bets}</td><td class="r azul">${fmt(d.total.volume)}</td><td class="r">${fmt(mt.stakeMedia)}</td><td class="c amb">${oddTxt(mt)}</td><td class="r">${fmt(d.total.retorno)}</td><td class="r ${cls(mt.lucro)}"><b>${fmt(mt.lucro)}</b></td><td class="r ${cls(mt.lucro)}">${roiTxt(mt)}</td><td class="c pos">${d.total.greens}</td><td class="c neg">${d.total.reds}</td><td class="c">${wrTxt(mt)}</td></tr></tbody></table><p class="nota">Winrate = apostas com lucro ÷ (apostas com lucro + apostas com prejuízo). Bilhetes void/estornados (lucro zero) aparecem no 🔄 dos cards e não entram no winrate. ROI = lucro ÷ valor girado.${d.semPernas ? ` ${d.semPernas} aposta(s) finalizada(s) sem pernas registradas não entram na classificação por tamanho.` : ''}</p>` : '';
       return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Análise de Bilhetes — BetControl</title>
   <style>
     *{box-sizing:border-box}
@@ -5207,7 +5207,7 @@
             <div class="flex justify-between gap-2"><span class="text-mutado">Odd média</span><span class="font-bold text-amber-500">${oddTxt(m)}</span></div>
             <div class="flex justify-between gap-2"><span class="text-mutado">ROI</span><span class="font-bold ${corLucro(m.lucro)}">${roiTxt(m)}</span></div>
             <div class="flex justify-between gap-2"><span class="text-mutado">Winrate</span><span class="font-bold text-teal-500">${wrTxt(m)}</span></div>
-            <div class="flex justify-between gap-2 text-xs"><span class="text-mutado">Resultado</span><span><span class="text-emerald-500 font-bold">✅ ${g.greens}</span> · <span class="text-red-500 font-bold">❌ ${g.reds}</span>${g.voids ? ` · ⚪ ${g.voids}` : ''}</span></div>
+            <div class="flex justify-between gap-2 text-xs"><span class="text-mutado">Resultado</span><span><span class="text-emerald-500 font-bold">✅ ${g.greens}</span> · <span class="text-red-500 font-bold">❌ ${g.reds}</span>${g.voids ? ` · 🔄 ${g.voids}` : ''}</span></div>
             <div class="flex justify-between gap-2 text-xs"><span class="text-mutado">Lucro</span><span class="font-bold ${corLucro(m.lucro)}">${fmt(m.lucro)}</span></div>
           </div>
         </div>`;
@@ -5353,7 +5353,7 @@
               </tbody>
             </table>
           </div>
-          <p class="text-[10px] text-mutado mt-2">Winrate = apostas com lucro ÷ (apostas com lucro + apostas com prejuízo). Bilhetes void/estornados (lucro zero) aparecem no ⚪ dos cards e não entram no winrate. ROI = lucro ÷ valor girado.${semPernas ? ` ${semPernas} aposta(s) finalizada(s) sem pernas registradas não entram na classificação por tamanho.` : ''}</p>
+          <p class="text-[10px] text-mutado mt-2">Winrate = apostas com lucro ÷ (apostas com lucro + apostas com prejuízo). Bilhetes void/estornados (lucro zero) aparecem no 🔄 dos cards e não entram no winrate. ROI = lucro ÷ valor girado.${semPernas ? ` ${semPernas} aposta(s) finalizada(s) sem pernas registradas não entram na classificação por tamanho.` : ''}</p>
         </div>
       `;
     }
