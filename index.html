@@ -770,8 +770,8 @@
     function verificarPermissaoAba(aba) {
       const usr = obterUsuarioLogado();
       if (!usr) return false;
-      // (21/11/2026, a pedido do usuário) Usuários/Admin: nem editor genérico — só o login 'admin'.
-      if (usr.perfil === 'editor') return !(aba === 'usuarios' && usr.usuario !== 'admin');
+      // (21/11/2026, a pedido do usuário) Usuários/Admin e Backup: nem editor genérico — só o login 'admin'.
+      if (usr.perfil === 'editor') return !((aba === 'usuarios' || aba === 'backup') && usr.usuario !== 'admin');
       if (aba === 'usuarios' || aba === 'backup') return false;
       const permissoes = usr.permissoesLeitor || [];
       return permissoes.includes(aba);
@@ -865,8 +865,8 @@
 
         if (usr.perfil === 'editor') {
           // (20/11/2026, a pedido do usuário) Comissão só aparece para o admin principal (usuario 'admin'); demais editores não veem o módulo.
-          // (21/11/2026, a pedido do usuário) Usuários/Admin idem: só o login 'admin' vê — nem o login 'Administrador' (editor) enxerga o módulo.
-          if ((aba === 'comissao' || aba === 'usuarios') && usr.usuario !== 'admin') {
+          // (21/11/2026, a pedido do usuário) Usuários/Admin idem: só o login 'admin' vê — nem o login 'Administrador' (editor) enxerga o módulo. Backup idem (pedido dele no mesmo dia).
+          if ((aba === 'comissao' || aba === 'usuarios' || aba === 'backup') && usr.usuario !== 'admin') {
             btnEl.style.display = 'none';
           } else {
             btnEl.style.display = 'flex';
@@ -1224,9 +1224,9 @@
     function renderizarAba() {
       const main = document.getElementById('conteudo-principal');
       // (20/11/2026, a pedido do usuário) Comissão só aparece para o admin principal (usuario 'admin'); demais editores não veem o módulo.
-      // (21/11/2026, a pedido do usuário) Usuários/Admin idem: só o login 'admin' — o login 'Administrador' (editor) cai pro dashboard.
+      // (21/11/2026, a pedido do usuário) Usuários/Admin idem: só o login 'admin' — o login 'Administrador' (editor) cai pro dashboard. Backup idem (pedido dele no mesmo dia).
       const usrRenderAtual = obterUsuarioLogado();
-      if ((estado.abaAtiva === 'comissao' || estado.abaAtiva === 'usuarios') && usrRenderAtual && usrRenderAtual.perfil === 'editor' && usrRenderAtual.usuario !== 'admin') {
+      if ((estado.abaAtiva === 'comissao' || estado.abaAtiva === 'usuarios' || estado.abaAtiva === 'backup') && usrRenderAtual && usrRenderAtual.perfil === 'editor' && usrRenderAtual.usuario !== 'admin') {
         estado.abaAtiva = 'dashboard';
       }
       if (!verificarPermissaoAba(estado.abaAtiva)) {
