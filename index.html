@@ -4257,6 +4257,285 @@
   <div class="rodape"><span>BetControl — análise por bilhete gerada a partir dos filtros atuais da Análise por Esportes</span><span>Gerado em ${esc(agora)}</span></div>
   </body></html>`;
     }
+    // ===== 📄 PDF da aba 🎟️ Análise de Bilhetes (21/11/2026, pedido do usuário) =====
+    // O botão DESTA aba gera o documento com os dados DA ABA (os mesmos da
+    // tela): cards gerais, cards por tipo, por dia da semana, matriz dia da
+    // semana × tipo e resumo por tipo de bilhete — respeitando os filtros
+    // globais e o filtro de odd da aba. NÃO é o documento de bilhetes por
+    // esporte da aba Análise por Esportes (esse continua no botão de lá).
+    function calcularAnaliseBilhetes() {
+      const selPorAposta = {};
+      (estado.selecoes || []).forEach(s => {
+        if (!selPorAposta[s.apostaId]) selPorAposta[s.apostaId] = [];
+        selPorAposta[s.apostaId].push(s);
+      });
+      const parseOddFiltro = v => { const n = parseFloat(String(v || '').replace(',', '.')); return isNaN(n) ? null : n; };
+      const oddMin = parseOddFiltro(fBil.oddMin);
+      const oddMax = parseOddFiltro(fBil.oddMax);
+      const oddEfetivaBil = a => {
+        const ob = (a.oddTotal !== null && a.oddTotal !== undefined && a.oddTotal !== '') ? Number(a.oddTotal) : null;
+        if (ob) return ob;
+        const sels = selPorAposta[a.id] || [];
+        return sels.length ? calcularOddTotal(sels) : null;
+      };
+      const base = filtrarApostasPorGeral(estado.apostas).filter(a => a.finalizada && a.retorno !== null && a.retorno !== undefined)
+        .filter(a => {
+          if (oddMin === null && oddMax === null) return true;
+          const o = oddEfetivaBil(a);
+          if (o === null) return false;
+          if (oddMin !== null && o < oddMin) return false;
+          if (oddMax !== null && o > oddMax) return false;
+          return true;
+        });
+      const gruposDef = [
+        { chave: '1', nome: 'Simples', pernas: '1 perna' },
+        { chave: '2', nome: 'Duplas', pernas: '2 pernas' },
+        { chave: '3', nome: 'Triplas', pernas: '3 pernas' },
+        { chave: '4', nome: 'Quádruplas', pernas: '4 pernas' },
+        { chave: '5+', nome: '5+ pernas', pernas: '5 ou mais pernas' }
+      ];
+      const grupos = {};
+      gruposDef.forEach(d => { grupos[d.chave] = { bets: 0, volume: 0, retorno: 0, greens: 0, reds: 0, voids: 0, somaOdds: 0, comOdd: 0 }; });
+      let semPernas = 0;
+      base.forEach(a => {
+        const n = (selPorAposta[a.id] || []).length;
+        if (n === 0) { semPernas++; return; }
+        const g = grupos[n >= 5 ? '5+' : String(n)];
+        const stake = Number(a.stake) || 0;
+        const ret = Number(a.retorno) || 0;
+        g.bets++; g.volume += stake; g.retorno += ret;
+        const o = oddEfetivaBil(a);
+        if (o !== null && o > 0) { g.somaOdds += o; g.comOdd++; }
+        const lucro = ret - stake;
+        if (lucro > 0.009) g.greens++; else if (lucro < -0.009) g.reds++; else g.voids++;
+      });
+      const metricas = g => {
+        const lucro = g.retorno - g.volume;
+        return {
+          lucro,
+          stakeMedia: g.bets > 0 ? g.volume / g.bets : 0,
+          roi: g.volume > 0 ? lucro / g.volume * 100 : null,
+          winrate: (g.greens + g.reds) > 0 ? g.greens / (g.greens + g.reds) * 100 : null,
+          oddMedia: g.comOdd > 0 ? g.somaOdds / g.comOdd : null
+        };
+      };
+      const total = { bets: 0, volume: 0, retorno: 0, greens: 0, reds: 0, voids: 0, somaOdds: 0, comOdd: 0 };
+      gruposDef.forEach(d => { const g = grupos[d.chave]; total.bets += g.bets; total.volume += g.volume; total.retorno += g.retorno; total.greens += g.greens; total.reds += g.reds; total.voids += g.voids; total.somaOdds += g.somaOdds; total.comOdd += g.comOdd; });
+      const mTotal = metricas(total);
+      const gruposVisiveis = gruposDef.filter(d => d.chave !== '5+' || grupos[d.chave].bets > 0);
+      const NOMES_DIA = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
+      const ORDEM_DIAS = [1, 2, 3, 4, 5, 6, 0];
+      const diasSemana = {};
+      ORDEM_DIAS.forEach(d => { diasSemana[d] = { bets: 0, volume: 0, retorno: 0, greens: 0, reds: 0, voids: 0, somaOdds: 0, comOdd: 0 }; });
+      base.forEach(a => {
+        const n = (selPorAposta[a.id] || []).length;
+        if (n === 0) return;
+        const partes = String(a.data || '').slice(0, 10).split('-');
+        if (partes.length !== 3) return;
+        const dia = new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2])).getDay();
+        const g = diasSemana[dia];
+        const stake = Number(a.stake) || 0;
+        const ret = Number(a.retorno) || 0;
+        g.bets++; g.volume += stake; g.retorno += ret;
+        const lucro = ret - stake;
+        if (lucro > 0.009) g.greens++; else if (lucro < -0.009) g.reds++; else g.voids++;
+        const o = oddEfetivaBil(a);
+        if (o !== null && o > 0) { g.somaOdds += o; g.comOdd++; }
+      });
+      const lucrosDias = ORDEM_DIAS.map(d => diasSemana[d].retorno - diasSemana[d].volume);
+      const piorDia = lucrosDias.some(l => l < 0) ? ORDEM_DIAS[lucrosDias.indexOf(Math.min(...lucrosDias))] : null;
+      const melhorDia = lucrosDias.some(l => l > 0) ? ORDEM_DIAS[lucrosDias.indexOf(Math.max(...lucrosDias))] : null;
+      const matrizDiaTipo = {};
+      ORDEM_DIAS.forEach(d => { matrizDiaTipo[d] = {}; gruposDef.forEach(gd => { matrizDiaTipo[d][gd.chave] = { bets: 0, volume: 0, retorno: 0 }; }); });
+      base.forEach(a => {
+        const n = (selPorAposta[a.id] || []).length;
+        if (n === 0) return;
+        const partes = String(a.data || '').slice(0, 10).split('-');
+        if (partes.length !== 3) return;
+        const dia = new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2])).getDay();
+        const cel = matrizDiaTipo[dia][n >= 5 ? '5+' : String(n)];
+        cel.bets++; cel.volume += Number(a.stake) || 0; cel.retorno += Number(a.retorno) || 0;
+      });
+      const leituraDiaTipo = d => {
+        const cells = gruposVisiveis.map(gd => ({ nome: gd.nome, lucro: matrizDiaTipo[d][gd.chave].retorno - matrizDiaTipo[d][gd.chave].volume, bets: matrizDiaTipo[d][gd.chave].bets })).filter(c => c.bets > 0);
+        if (!cells.length) return '—';
+        const melhor = cells.reduce((m, c) => c.lucro > m.lucro ? c : m, cells[0]);
+        const pior = cells.reduce((m, c) => c.lucro < m.lucro ? c : m, cells[0]);
+        if (melhor.nome === pior.nome) return `só ${melhor.nome} no dia`;
+        const partes = [];
+        if (melhor.lucro > 0) partes.push(`✅ melhor: ${melhor.nome}`);
+        if (pior.lucro < 0) partes.push(`🔴 pior: ${pior.nome}`);
+        return partes.length ? partes.join(' · ') : '—';
+      };
+      return { gruposDef, grupos, gruposVisiveis, total, mTotal, metricas, diasSemana, piorDia, melhorDia, matrizDiaTipo, leituraDiaTipo, NOMES_DIA, ORDEM_DIAS, semPernas, oddMin, oddMax };
+    }
+
+    function gerarPdfAbaBilhetes() {
+      const d = calcularAnaliseBilhetes();
+      if (!d.total.bets) { alert('Nenhuma aposta finalizada no filtro atual para gerar o PDF.'); return; }
+      window.__pdfAbaBil = d;
+      let m = document.getElementById('modalPdfAbaBil');
+      if (!m) {
+        m = document.createElement('div');
+        m.id = 'modalPdfAbaBil';
+        m.className = 'fixed inset-0 z-[90] hidden items-center justify-center bg-black/60 p-4';
+        m.innerHTML = `<div class="bg-panel border border-linha rounded-2xl w-full max-w-sm p-5 shadow-2xl">
+          <h3 class="text-base font-black text-texto mb-1">📄 O que entra no PDF?</h3>
+          <p class="text-[11px] text-mutado mb-4">Documento com os dados desta aba (Análise de Bilhetes), pelos filtros atuais da tela. Só entra o que estiver marcado — a escolha fica salva neste aparelho.</p>
+          <div class="space-y-2.5 text-sm text-texto">
+            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pdfAbaOpGeral" class="accent-emerald-500 w-4 h-4"> 📊 Resumo geral (cards do topo)</label>
+            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pdfAbaOpTipos" class="accent-emerald-500 w-4 h-4"> 🎟️ Cards por tipo de bilhete</label>
+            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pdfAbaOpDia" class="accent-emerald-500 w-4 h-4"> 📅 Por dia da semana</label>
+            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pdfAbaOpMatriz" class="accent-emerald-500 w-4 h-4"> 🗓️ Dia da semana × tipo de bilhete</label>
+            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="pdfAbaOpResumo" class="accent-emerald-500 w-4 h-4"> 📋 Resumo por tipo de bilhete</label>
+          </div>
+          <div class="flex gap-2 mt-5">
+            <button onclick="confirmarPdfAbaBilhetes()" class="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-black rounded-xl transition">Gerar PDF</button>
+            <button onclick="fecharOpcoesPdfAbaBilhetes()" class="px-4 py-2.5 bg-input border border-linha text-mutado hover:text-texto text-sm font-bold rounded-xl transition">Cancelar</button>
+          </div>
+        </div>`;
+        document.body.appendChild(m);
+        m.addEventListener('click', e => { if (e.target === m) fecharOpcoesPdfAbaBilhetes(); });
+      }
+      let salvas = {};
+      try { salvas = JSON.parse(localStorage.getItem('bc_pdf_aba_bil_opcoes') || '{}'); } catch (e) { salvas = {}; }
+      const def = (id, padrao) => { const el = document.getElementById(id); if (el) el.checked = (id in salvas) ? !!salvas[id] : padrao; };
+      def('pdfAbaOpGeral', true); def('pdfAbaOpTipos', true); def('pdfAbaOpDia', true); def('pdfAbaOpMatriz', true); def('pdfAbaOpResumo', true);
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    }
+    function fecharOpcoesPdfAbaBilhetes() {
+      const m = document.getElementById('modalPdfAbaBil');
+      if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+    }
+    function confirmarPdfAbaBilhetes() {
+      const ler = id => { const el = document.getElementById(id); return el ? el.checked : false; };
+      const opcoes = { geral: ler('pdfAbaOpGeral'), tipos: ler('pdfAbaOpTipos'), dia: ler('pdfAbaOpDia'), matriz: ler('pdfAbaOpMatriz'), resumo: ler('pdfAbaOpResumo') };
+      if (!Object.values(opcoes).some(Boolean)) { alert('Marque pelo menos um bloco para gerar o PDF.'); return; }
+      try {
+        localStorage.setItem('bc_pdf_aba_bil_opcoes', JSON.stringify({ pdfAbaOpGeral: opcoes.geral, pdfAbaOpTipos: opcoes.tipos, pdfAbaOpDia: opcoes.dia, pdfAbaOpMatriz: opcoes.matriz, pdfAbaOpResumo: opcoes.resumo }));
+      } catch (e) { /* sem persistência, segue */ }
+      fecharOpcoesPdfAbaBilhetes();
+      const d = window.__pdfAbaBil || calcularAnaliseBilhetes();
+      const html = montarHtmlPdfAbaBilhetes(d, opcoes);
+      let frame = document.getElementById('printFrameBC');
+      if (!frame) {
+        frame = document.createElement('iframe');
+        frame.id = 'printFrameBC';
+        frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+        document.body.appendChild(frame);
+      }
+      frame.srcdoc = html;
+      frame.onload = () => {
+        try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (e) { console.error('Erro ao imprimir PDF da Análise de Bilhetes:', e); }
+      };
+    }
+
+    function montarHtmlPdfAbaBilhetes(d, opcoes) {
+      const op = Object.assign({ geral: true, tipos: true, dia: true, matriz: true, resumo: true }, opcoes || {});
+      const esc = previaEsc;
+      const fmt = v => `R$ ${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const oddTxt = m => m.oddMedia === null ? '—' : m.oddMedia.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const roiTxt = m => m.roi === null ? '—' : m.roi.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+      const wrTxt = m => m.winrate === null ? '—' : m.winrate.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+      const fmtData = x => { const p = String(x || '').split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : (x || ''); };
+      const nomeCasa = id => { const c = (estado.casas || []).find(x => x.id === id); return c ? c.nome : ''; };
+      const nomeOp = id => { const o = (estado.operadores || []).find(x => x.id === id); return o ? o.nome : ''; };
+      const agora = new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const gf = estado.filtros || {};
+      const partes = [];
+      if (gf.dataInicio || gf.dataFim) partes.push(`Período: ${gf.dataInicio ? fmtData(gf.dataInicio) : '…'} a ${gf.dataFim ? fmtData(gf.dataFim) : '…'}`);
+      else if (gf.mes || gf.ano) partes.push(`Período: ${gf.mes ? 'mês ' + gf.mes : ''}${gf.mes && gf.ano ? '/' : ''}${gf.ano || ''}`);
+      if (gf.casaId) partes.push(`Casa: ${nomeCasa(gf.casaId)}`);
+      if (gf.operadorId) partes.push(`Operador: ${nomeOp(gf.operadorId)}`);
+      if (d.oddMin !== null || d.oddMax !== null) partes.push(`Odd do bilhete: ${d.oddMin !== null ? '≥ ' + d.oddMin.toLocaleString('pt-BR') : ''}${d.oddMin !== null && d.oddMax !== null ? ' e ' : ''}${d.oddMax !== null ? '≤ ' + d.oddMax.toLocaleString('pt-BR') : ''}`);
+      const cls = v => v > 0 ? 'pos' : v < 0 ? 'neg' : '';
+      const mt = d.mTotal;
+      const cardsHtml = op.geral ? `<div class="cards">
+    <div class="card"><div class="t">Total de apostas</div><div class="v">${d.total.bets}</div></div>
+    <div class="card"><div class="t">Valor girado</div><div class="v azul">${fmt(d.total.volume)}</div></div>
+    <div class="card"><div class="t">Stake média</div><div class="v">${fmt(mt.stakeMedia)}</div></div>
+    <div class="card"><div class="t">Odd média</div><div class="v amb">${oddTxt(mt)}</div></div>
+    <div class="card"><div class="t">ROI</div><div class="v ${cls(mt.lucro)}">${roiTxt(mt)}</div></div>
+    <div class="card"><div class="t">Winrate</div><div class="v teal">${wrTxt(mt)}</div></div>
+  </div>` : '';
+      const tiposHtml = op.tipos ? `<h3 class="sub">🎟️ Por tipo de bilhete</h3><div class="tipos">${d.gruposVisiveis.map(gd => {
+        const g = d.grupos[gd.chave]; const m = d.metricas(g);
+        return `<div class="tipo-card"><div class="tt">🎟️ ${esc(gd.nome)} <span>(${esc(gd.pernas)})</span></div>
+          <div class="ln"><span>Total de apostas</span><b>${g.bets} bets · ${fmt(g.volume)}</b></div>
+          <div class="ln"><span>Stake média</span><b>${fmt(m.stakeMedia)}</b></div>
+          <div class="ln"><span>Odd média</span><b class="amb">${oddTxt(m)}</b></div>
+          <div class="ln"><span>ROI</span><b class="${cls(m.lucro)}">${roiTxt(m)}</b></div>
+          <div class="ln"><span>Winrate</span><b class="teal">${wrTxt(m)}</b></div>
+          <div class="ln"><span>Resultado</span><b><span class="pos">✅ ${g.greens}</span> · <span class="neg">❌ ${g.reds}</span>${g.voids ? ` · ⚪ ${g.voids}` : ''}</b></div>
+          <div class="ln"><span>Lucro</span><b class="${cls(m.lucro)}">${fmt(m.lucro)}</b></div>
+        </div>`;
+      }).join('')}</div>` : '';
+      const diaHtml = op.dia ? `<h3 class="sub">📅 Por dia da semana</h3><table class="resumo"><thead><tr><th>Dia</th><th class="c">Apostas</th><th class="r">Valor girado</th><th class="r">Stake média</th><th class="c">Odd média</th><th class="r">Retorno</th><th class="r">Lucro</th><th class="r">ROI</th><th class="c">✅</th><th class="c">❌</th><th class="c">Winrate</th></tr></thead><tbody>${d.ORDEM_DIAS.map(dd => {
+        const g = d.diasSemana[dd]; const m = d.metricas(g);
+        const marca = dd === d.piorDia ? ' <span class="neg"><b>🔴 pior dia</b></span>' : dd === d.melhorDia ? ' <span class="pos"><b>✅ melhor dia</b></span>' : '';
+        return `<tr><td><b>📅 ${esc(d.NOMES_DIA[dd])}</b>${marca}</td><td class="c">${g.bets}</td><td class="r azul">${fmt(g.volume)}</td><td class="r">${fmt(m.stakeMedia)}</td><td class="c amb"><b>${oddTxt(m)}</b></td><td class="r">${fmt(g.retorno)}</td><td class="r ${cls(m.lucro)}"><b>${fmt(m.lucro)}</b></td><td class="r ${cls(m.lucro)}">${roiTxt(m)}</td><td class="c pos"><b>${g.greens}</b></td><td class="c neg"><b>${g.reds}</b></td><td class="c">${wrTxt(m)}</td></tr>`;
+      }).join('')}</tbody></table><p class="nota">Onde o dinheiro escapa mais — pela data do bilhete, com os mesmos filtros da tela.</p>` : '';
+      const matrizHtml = op.matriz ? `<h3 class="sub">🗓️ Dia da semana × Tipo de bilhete</h3><table class="resumo"><thead><tr><th>Dia</th>${d.gruposVisiveis.map(gd => `<th>${esc(gd.nome)}</th>`).join('')}<th>Leitura do dia</th></tr></thead><tbody>${d.ORDEM_DIAS.map(dd => {
+        const celulas = d.gruposVisiveis.map(gd => {
+          const cel = d.matrizDiaTipo[dd][gd.chave]; const lucro = cel.retorno - cel.volume;
+          return cel.bets === 0 ? '<td>—</td>' : `<td><b class="${cls(lucro)}">${fmt(lucro)}</b><div class="det">${cel.bets} bets</div></td>`;
+        }).join('');
+        return `<tr><td><b>📅 ${esc(d.NOMES_DIA[dd])}</b></td>${celulas}<td>${esc(d.leituraDiaTipo(dd))}</td></tr>`;
+      }).join('')}</tbody></table><p class="nota">O lucro de cada estilo em cada dia (com o nº de bets) — onde cada tipo ganha e onde perde.</p>` : '';
+      const resumoHtml = op.resumo ? `<h3 class="sub">📋 Resumo por tipo de bilhete</h3><table class="resumo"><thead><tr><th>Bilhete</th><th class="c">Apostas</th><th class="r">Valor girado</th><th class="r">Stake média</th><th class="c">Odd média</th><th class="r">Retorno</th><th class="r">Lucro</th><th class="r">ROI</th><th class="c">✅</th><th class="c">❌</th><th class="c">Winrate</th></tr></thead><tbody>${d.gruposVisiveis.map(gd => {
+        const g = d.grupos[gd.chave]; const m = d.metricas(g);
+        return `<tr><td><b>🎟️ ${esc(gd.nome)}</b></td><td class="c">${g.bets}</td><td class="r azul">${fmt(g.volume)}</td><td class="r">${fmt(m.stakeMedia)}</td><td class="c amb"><b>${oddTxt(m)}</b></td><td class="r">${fmt(g.retorno)}</td><td class="r ${cls(m.lucro)}"><b>${fmt(m.lucro)}</b></td><td class="r ${cls(m.lucro)}">${roiTxt(m)}</td><td class="c pos"><b>${g.greens}</b></td><td class="c neg"><b>${g.reds}</b></td><td class="c">${wrTxt(m)}</td></tr>`;
+      }).join('')}<tr class="total"><td>TOTAL</td><td class="c">${d.total.bets}</td><td class="r azul">${fmt(d.total.volume)}</td><td class="r">${fmt(mt.stakeMedia)}</td><td class="c amb">${oddTxt(mt)}</td><td class="r">${fmt(d.total.retorno)}</td><td class="r ${cls(mt.lucro)}"><b>${fmt(mt.lucro)}</b></td><td class="r ${cls(mt.lucro)}">${roiTxt(mt)}</td><td class="c pos">${d.total.greens}</td><td class="c neg">${d.total.reds}</td><td class="c">${wrTxt(mt)}</td></tr></tbody></table><p class="nota">Winrate = apostas com lucro ÷ (apostas com lucro + apostas com prejuízo). Bilhetes void/estornados (lucro zero) aparecem no ⚪ dos cards e não entram no winrate. ROI = lucro ÷ valor girado.${d.semPernas ? ` ${d.semPernas} aposta(s) finalizada(s) sem pernas registradas não entram na classificação por tamanho.` : ''}</p>` : '';
+      return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Análise de Bilhetes — BetControl</title>
+  <style>
+    *{box-sizing:border-box}
+    @page{ size:A4; margin:12mm 10mm 14mm 10mm; @bottom-right{ content:"Página " counter(page) " de " counter(pages); font-size:8px; color:#999; } }
+    body{font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;font-size:10.5px;margin:0;padding:0;line-height:1.42;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .topo{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #059669;padding-bottom:8px;margin:0 0 8px;}
+    .marca .nome{font-size:17px;font-weight:900;letter-spacing:.5px;}
+    .marca .nome span{color:#059669;}
+    .marca .tag{font-size:9px;color:#888;letter-spacing:2px;margin-top:2px;}
+    .doc{text-align:right;}
+    .doc h1{font-size:15px;margin:0;letter-spacing:.6px;color:#111;}
+    .doc .tipo{font-size:10.5px;color:#555;margin-top:2px;}
+    .meta{font-size:10px;color:#555;margin:0 0 10px;}
+    .cards{display:flex;gap:8px;margin:0 0 12px;}
+    .card{flex:1;border:1px solid #e2e8f0;border-radius:8px;padding:7px 10px;background:#f8fafc;}
+    .card .t{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;}
+    .card .v{font-size:14px;font-weight:900;margin-top:1px;}
+    .pos{color:#059669;} .neg{color:#dc2626;} .azul{color:#2563eb;} .amb{color:#b45309;} .teal{color:#0f766e;}
+    h3.sub{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#065f46;margin:14px 0 6px;}
+    .tipos{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 4px;}
+    .tipo-card{flex:1 1 23%;border:1px solid #e2e8f0;border-radius:8px;padding:7px 10px;background:#fff;page-break-inside:avoid;}
+    .tipo-card .tt{font-size:9.5px;font-weight:900;text-transform:uppercase;color:#065f46;margin-bottom:4px;}
+    .tipo-card .tt span{color:#64748b;font-weight:400;text-transform:none;}
+    .tipo-card .ln{display:flex;justify-content:space-between;gap:8px;font-size:9.5px;padding:1px 0;}
+    .tipo-card .ln span:first-child{color:#64748b;}
+    table.resumo{width:100%;border-collapse:collapse;}
+    table.resumo thead th{background:#047857;color:#fff;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;padding:5px 8px;text-align:left;}
+    table.resumo tbody td{padding:4px 8px;border:1px solid #e2e8f0;font-size:9.5px;vertical-align:top;}
+    table.resumo td.c, table.resumo th.c{text-align:center;}
+    table.resumo td.r, table.resumo th.r{text-align:right;}
+    table.resumo tr.total td{background:#f1f5f9;font-weight:700;}
+    table.resumo .det{color:#475569;font-size:9px;margin-top:1px;}
+    .nota{font-size:9px;color:#888;margin:4px 0 0;}
+    .rodape{position:fixed;bottom:0;left:0;right:0;padding-top:6px;border-top:1px solid #ddd;display:flex;justify-content:space-between;font-size:9px;color:#999;background:#fff;}
+  </style></head><body>
+  <div class="topo">
+    <div class="marca"><div class="nome">BET<span>CONTROL</span></div><div class="tag">GESTÃO DE APOSTAS</div></div>
+    <div class="doc"><h1>ANÁLISE DE BILHETES</h1><div class="tipo">Aba Análise de Bilhetes — por tipo, dia da semana e matriz</div></div>
+  </div>
+  <div class="meta"><b>Gerado em ${esc(agora)}</b>${partes.length ? ' · ' + esc(partes.join(' · ')) : ''} · ${d.total.bets} aposta(s) classificada(s) no documento</div>
+  ${cardsHtml}
+  ${tiposHtml}
+  ${diaHtml}
+  ${matrizHtml}
+  ${resumoHtml}
+  <div class="rodape"><span>BetControl — análise de bilhetes gerada a partir dos filtros atuais da aba Análise de Bilhetes</span><span>Gerado em ${esc(agora)}</span></div>
+</body></html>`;
+    }
+
     let fEsp = { esporte: '', mercado: '', tipo: '', resultado: '', ordem: 'lucro' };
     let espExpandido = {};
 
@@ -4938,7 +5217,7 @@
             <h2 class="text-xl md:text-2xl font-bold text-texto">🎟️ Análise de Bilhetes</h2>
             <p class="text-xs md:text-sm text-mutado mt-1">Suas apostas finalizadas quebradas pelo tamanho do bilhete — simples, duplas, triplas e quádruplas. Respeita os filtros globais (período, casa e operador).</p>
           </div>
-          <button onclick="gerarPdfBilhetes('')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition">📄 Gerar PDF — análise por bilhete</button>
+          <button onclick="gerarPdfAbaBilhetes()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition">📄 Gerar PDF — análise por bilhete</button>
         </div>
 
         <div class="bg-panel border border-linha rounded-xl p-4 mb-6 flex flex-wrap items-end gap-3" data-filtros-bilhetes="odds">
