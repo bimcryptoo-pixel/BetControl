@@ -770,7 +770,8 @@
     function verificarPermissaoAba(aba) {
       const usr = obterUsuarioLogado();
       if (!usr) return false;
-      if (usr.perfil === 'editor') return true;
+      // (21/11/2026, a pedido do usuário) Usuários/Admin: nem editor genérico — só o login 'admin'.
+      if (usr.perfil === 'editor') return !(aba === 'usuarios' && usr.usuario !== 'admin');
       if (aba === 'usuarios' || aba === 'backup') return false;
       const permissoes = usr.permissoesLeitor || [];
       return permissoes.includes(aba);
@@ -864,7 +865,8 @@
 
         if (usr.perfil === 'editor') {
           // (20/11/2026, a pedido do usuário) Comissão só aparece para o admin principal (usuario 'admin'); demais editores não veem o módulo.
-          if (aba === 'comissao' && usr.usuario !== 'admin') {
+          // (21/11/2026, a pedido do usuário) Usuários/Admin idem: só o login 'admin' vê — nem o login 'Administrador' (editor) enxerga o módulo.
+          if ((aba === 'comissao' || aba === 'usuarios') && usr.usuario !== 'admin') {
             btnEl.style.display = 'none';
           } else {
             btnEl.style.display = 'flex';
@@ -873,7 +875,7 @@
           if (aba === 'backup') {
             btnEl.style.display = 'none';
           } else if (aba === 'usuarios') {
-            btnEl.style.display = 'flex';
+            btnEl.style.display = 'none';
           } else {
             if (usr.permissoesLeitor && usr.permissoesLeitor.includes(aba)) {
               btnEl.style.display = 'flex';
@@ -1222,8 +1224,9 @@
     function renderizarAba() {
       const main = document.getElementById('conteudo-principal');
       // (20/11/2026, a pedido do usuário) Comissão só aparece para o admin principal (usuario 'admin'); demais editores não veem o módulo.
+      // (21/11/2026, a pedido do usuário) Usuários/Admin idem: só o login 'admin' — o login 'Administrador' (editor) cai pro dashboard.
       const usrRenderAtual = obterUsuarioLogado();
-      if (estado.abaAtiva === 'comissao' && usrRenderAtual && usrRenderAtual.perfil === 'editor' && usrRenderAtual.usuario !== 'admin') {
+      if ((estado.abaAtiva === 'comissao' || estado.abaAtiva === 'usuarios') && usrRenderAtual && usrRenderAtual.perfil === 'editor' && usrRenderAtual.usuario !== 'admin') {
         estado.abaAtiva = 'dashboard';
       }
       if (!verificarPermissaoAba(estado.abaAtiva)) {
