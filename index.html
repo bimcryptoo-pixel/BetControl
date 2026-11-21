@@ -4213,7 +4213,7 @@
     .cards{display:flex;gap:8px;margin:0 0 12px;}
     .card{flex:1;border:1px solid #e2e8f0;border-radius:8px;padding:7px 10px;background:#f8fafc;}
     .card .t{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;}
-    .card .v{font-size:14px;font-weight:900;margin-top:1px;}
+    .card .v{font-size:13px;font-weight:900;margin-top:1px;white-space:nowrap;}
     .pos{color:#059669;} .neg{color:#dc2626;} .azul{color:#2563eb;} .neu{color:#555;}
     .poscl{color:#a7f3d0;} .negcl{color:#fecaca;}
     .secao{display:flex;justify-content:space-between;align-items:center;background:#065f46;color:#fff;font-weight:700;font-size:11px;padding:6px 10px;border-radius:6px;margin:14px 0 8px;}
@@ -4230,10 +4230,10 @@
     table.bilhete .extra{color:#64748b;font-style:italic;}
     h3.sub{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#065f46;margin:14px 0 6px;}
     table.resumo{width:100%;border-collapse:collapse;}
-    table.resumo thead th{background:#047857;color:#fff;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;padding:5px 8px;text-align:left;}
+    table.resumo thead th{background:#047857;color:#fff;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;padding:5px 8px;text-align:left;white-space:nowrap;}
     table.resumo tbody td{padding:4px 8px;border:1px solid #e2e8f0;font-size:9.5px;}
-    table.resumo td.c, table.resumo th.c{text-align:center;}
-    table.resumo td.r, table.resumo th.r{text-align:right;}
+    table.resumo td.c, table.resumo th.c{text-align:center;white-space:nowrap;}
+    table.resumo td.r, table.resumo th.r{text-align:right;white-space:nowrap;}
     table.resumo tr.total td{background:#f1f5f9;font-weight:700;}
     .nota{font-size:9px;color:#888;margin:4px 0 0;}
     .rodape{position:fixed;bottom:0;left:0;right:0;padding-top:6px;border-top:1px solid #ddd;display:flex;justify-content:space-between;font-size:9px;color:#999;background:#fff;}
@@ -4503,7 +4503,7 @@
     .cards{display:flex;gap:8px;margin:0 0 12px;}
     .card{flex:1;border:1px solid #e2e8f0;border-radius:8px;padding:7px 10px;background:#f8fafc;}
     .card .t{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;}
-    .card .v{font-size:14px;font-weight:900;margin-top:1px;}
+    .card .v{font-size:13px;font-weight:900;margin-top:1px;white-space:nowrap;}
     .pos{color:#059669;} .neg{color:#dc2626;} .azul{color:#2563eb;} .amb{color:#b45309;} .teal{color:#0f766e;}
     h3.sub{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#065f46;margin:14px 0 6px;}
     .tipos{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 4px;}
@@ -4512,11 +4512,13 @@
     .tipo-card .tt span{color:#64748b;font-weight:400;text-transform:none;}
     .tipo-card .ln{display:flex;justify-content:space-between;gap:8px;font-size:9.5px;padding:1px 0;}
     .tipo-card .ln span:first-child{color:#64748b;}
+    .tipo-card .ln b{white-space:nowrap;}
+    table.resumo td b{white-space:nowrap;}
     table.resumo{width:100%;border-collapse:collapse;}
-    table.resumo thead th{background:#047857;color:#fff;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;padding:5px 8px;text-align:left;}
+    table.resumo thead th{background:#047857;color:#fff;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;padding:5px 8px;text-align:left;white-space:nowrap;}
     table.resumo tbody td{padding:4px 8px;border:1px solid #e2e8f0;font-size:9.5px;vertical-align:top;}
-    table.resumo td.c, table.resumo th.c{text-align:center;}
-    table.resumo td.r, table.resumo th.r{text-align:right;}
+    table.resumo td.c, table.resumo th.c{text-align:center;white-space:nowrap;}
+    table.resumo td.r, table.resumo th.r{text-align:right;white-space:nowrap;}
     table.resumo tr.total td{background:#f1f5f9;font-weight:700;}
     table.resumo .det{color:#475569;font-size:9px;margin-top:1px;}
     .nota{font-size:9px;color:#888;margin:4px 0 0;}
