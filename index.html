@@ -551,6 +551,8 @@
         estilo = "background-color: #1d4ed8; color: #facc15;";
       } else if (/^EMIRATES\s*BET$/i.test(nomeLimpo)) {
         estilo = "background-color: #16a34a; color: #000000; -webkit-text-stroke: 1px #ffffff; paint-order: stroke fill;";
+      } else if (/^PRINT\s*BET$/i.test(nomeLimpo)) {
+        estilo = "background-color: #ffffff; color: #009c3b; border: 1px solid rgba(0,0,0,0.1); -webkit-text-stroke: 2px #ffdf00; paint-order: stroke fill;";
       }
 
       return `<span class="flag-casa px-2.5 py-1 rounded-md text-[11px] md:text-xs font-black inline-flex items-center shadow-sm uppercase" style="${estilo}">${nomeLimpo}</span>`;
