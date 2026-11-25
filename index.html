@@ -4769,6 +4769,48 @@
         const bets = Object.values(detalheEsp[k] || {})
           .sort((x, y) => String(y.a.data || '').localeCompare(String(x.a.data || '')) || String(y.a.liquidada_em || y.a.liquidadaEm || '').localeCompare(String(x.a.liquidada_em || x.a.liquidadaEm || '')));
         if (!bets.length) return '';
+        // MISTA (25/11/2026, pedido do usuário): os bilhetes mistos são duplas
+        // e triplas — em vez da lista bilhete a bilhete, a Mista mostra só os
+        // grupos unificados, com os totais de cada um. O detalhe bilhete a
+        // bilhete continua no 📄 PDF deste esporte.
+        if (k === 'Mista' && !focoMercado) {
+          const grupos = [
+            { rot: 'Duplas', sub: '2 pernas', teste: n => n === 2 },
+            { rot: 'Triplas', sub: '3 pernas', teste: n => n === 3 },
+            { rot: 'Múltiplas', sub: '4 ou mais pernas', teste: n => n >= 4 },
+          ].map(g => {
+            const bs = bets.filter(({ legs }) => g.teste(legs.length));
+            const d = { apostas: bs.length, greens: 0, reds: 0, volume: 0, lucro: 0 };
+            bs.forEach(({ a }) => { const l = Number(a.retorno) - Number(a.stake); d.volume += Number(a.stake); d.lucro += l; if (l > 0) d.greens++; else if (l < 0) d.reds++; });
+            return { ...g, d };
+          }).filter(g => g.d.apostas > 0);
+          return `<div class="mt-4">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <p class="text-[10px] uppercase tracking-wider text-mutado font-bold">📋 Apostas — ${iconeEsporteEsp(k)} ${k} (${bets.length}) · por tipo de bilhete</p>
+            <button onclick="gerarPdfBilhetes('${k}')" class="no-print shrink-0 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black rounded-lg transition">📄 PDF deste esporte</button>
+          </div>
+          <div class="overflow-x-auto rounded-lg border border-linha">
+            <table class="w-full text-left text-xs text-mutado">
+              <thead class="bg-panelAlt text-texto uppercase text-[10px]">
+                <tr><th class="p-3 border-b border-linha">Tipo</th><th class="p-3 border-b border-linha">Apostas</th><th class="p-3 border-b border-linha">✅</th><th class="p-3 border-b border-linha">❌</th><th class="p-3 border-b border-linha">Acerto</th><th class="p-3 border-b border-linha">Volume</th><th class="p-3 border-b border-linha">Lucro / Prejuízo</th><th class="p-3 border-b border-linha">ROI</th></tr>
+              </thead>
+              <tbody class="divide-y divide-linha">
+                ${grupos.map((g, i) => `<tr class="${i % 2 === 0 ? 'bg-panel' : 'bg-panelAlt'}">
+                    <td class="p-3 font-semibold text-texto">🔀 ${g.rot} <span class="font-normal text-mutado">(${g.sub})</span></td>
+                    <td class="p-3 text-texto">${g.d.apostas}</td>
+                    <td class="p-3 text-emerald-500 font-bold">${g.d.greens}</td>
+                    <td class="p-3 text-red-500 font-bold">${g.d.reds}</td>
+                    <td class="p-3 text-texto">${acertoTxt(g.d.greens, g.d.greens + g.d.reds)}</td>
+                    <td class="p-3 text-texto">${fmt(g.d.volume)}</td>
+                    <td class="p-3 font-bold ${corLucro(g.d.lucro)}">${fmt(g.d.lucro)}</td>
+                    <td class="p-3 font-bold ${corLucro(g.d.lucro)}">${roiTxt(g.d)}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+          <p class="text-[10px] text-mutado mt-2">Bilhetes de esportes misturados unificados por tamanho — o detalhe bilhete a bilhete sai no 📄 PDF deste esporte.</p>
+        </div>`;
+        }
         const max = 50;
         return `<div class="mt-4">
           <div class="flex items-center justify-between gap-2 mb-2">
