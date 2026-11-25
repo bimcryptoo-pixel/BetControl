@@ -3534,13 +3534,14 @@
                   <th class="p-1.5 md:p-2 border-b border-linha">Data</th>
                   <th class="p-1.5 md:p-2 border-b border-linha">Operador</th>
                   <th class="p-1.5 md:p-2 border-b border-linha">Casa</th>
+                  <th class="p-1.5 md:p-2 border-b border-linha">Odd</th>
                   <th class="p-1.5 md:p-2 border-b border-linha">Stake</th>
                   <th class="p-1.5 md:p-2 border-b border-linha">Retorno</th>
                   <th class="p-1.5 md:p-2 border-b border-linha">Resultado</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-linha">
-                ${apostasFiltradas.length === 0 ? '<tr><td colspan="6" class="p-3 text-center text-mutado">Nenhuma aposta encontrada.</td></tr>' : ''}
+                ${apostasFiltradas.length === 0 ? '<tr><td colspan="7" class="p-3 text-center text-mutado">Nenhuma aposta encontrada.</td></tr>' : ''}
                 ${apostasFiltradas.map((a, index) => {
                   const operador = estado.operadores.find(o => o.id === (a.operadorId || a.clienteId));
                   const casa = estado.casas.find(cs => cs.id === a.casaId);
@@ -3556,6 +3557,7 @@
                       <td class="p-1.5 md:p-2 text-texto">${formatarDataBR(a.data)}</td>
                       <td class="p-1.5 md:p-2 font-bold text-texto">${operador ? operador.nome : 'N/A'}</td>
                       <td class="p-1.5 md:p-2">${casa ? renderizarFlagCasa(casa.nome) : 'N/A'}</td>
+                      <td class="p-1.5 md:p-2 text-texto">${(a.oddTotal !== null && a.oddTotal !== undefined && a.oddTotal !== '') ? Number(a.oddTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
                       <td class="p-1.5 md:p-2 text-texto">R$ ${a.stake.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                       <td class="p-1.5 md:p-2 text-texto">${a.retorno !== null ? `R$ ${a.retorno.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-'}</td>
                       <td class="p-1.5 md:p-2 ${resCor}">${resTexto}</td>
@@ -3565,7 +3567,7 @@
               </tbody>
               <tfoot>
                 <tr class="bg-panelAlt">
-                  <td colspan="3" class="p-1.5 md:p-2 font-black text-texto uppercase text-right">Total</td>
+                  <td colspan="4" class="p-1.5 md:p-2 font-black text-texto uppercase text-right">Total</td>
                   <td class="p-1.5 md:p-2 font-black text-blue-500">R$ ${volumeTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                   <td class="p-1.5 md:p-2 font-black text-texto">R$ ${retornoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                   <td class="p-1.5 md:p-2 font-black ${lucroTotal > 0 ? 'text-emerald-500' : lucroTotal < 0 ? 'text-red-500' : 'text-texto'}">${lucroTotal > 0 ? `+R$ ${lucroTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : lucroTotal < 0 ? `-R$ ${Math.abs(lucroTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 'R$ 0,00'}</td>
