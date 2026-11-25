@@ -3557,7 +3557,7 @@
                       <td class="p-1.5 md:p-2 text-texto">${formatarDataBR(a.data)}</td>
                       <td class="p-1.5 md:p-2 font-bold text-texto">${operador ? operador.nome : 'N/A'}</td>
                       <td class="p-1.5 md:p-2">${casa ? renderizarFlagCasa(casa.nome) : 'N/A'}</td>
-                      <td class="p-1.5 md:p-2 text-texto">${(a.oddTotal !== null && a.oddTotal !== undefined && a.oddTotal !== '') ? Number(a.oddTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
+                      <td class="p-1.5 md:p-2 text-texto">${(a.oddTotal !== null && a.oddTotal !== undefined && a.oddTotal !== '') ? Number(a.oddTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 3}) : '-'}</td>
                       <td class="p-1.5 md:p-2 text-texto">R$ ${a.stake.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                       <td class="p-1.5 md:p-2 text-texto">${a.retorno !== null ? `R$ ${a.retorno.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-'}</td>
                       <td class="p-1.5 md:p-2 ${resCor}">${resTexto}</td>
