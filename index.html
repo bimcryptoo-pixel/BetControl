@@ -4053,7 +4053,7 @@
       base.forEach(a => {
         const pernas = selPorAposta[a.id] || [];
         const esportes = [...new Set(pernas.map(p => classificarEsporteEsp(p.jogo, p.mercado)))];
-        const espAposta = esportes.length === 0 ? 'Outros' : (esportes.length === 1 ? esportes[0] : 'Mista');
+        const espAposta = pernas.length >= 2 ? 'Mista' : (esportes.length === 0 ? 'Outros' : esportes[0]);
         if (fEsp.mercado) {
           pernas.forEach(p => {
             if (normalizarMercadoEsp(p.mercado) !== fEsp.mercado) return;
@@ -4593,9 +4593,11 @@
         const pernas = selPorAposta[a.id] || [];
         const n = Math.max(pernas.length, 1);
 
-        // esporte da aposta (nível aposta)
+        // esporte da aposta (nível aposta) — REGRA (25/11/2026, pedido do
+        // usuário): TODA múltipla (2+ pernas) é "Mista", independente dos
+        // esportes das pernas; nos esportes ficam só as simples.
         const esportes = [...new Set(pernas.map(p => classificarEsporteEsp(p.jogo, p.mercado)))];
-        const espAposta = esportes.length === 0 ? 'Outros' : (esportes.length === 1 ? esportes[0] : 'Mista');
+        const espAposta = pernas.length >= 2 ? 'Mista' : (esportes.length === 0 ? 'Outros' : esportes[0]);
         if (!fEsp.esporte || espAposta === fEsp.esporte || (fEsp.esporte !== 'Mista' && esportes.includes(fEsp.esporte))) {
           if (!porEsporte[espAposta]) porEsporte[espAposta] = { lucro: 0, volume: 0, apostas: 0, greens: 0, reds: 0 };
           const d = porEsporte[espAposta];
@@ -4769,10 +4771,11 @@
         const bets = Object.values(detalheEsp[k] || {})
           .sort((x, y) => String(y.a.data || '').localeCompare(String(x.a.data || '')) || String(y.a.liquidada_em || y.a.liquidadaEm || '').localeCompare(String(x.a.liquidada_em || x.a.liquidadaEm || '')));
         if (!bets.length) return '';
-        // MISTA (25/11/2026, pedido do usuário): os bilhetes mistos são duplas
-        // e triplas — em vez da lista bilhete a bilhete, a Mista mostra só os
-        // grupos unificados, com os totais de cada um. O detalhe bilhete a
-        // bilhete continua no 📄 PDF deste esporte.
+        // MISTA (25/11/2026, pedido do usuário): em vez da lista bilhete a
+        // bilhete, a Mista mostra só os grupos unificados por tamanho (Duplas,
+        // Triplas...), com os totais de cada um. O detalhe bilhete a bilhete
+        // continua no 📄 PDF deste esporte. A Mista reúne TODAS as múltiplas,
+        // mesmo as de um esporte só (regra do mesmo dia, ver espAposta).
         if (k === 'Mista' && !focoMercado) {
           const grupos = [
             { rot: 'Duplas', sub: '2 pernas', teste: n => n === 2 },
@@ -4808,7 +4811,7 @@
               </tbody>
             </table>
           </div>
-          <p class="text-[10px] text-mutado mt-2">Bilhetes de esportes misturados unificados por tamanho — o detalhe bilhete a bilhete sai no 📄 PDF deste esporte.</p>
+          <p class="text-[10px] text-mutado mt-2">Todas as múltiplas ficam na Mista, independente dos esportes das pernas — o detalhe bilhete a bilhete sai no 📄 PDF deste esporte.</p>
         </div>`;
         }
         const max = 50;
@@ -4959,7 +4962,7 @@
               </tbody>
             </table>
           </div>
-          <p class="text-[10px] text-mutado mt-2">${focoMercado ? 'No foco de mercado, lucro e volume da aposta são rateados igualmente entre as pernas desse mercado.' : 'Apostas com pernas de esportes diferentes aparecem como "Mista". Toque na linha do esporte para abrir os mercados e as apostas.'}</p>
+          <p class="text-[10px] text-mutado mt-2">${focoMercado ? 'No foco de mercado, lucro e volume da aposta são rateados igualmente entre as pernas desse mercado.' : 'Toda múltipla (dupla, tripla...) aparece como "Mista", independente dos esportes das pernas — nos esportes ficam só as simples. Toque na linha do esporte para abrir os mercados e as apostas.'}</p>
         </div>
 
         <div class="bg-panel border border-linha rounded-xl p-4 md:p-6 mb-6">
