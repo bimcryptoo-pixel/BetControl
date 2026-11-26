@@ -1397,11 +1397,12 @@
                   <th class="p-3 border-b border-linha">Valor de Retorno (R$)</th>
                   <th class="p-3 border-b border-linha">Status</th>
                   <th class="p-3 border-b border-linha text-center">Bilhete</th>
+                  <th class="p-3 border-b border-linha text-center">Tipo</th>
                   <th class="p-3 text-right no-print border-b border-linha">Ação</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-linha">
-                ${apostasFiltradas.length === 0 ? '<tr><td colspan="9" class="p-4 text-center text-mutado">Nenhuma aposta encontrada.</td></tr>' : ''}
+                ${apostasFiltradas.length === 0 ? '<tr><td colspan="10" class="p-4 text-center text-mutado">Nenhuma aposta encontrada.</td></tr>' : ''}
                 ${apostasFiltradas.map((a, index) => {
                   const opId = a.operadorId || a.clienteId;
                   const operador = estado.operadores.find(o => o.id === opId);
@@ -1426,6 +1427,17 @@
                       statusTag = `<span class="bg-gray-500/20 text-gray-700 dark:text-gray-300 px-2.5 py-1 rounded text-[10px] md:text-xs font-bold">${sinalStr}</span>`;
                     }
                   }
+
+                  // Tipo do bilhete (25/11/2026, pedido do usuário): só o
+                  // texto no padrão dos cards da Análise de Bilhetes —
+                  // 🎟️ + nome da categoria, sem selo colorido. A contagem
+                  // de pernas é a que a linha já tem em selsAposta.
+                  const tipoTxtGestao = selsAposta.length === 1 ? '🎟️ Simples'
+                    : selsAposta.length === 2 ? '🎟️ Duplas'
+                    : selsAposta.length === 3 ? '🎟️ Triplas'
+                    : selsAposta.length === 4 ? '🎟️ Quádruplas'
+                    : selsAposta.length >= 5 ? '🎟️ 5+ pernas' : null;
+                  const tipoTagGestao = tipoTxtGestao ? `<span class="text-texto font-semibold whitespace-nowrap">${tipoTxtGestao}</span>` : '<span class="text-mutado text-[10px] md:text-xs">Sem pernas</span>';
 
                   return `
                     <tr class="${bgClass} hover:opacity-80 transition-opacity">
@@ -1457,6 +1469,7 @@
                       </td>
                       <td class="p-3">${statusTag}</td>
                       <td class="p-3 text-center">${a.anexo_url ? `<button onclick="abrirPainelBilhete('${a.id}')" onmouseenter="mostrarPreviaBilhete(event, '${a.id}')" onmousemove="moverPreviaBilhete(event)" onmouseleave="esconderPreviaBilhete()" title="Passe o mouse para ver o bilhete e a correção · clique para abrir" class="text-lg hover:scale-125 transition inline-block">📎</button>` : '<span class="text-mutado text-xs">-</span>'}</td>
+                      <td class="p-3 text-center">${tipoTagGestao}</td>
                       <td class="p-3 text-right no-print">
                         ${podeEditar ? `
                           <div class="flex items-center justify-end gap-1.5">
