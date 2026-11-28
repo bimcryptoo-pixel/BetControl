@@ -5114,6 +5114,19 @@
     // Lucas 5%) em qualquer data, e apostas de datas anteriores à vigência
     // seguem as regras antigas (geral Fabio 7,5% / Lucas 2,5%).
     const COMISSOES_GG_NOVA = { desde: '2026-11-09', porOperador: { 'PANDOLFO': [['Fabio', 10], ['Lucas', 5]] } };
+    // Regra NOVA de comissão a partir de 23/11/2026 (pedido do usuário em
+    // 28/11/2026, valendo até ele falar algo): GG BETS e X BETS passam a ter
+    // UMA regra única sobre o prejuízo TOTAL da casa (os dois operadores
+    // juntos, sem separar por operador nem pelas eras antigas), e o
+    // PANDOLFO entra como comissionado nas duas casas:
+    // GG BETS → Fabio 7,5% / Lucas 2,5% / Pandolfo 5%;
+    // X BETS → Fabio 5% / Lucas 5% / Pandolfo 5%.
+    // Apostas com data < 2026-11-23 seguem TODAS as regras antigas
+    // (geral da casa, por operador e a era GG de 09/11/2026).
+    const COMISSOES_NOVA_ERA = { desde: '2026-11-23', casas: {
+      'GG BETS': [['Fabio', 7.5], ['Lucas', 2.5], ['Pandolfo', 5]],
+      'X BETS': [['Fabio', 5], ['Lucas', 5], ['Pandolfo', 5]]
+    } };
 
     // ================= ANÁLISE DE BILHETES (08/11/2026, pedido do usuário) =================
     // Quebra das apostas finalizadas pelo número de pernas do bilhete:
@@ -5435,6 +5448,7 @@
       const lucroPorCasa = {};
       const lucroPorCasaOperador = {}; // { casaNome: { OPERADOR: lucro } } — base das regras por operador
       const lucroGGPorOperadorEra = {}; // GG BETS: { OPERADOR: { antes, nova } } — corte em COMISSOES_GG_NOVA.desde
+      const lucroNovaEra = {}; // GG/X: prejuízo total da casa só com apostas desde COMISSOES_NOVA_ERA.desde
       apostasFiltradas.forEach(a => {
         if (a.finalizada && a.retorno !== null) {
           const casaObj = estado.casas.find(c => c.id === a.casaId);
@@ -5445,7 +5459,13 @@
           lucroPorCasa[nomeCasa].totalApostas++;
           const opObj = (estado.operadores || []).find(o => o.id === a.operadorId);
           const nomeOp = opObj ? String(opObj.nome || '').trim().toUpperCase() : '';
-          if (nomeOp) {
+          const naNovaEra = !!(COMISSOES_NOVA_ERA.casas[nomeCasa] && a.data && a.data >= COMISSOES_NOVA_ERA.desde);
+          if (naNovaEra) {
+            // Era nova (desde 23/11/2026): a base é o prejuízo TOTAL da casa,
+            // sem separar por operador nem pelas eras antigas.
+            if (lucroNovaEra[nomeCasa] === undefined) lucroNovaEra[nomeCasa] = 0;
+            lucroNovaEra[nomeCasa] += (a.retorno - a.stake);
+          } else if (nomeOp) {
             if (!lucroPorCasaOperador[nomeCasa]) lucroPorCasaOperador[nomeCasa] = {};
             if (lucroPorCasaOperador[nomeCasa][nomeOp] === undefined) lucroPorCasaOperador[nomeCasa][nomeOp] = 0;
             lucroPorCasaOperador[nomeCasa][nomeOp] += (a.retorno - a.stake);
@@ -5467,6 +5487,9 @@
       Object.values(COMISSOES_BANCA_OPERADOR).forEach(porOp => Object.values(porOp).forEach(conf => conf.forEach(([nome]) => {
         if (!pessoasDisponiveis.includes(nome)) pessoasDisponiveis.push(nome);
       })));
+      Object.values(COMISSOES_NOVA_ERA.casas).forEach(conf => conf.forEach(([nome]) => {
+        if (!pessoasDisponiveis.includes(nome)) pessoasDisponiveis.push(nome);
+      }));
       const blocos = []; // [{ casa, operador, base, linhas: [{nome, pct, valor}], subtotal }]
       const montarBloco = (casaNome, operador, lucroGrupo, conf, rotulo) => {
         if (lucroGrupo < 0 && conf && conf.length) {
@@ -5491,6 +5514,8 @@
             montarBloco(casaNome, opNome, eras.antes, confAntiga, 'até 08/11/2026');
             montarBloco(casaNome, opNome, eras.nova, COMISSOES_GG_NOVA.porOperador[opNome] || confAntiga, 'desde 09/11/2026');
           });
+          // Era nova (desde 23/11/2026): bloco único com o total da casa
+          if (lucroNovaEra[casaNome] !== undefined) montarBloco(casaNome, '', lucroNovaEra[casaNome], COMISSOES_NOVA_ERA.casas[casaNome], 'desde 23/11/2026');
         } else if (confOp) {
           // Base por operador: regra específica do operador quando houver;
           // os demais operadores da casa usam a regra geral da casa.
@@ -5498,6 +5523,11 @@
           Object.keys(grupos).sort().forEach(opNome => {
             montarBloco(casaNome, opNome, grupos[opNome], confOp[opNome] || conf);
           });
+        } else if (COMISSOES_NOVA_ERA.casas[casaNome]) {
+          // Casa da era nova (ex.: X BETS): bloco antigo só com as apostas
+          // anteriores a 23/11/2026 + bloco novo com o total da era nova.
+          montarBloco(casaNome, '', dados.lucro - (lucroNovaEra[casaNome] || 0), conf, 'até 22/11/2026');
+          if (lucroNovaEra[casaNome] !== undefined) montarBloco(casaNome, '', lucroNovaEra[casaNome], COMISSOES_NOVA_ERA.casas[casaNome], 'desde 23/11/2026');
         } else {
           montarBloco(casaNome, '', dados.lucro, conf);
         }
@@ -5509,6 +5539,11 @@
         return { nome, total: +t.toFixed(2) };
       });
       const totalGeral = +blocos.reduce((s, b) => s + b.subtotal, 0).toFixed(2);
+      // Renan (28/11/2026, pedido do usuário): só APARECE no módulo quando
+      // tem algum valor a receber no período — zerado, some dos cards de
+      // totais e das opções do filtro de comissionado.
+      const renanTotal = (totaisPorPessoa.find(p => p.nome === 'Renan') || { total: 0 }).total;
+      const pessoasExibir = renanTotal > 0 ? pessoasDisponiveis : pessoasDisponiveis.filter(n => n !== 'Renan');
 
       // Aplica o filtro por comissionado (se houver): blocos, cards e total
       const blocosExibir = filtroComissionado
@@ -5518,7 +5553,7 @@
             return { casa: b.casa, operador: b.operador || '', base: b.base, linhas, subtotal: +linhas.reduce((s, l) => s + l.valor, 0).toFixed(2), rotulo: b.rotulo || '' };
           }).filter(Boolean)
         : blocos;
-      const totaisExibir = filtroComissionado ? totaisPorPessoa.filter(p => p.nome === filtroComissionado) : totaisPorPessoa;
+      const totaisExibir = (filtroComissionado ? totaisPorPessoa.filter(p => p.nome === filtroComissionado) : totaisPorPessoa).filter(p => pessoasExibir.includes(p.nome));
       const totalExibir = +blocosExibir.reduce((s, b) => s + b.subtotal, 0).toFixed(2);
       const rotuloTotal = filtroComissionado ? `Total ${filtroComissionado}` : 'Total geral';
       const msgVazio = filtroComissionado
@@ -5576,7 +5611,7 @@
             <label class="text-xs text-mutado flex items-center gap-2 no-print">Comissionado:
               <select onchange="filtrarComissaoPorPessoa(this.value)" class="px-2.5 py-2 bg-panel border border-linha rounded-xl text-texto text-xs cursor-pointer hover:border-emerald-500 transition outline-none font-bold">
                 <option value="">Todos</option>
-                ${pessoasDisponiveis.map(n => `<option value="${n}" ${filtroComissionado === n ? 'selected' : ''}>${n}</option>`).join('')}
+                ${pessoasExibir.map(n => `<option value="${n}" ${filtroComissionado === n ? 'selected' : ''}>${n}</option>`).join('')}
               </select>
             </label>
           </div>
